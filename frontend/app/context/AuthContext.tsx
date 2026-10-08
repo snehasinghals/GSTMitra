@@ -35,6 +35,7 @@ interface AuthContextType {
   business: Business | null;
   token: string | null;
   loading: boolean;
+  authError: string | null;   // add this line
   login: (email: string, password: string) => Promise<{ error?: string }>;
   signup: (email: string, password: string, name: string, businessName: string) => Promise<{ error?: string }>;
   logout: () => void;
@@ -49,6 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [business, setBusiness] = useState<Business | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const fetchCurrentContext = async () => {
     const savedToken = typeof window !== "undefined" ? localStorage.getItem("gstmitra_token") : null;
@@ -62,7 +64,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (data) {
       setUser(data.user);
       setBusiness(data.business);
+      setAuthError(null);
     } else if (error) {
+      setAuthError(error);
       localStorage.removeItem("gstmitra_token");
       setToken(null);
     }
@@ -132,6 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         business,
         token,
         loading,
+        authError,
         login,
         signup,
         logout,
