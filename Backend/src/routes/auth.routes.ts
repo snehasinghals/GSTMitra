@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import bcrypt from "bcryptjs";
-import { prisma } from "../lib/db";
+import { prisma } from "../lib/db.js";
 import { generateToken, authMiddleware, AuthenticatedRequest } from "../middleware/auth";
 import { validateGstin, INDIAN_STATES } from "../lib/constants";
 
