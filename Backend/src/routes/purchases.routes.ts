@@ -2,10 +2,10 @@ import { Router, Response } from "express";
 import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
-import { prisma } from "../lib/db";
-import { authMiddleware, AuthenticatedRequest } from "../middleware/auth";
-import { r2 } from "../lib/money";
-import { Prisma } from "../../app/generated/prisma/client";
+import { prisma } from "../lib/db.js";
+import { authMiddleware, AuthenticatedRequest } from "../middleware/auth.js";
+import { r2 } from "../lib/money.js";
+import { Prisma } from "../../app/generated/prisma/client.js";
 
 const router = Router();
 

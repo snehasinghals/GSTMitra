@@ -1,8 +1,8 @@
 import { Router, Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import { prisma } from "../lib/db.js";
-import { generateToken, authMiddleware, AuthenticatedRequest } from "../middleware/auth";
-import { validateGstin, INDIAN_STATES } from "../lib/constants";
+import { generateToken, authMiddleware, AuthenticatedRequest } from "../middleware/auth.js";
+import { validateGstin, INDIAN_STATES } from "../lib/constants.js";
 
 const router = Router();
 

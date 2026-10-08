@@ -57,8 +57,12 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 
 import { warmupDatabase } from "./lib/db.js";
 
-const port = process.env.PORT ?? 4000;
-app.listen(port, async () => {
-  console.log(`GSTMitra Backend running on http://localhost:${port}`);
-  await warmupDatabase();
-});
+if (!process.env.VERCEL) {
+  const port = process.env.PORT ?? 4000;
+  app.listen(port, async () => {
+    console.log(`GSTMitra Backend running on http://localhost:${port}`);
+    await warmupDatabase();
+  });
+}
+
+export default app;

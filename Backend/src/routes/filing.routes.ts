@@ -1,8 +1,8 @@
 import { Router, Response } from "express";
-import { prisma } from "../lib/db";
-import { authMiddleware, AuthenticatedRequest } from "../middleware/auth";
+import { prisma } from "../lib/db.js";
+import { authMiddleware, AuthenticatedRequest } from "../middleware/auth.js";
 import ExcelJS from "exceljs";
-import { INDIAN_STATES } from "../lib/constants";
+import { INDIAN_STATES } from "../lib/constants.js";
 
 const router = Router();
 

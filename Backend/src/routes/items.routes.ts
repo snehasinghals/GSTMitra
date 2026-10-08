@@ -1,7 +1,7 @@
 import { Router, Response } from "express";
-import { prisma } from "../lib/db";
-import { authMiddleware, AuthenticatedRequest } from "../middleware/auth";
-import { COMMON_HSN_CODES } from "../lib/constants";
+import { prisma } from "../lib/db.js";
+import { authMiddleware, AuthenticatedRequest } from "../middleware/auth.js";
+import { COMMON_HSN_CODES } from "../lib/constants.js";
 
 const router = Router();
 

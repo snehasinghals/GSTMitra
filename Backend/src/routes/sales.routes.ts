@@ -1,11 +1,11 @@
 import { Router, Response } from "express";
 import * as path from "path";
 import * as fs from "fs";
-import { prisma } from "../lib/db";
-import { authMiddleware, AuthenticatedRequest } from "../middleware/auth";
+import { prisma } from "../lib/db.js";
+import { authMiddleware, AuthenticatedRequest } from "../middleware/auth.js";
 import PDFDocument from "pdfkit";
-import { allocateUniqueInvoiceNumber } from "../lib/invoiceNumbers";  
-import { r2 } from "../lib/money";
+import { allocateUniqueInvoiceNumber } from "../lib/invoiceNumbers.js";  
+import { r2 } from "../lib/money.js";
 
 const router = Router();
 
