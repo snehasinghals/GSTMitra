@@ -1,0 +1,332 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Business {
+  id               String                @id @default(uuid())
+  name             String
+  gstin            String?               @unique
+  stateCode        String                @default("27")
+  createdAt        DateTime              @default(now())
+  address          String?
+  bankAccount      String?
+  bankBranch       String?
+  bankIfsc         String?
+  bankName         String?
+  businessType     String                @default("RETAIL")
+  email            String?
+  filingFrequency  String                @default("MONTHLY")
+  isOnboarded      Boolean               @default(false)
+  phone            String?
+  pincode          String?
+  registrationType String                @default("REGULAR")
+  stateName        String                @default("Maharashtra")
+  tradeName        String?
+  turnoverRange    String                @default("40L_TO_15CR")
+  updatedAt        DateTime              @updatedAt
+  users            BusinessUser[]
+  creditDebitNotes CreditDebitNote[]
+  customers        Customer[]
+  items            Item[]
+  purchaseBills    PurchaseBill[]
+  gstr3bAdjustments Gstr3bAdjustment[]
+  returnFilings    ReturnFilingHistory[]
+  salesInvoices    SalesInvoice[]
+  vendors          Vendor[]
+}
+
+model Gstr3bAdjustment {
+  id         String   @id @default(uuid())
+  businessId String
+  period     String
+  valuesJson String   @default("{}")
+  confirmed  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, period])
+}
+
+model BusinessUser {
+  id         String   @id @default(uuid())
+  userId     String
+  businessId String
+  role       String   @default("OWNER")
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, businessId])
+}
+
+model CreditDebitNote {
+  id                String        @id @default(uuid())
+  businessId        String
+  originalInvoiceId String?
+  customerId        String?
+  vendorId          String?
+  noteType          String
+  noteNumber        String
+  noteDate          DateTime
+  reason            String
+  supplyType        String        @default("INTRA_STATE")
+  taxableValue      Float
+  cgstAmount        Float         @default(0)
+  sgstAmount        Float         @default(0)
+  igstAmount        Float         @default(0)
+  cessAmount        Float         @default(0)
+  totalAmount       Float
+  notes             String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  business          Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer          Customer?     @relation(fields: [customerId], references: [id])
+  originalInvoice   SalesInvoice? @relation(fields: [originalInvoiceId], references: [id])
+  vendor            Vendor?       @relation(fields: [vendorId], references: [id])
+}
+
+model Customer {
+  id               String            @id @default(uuid())
+  businessId       String
+  name             String
+  tradeName        String?
+  gstin            String?
+  stateCode        String            @default("27")
+  stateName        String            @default("Maharashtra")
+  registrationType String            @default("REGULAR")
+  email            String?
+  phone            String?
+  address          String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  creditDebitNotes CreditDebitNote[]
+  business         Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  salesInvoices    SalesInvoice[]
+
+  @@index([businessId])
+}
+
+model GstRule {
+  id             String         @id @default(uuid())
+  category       String
+  ruleCode       String
+  ruleName       String
+  valueJson      String
+  effectiveFrom  DateTime
+  effectiveTo    DateTime?
+  description    String
+  officialSource String?
+  sourceQuote    String?
+  status         String         @default("ACTIVE")
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  audits         GstRuleAudit[]
+
+  @@unique([ruleCode])
+}
+
+model GstRuleAudit {
+  id          String   @id @default(uuid())
+  ruleId      String?
+  action      String
+  details     String
+  sourceUrl   String?
+  performedBy String   @default("SYSTEM")
+  createdAt   DateTime @default(now())
+  rule        GstRule? @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+}
+
+model Item {
+  id             String   @id @default(uuid())
+  businessId     String
+  name           String
+  description    String?
+  type           String   @default("GOODS")
+  hsnSacCode     String
+  unit           String   @default("PCS")
+  sellingPrice   Float
+  purchasePrice  Float    @default(0)
+  isTaxInclusive Boolean  @default(false)
+  gstRate        Float    @default(18.0)
+  cessRate       Float    @default(0.0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  business       Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+}
+
+model PurchaseBill {
+  id                     String             @id @default(uuid())
+  businessId             String
+  vendorId               String
+  billNumber             String
+  billDate               DateTime
+  receivedDate           DateTime?
+  dueDate                DateTime?
+  supplyType             String             @default("INTRA_STATE")
+  placeOfSupply          String             @default("27")
+  category               String             @default("STOCK")
+  isReverseCharge        Boolean            @default(false)
+  isItcEligible          Boolean            @default(true)
+  itcIneligibilityReason String?
+  status                 String             @default("UNPAID")
+  subtotal               Float
+  totalCgst              Float              @default(0)
+  totalSgst              Float              @default(0)
+  totalIgst              Float              @default(0)
+  totalCess              Float              @default(0)
+  totalAmount            Float
+  paidAmount             Float              @default(0)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  business               Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  vendor                 Vendor             @relation(fields: [vendorId], references: [id])
+  items                  PurchaseBillItem[]
+  payments               PurchasePayment[]
+
+  @@unique([businessId, vendorId, billNumber])
+  @@index([businessId, billDate])
+}
+
+model PurchasePayment {
+  id             String       @id @default(uuid())
+  purchaseBillId String
+  amount         Float
+  paymentDate    DateTime
+  mode           String       @default("UPI")
+  reference      String?
+  notes          String?
+  createdAt      DateTime     @default(now())
+  purchaseBill  PurchaseBill @relation(fields: [purchaseBillId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseBillId])
+}
+
+model PurchaseBillItem {
+  id             String       @id @default(uuid())
+  purchaseBillId String
+  itemId         String?
+  description    String
+  hsnSacCode     String
+  quantity       Float
+  unit           String       @default("PCS")
+  rate           Float
+  taxableValue   Float
+  gstRate        Float
+  cgstAmount     Float        @default(0)
+  sgstAmount     Float        @default(0)
+  igstAmount     Float        @default(0)
+  cessRate       Float        @default(0)
+  cessAmount     Float        @default(0)
+  isItcEligible  Boolean      @default(true)
+  totalAmount    Float
+  purchaseBill   PurchaseBill @relation(fields: [purchaseBillId], references: [id], onDelete: Cascade)
+}
+
+model ReturnFilingHistory {
+  id                 String   @id @default(uuid())
+  businessId         String
+  returnType         String
+  period             String
+  fileFormat         String
+  templateVersion    String   @default("1.0.0")
+  rulesVersion       String   @default("1.0.0")
+  filePath           String?
+  isFromBooks        Boolean  @default(false)
+  healthCheckSummary String?
+  createdAt          DateTime @default(now())
+  business           Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+model SalesInvoice {
+  id               String             @id @default(uuid())
+  businessId       String
+  customerId       String
+  invoiceNumber    String
+  invoiceDate      DateTime
+  dueDate          DateTime?
+  supplyType       String             @default("INTRA_STATE")
+  placeOfSupply    String             @default("27")
+  status           String             @default("ISSUED")
+  paymentStatus    String             @default("UNPAID")
+  notes            String?
+  subtotal         Float
+  totalCgst        Float              @default(0)
+  totalSgst        Float              @default(0)
+  totalIgst        Float              @default(0)
+  totalCess        Float              @default(0)
+  roundOff         Float              @default(0)
+  isReverseCharge   Boolean           @default(false)   // NEW
+  applicablePercent Float?                              // NEW
+  ecomGstin         String?                             // NEW
+  totalAmount      Float
+  paidAmount       Float              @default(0)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  creditDebitNotes CreditDebitNote[]
+  business         Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer         Customer           @relation(fields: [customerId], references: [id])
+  items            SalesInvoiceItem[]
+
+  @@unique([businessId, invoiceNumber])
+  @@index([businessId, invoiceDate])
+}
+
+model SalesInvoiceItem {
+  id             String       @id @default(uuid())
+  salesInvoiceId String
+  itemId         String?
+  description    String
+  hsnSacCode     String
+  quantity       Float
+  unit           String       @default("PCS")
+  rate           Float
+  discount       Float        @default(0)
+  taxableValue   Float
+  gstRate        Float
+  cgstAmount     Float        @default(0)
+  sgstAmount     Float        @default(0)
+  igstAmount     Float        @default(0)
+  cessRate       Float        @default(0)
+  cessAmount     Float        @default(0)
+  totalAmount    Float
+  salesInvoice   SalesInvoice @relation(fields: [salesInvoiceId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id         String         @id @default(uuid())
+  email      String         @unique
+  password   String
+  name       String
+  phone      String?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  businesses BusinessUser[]
+}
+
+model Vendor {
+  id               String            @id @default(uuid())
+  businessId       String
+  name             String
+  tradeName        String?
+  gstin            String?
+  stateCode        String            @default("27")
+  stateName        String            @default("Maharashtra")
+  vendorType       String            @default("REGISTERED")
+  email            String?
+  phone            String?
+  address          String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  creditDebitNotes CreditDebitNote[]
+  purchaseBills    PurchaseBill[]
+  business         Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+}

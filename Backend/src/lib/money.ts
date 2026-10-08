@@ -1,0 +1,2 @@
+/** Round to 2 decimals (paise). Use on every tax/amount before storing so values like 1234.5599999 never reach the DB. */
+export const r2 = (n: number): number => Math.round((n + Number.EPSILON) * 100) / 100;
