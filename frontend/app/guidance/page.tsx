@@ -215,7 +215,7 @@ export default function BeginnerGuidancePage() {
           <span>Beginner Guidance</span>
         </h1>
         <p className="text-xs text-slate-500 mt-1">
-          New business? Follow 6 short steps: get your GST number, send bills, file returns. Most small businesses can do it themselves.
+          New business? Follow 6 short steps: get your GST number, send bills, file returns.
         </p>
       </div>
 

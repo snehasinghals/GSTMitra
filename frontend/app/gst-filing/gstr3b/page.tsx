@@ -383,8 +383,7 @@ export default function Gstr3bSectionPage() {
                   </label>
                   <button
                     type="button"
-                    onClick={() => gate.guard(() => void saveSupplement())}
-                    disabled={!supplementConfirmed || savingSupplement}
+                    onClick={() => void saveSupplement()}
                     className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {savingSupplement ? "Applying values…" : "Use calculated values"}
