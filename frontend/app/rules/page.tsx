@@ -311,28 +311,22 @@ export default function RulesPage() {
       .map(([cat, items]) => [cat, [...items].sort((a, b) => sortRules(a.rule, b.rule))] as const);
   }, [visible]);
 
-  const lastUpdated = useMemo(() => {
-    const t = rules.map((r) => toDate(r.updatedAt)?.getTime() || 0).filter(Boolean);
-    return t.length ? fmtDate(new Date(Math.max(...t)).toISOString()) : "";
-  }, [rules]);
-
   const tabs: { id: Phase; label: string; hidden?: boolean }[] = [
     { id: "current", label: "In force" },
     { id: "upcoming", label: "Upcoming", hidden: counts.upcoming === 0 },
     { id: "superseded", label: "Superseded" },
   ];
 
-    return (
+  return (
     <div className="w-full space-y-5">
       {/* Header */}
       <header className="rounded-2xl border border-slate-200 bg-white p-6">
         <h1 className="flex items-center gap-2 text-xl font-bold text-slate-900">
           <BookOpen className="h-5 w-5 text-blue-600" />
-          GST rules and rates
+          GST Rate &amp; Rule Reference
         </h1>
         <p className="mt-1 max-w-prose text-sm text-slate-500">
-          Curated rules and rate references link to their source documents; this is not a live government feed. A rate slab is not a substitute for checking the applicable HSN/SAC notification and any later amendments.
-          {lastUpdated && <> Database records last updated {lastUpdated}.</>}
+          Find the right GST rate, filing due date or credit rule in seconds. Every entry links to its official source.
         </p>
       </header>
 
@@ -359,25 +353,34 @@ export default function RulesPage() {
 
       {/* Controls */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* Category pills */}
         <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Filter by category">
-          {["ALL", ...Object.keys(categoryCounts).sort((a, b) => metaFor(a).order - metaFor(b).order)].map((c) => {
-            const active = category === c;
-            const n = c === "ALL" ? matches.length : categoryCounts[c];
-            return (
-              <button
-                key={c}
-                onClick={() => setCategory(c)}
-                className={
-                  "rounded-full px-3 py-1 text-xs font-medium transition-colors " +
-                  (active ? "bg-slate-900 text-white" : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50")
-                }
-              >
-                {c === "ALL" ? "All" : metaFor(c).label} <span className={active ? "text-slate-300" : "text-slate-400"}>{n}</span>
-              </button>
-            );
-          })}
+          {loading ? (
+            [0, 1, 2, 3].map((i) => (
+              <div key={i} className="h-7 w-20 animate-pulse rounded-full bg-slate-200" />
+            ))
+          ) : (
+            ["ALL", ...Object.keys(categoryCounts).sort((a, b) => metaFor(a).order - metaFor(b).order)].map((c) => {
+              const active = category === c;
+              const n = c === "ALL" ? matches.length : categoryCounts[c];
+              return (
+                <button
+                  key={c}
+                  onClick={() => setCategory(c)}
+                  className={
+                    "rounded-full px-3 py-1 text-xs font-medium transition-colors " +
+                    (active ? "bg-slate-900 text-white" : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50")
+                  }
+                >
+                  {c === "ALL" ? "All" : metaFor(c).label}
+                  <span className={"ml-1 " + (active ? "text-slate-300" : "text-slate-400")}>{n}</span>
+                </button>
+              );
+            })
+          )}
         </div>
 
+        {/* Phase tabs */}
         {!searching && (
           <div className="inline-flex shrink-0 rounded-lg bg-slate-100 p-0.5 text-xs font-medium">
             {tabs
@@ -391,7 +394,8 @@ export default function RulesPage() {
                     (phase === t.id ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800")
                   }
                 >
-                  {t.label} <span className="text-slate-400">{counts[t.id]}</span>
+                  {t.label}
+                  {!loading && !error && <span className="ml-1 text-slate-400">{counts[t.id]}</span>}
                 </button>
               ))}
           </div>
