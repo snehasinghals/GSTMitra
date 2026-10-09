@@ -1292,4 +1292,436 @@ router.get("/gstr2b-books/json", authMiddleware, async (req: AuthenticatedReques
   }
 });
 
+// -------------------------------------------------------------
+// 4. GSTR-2B import, reconcile and Excel report
+// -------------------------------------------------------------
+const RECON_TOLERANCE = 1; // rupees
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+const periodLabel = (p: string) => `${MONTH_NAMES[Number(p.slice(0, 2)) - 1] || p} ${p.slice(2)}`;
+const rupees = (n: number) => `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const cleanInvoiceNo = (value: unknown) => String(value ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+const cleanGstin = (value: unknown) => String(value ?? "").trim().toUpperCase();
+const toNum = (value: unknown) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+};
+function portalDateToIso(value: unknown) {
+  const m = String(value ?? "").match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : String(value ?? "");
+}
+
+class ReconError extends Error {}
+
+type ReconRow = {
+  supplierGstin: string;
+  supplierName: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  booksTax: number | null;
+  portalTax: number | null;
+  claimable: number | null;
+  problem: string; // what is wrong, in simple words
+  fix: string; // what the user should do
+};
+
+type PortalInvoice = {
+  gstin: string;
+  name: string;
+  number: string;
+  date: string;
+  taxable: number;
+  tax: number;
+  itcAvailable: boolean;
+};
+
+// Reads the "b2b" part of the official file into a simple list
+function readPortalInvoices(b2b: any[]) {
+  const map = new Map<string, PortalInvoice>();
+  for (const supplier of b2b) {
+    const gstin = cleanGstin(supplier?.ctin);
+    for (const inv of supplier?.inv || []) {
+      const key = `${gstin}|${cleanInvoiceNo(inv?.inum)}`;
+      if (map.has(key)) continue;
+      const lines: any[] = Array.isArray(inv?.items) && inv.items.length ? inv.items : [inv];
+      let taxable = 0;
+      let tax = 0;
+      for (const line of lines) {
+        taxable += toNum(line.txval);
+        tax += toNum(line.igst) + toNum(line.cgst) + toNum(line.sgst) + toNum(line.cess);
+      }
+      map.set(key, {
+        gstin,
+        name: String(supplier?.trdnm || ""),
+        number: String(inv?.inum || ""),
+        date: portalDateToIso(inv?.dt),
+        taxable: r2(taxable),
+        tax: r2(tax),
+        itcAvailable: String(inv?.itcavl ?? "Y").toUpperCase() !== "N",
+      });
+    }
+  }
+  return map;
+}
+
+async function reconcileGstr2b(businessId: string, period: string, file: any) {
+  // ---------- Check 1: is this really a GSTR-2B file? ----------
+  const root = file && typeof file === "object" ? (file.data ?? file) : null;
+  if (!root || typeof root !== "object") {
+    throw new ReconError("We could not read this file. Please download the GSTR-2B JSON file again from gst.gov.in and upload it here.");
+  }
+  if (!root.docdata) {
+    if (Array.isArray(root.b2b)) {
+      throw new ReconError("This looks like a GSTR-2A file. Please download GSTR-2B (not 2A) from gst.gov.in and upload that one.");
+    }
+    throw new ReconError("This does not look like a GSTR-2B file. Please download the GSTR-2B JSON file from gst.gov.in and try again.");
+  }
+
+  // ---------- Check 2: is it for your GSTIN? ----------
+  const business = await prisma.business.findUnique({ where: { id: businessId } });
+  if (!business?.gstin) {
+    throw new ReconError("Your GSTIN is not saved yet. Add it in your business profile, then upload the file again.");
+  }
+  if (cleanGstin(root.gstin) !== cleanGstin(business.gstin)) {
+    throw new ReconError(
+      `This file is for GSTIN ${cleanGstin(root.gstin) || "(unknown)"}, but your business in GSTMitra has GSTIN ${business.gstin}. Please download the file after logging in to the correct GST account.`
+    );
+  }
+
+  // ---------- Check 3: is it for the selected month? ----------
+  const filePeriod = String(root.rtnprd || "");
+  if (filePeriod && filePeriod !== period) {
+    throw new ReconError(
+      `This file is for ${periodLabel(filePeriod)}, but you selected ${periodLabel(period)} at the top. Change the Filing Period at the top, or upload the file for ${periodLabel(period)}.`
+    );
+  }
+
+  const portal = readPortalInvoices(Array.isArray(root.docdata?.b2b) ? root.docdata.b2b : []);
+  if (portal.size === 0) {
+    throw new ReconError(
+      "We could not find any supplier bills in this file. Please check that you downloaded the right month. If you really had no purchases from registered suppliers, there is nothing to compare."
+    );
+  }
+
+  // ---------- Load your bills ----------
+  const { startDate, endDate } = parsePeriod(period);
+  const portalGstins = [...new Set([...portal.values()].map((p) => p.gstin))];
+  const bills = await prisma.purchaseBill.findMany({
+    where: {
+      businessId,
+      OR: [
+        { billDate: { gte: startDate, lte: endDate } },
+        { vendor: { gstin: { in: portalGstins } } }, // bill dated an earlier month, supplier reported it now
+      ],
+    },
+    include: { vendor: true, items: true },
+    orderBy: { createdAt: "asc" },
+  });
+  type Bill = (typeof bills)[number];
+  const isInPeriod = (b: Bill) => b.billDate >= startDate && b.billDate <= endDate;
+  const taxOf = (b: Bill) => b.items.reduce((s, i) => s + i.igstAmount + i.cgstAmount + i.sgstAmount + i.cessAmount, 0);
+
+  // Group the same invoice (same supplier + same cleaned number) together
+  const groups = new Map<string, Bill[]>();
+  for (const bill of bills) {
+    const gstin = cleanGstin(bill.vendor.gstin);
+    const no = cleanInvoiceNo(bill.billNumber);
+    const key = gstin ? `${gstin}|${no}` : `V:${bill.vendorId}|${no}`;
+    const list = groups.get(key);
+    if (list) list.push(bill);
+    else groups.set(key, [bill]);
+  }
+
+  // ---------- Duplicate bill check ----------
+  const duplicates: ReconRow[] = [];
+  for (const list of groups.values()) {
+    if (list.length < 2 || !list.some(isInPeriod)) continue;
+    const extra = list.slice(1).reduce((s, b) => s + taxOf(b), 0);
+    const written = [...new Set(list.map((b) => b.billNumber))];
+    duplicates.push({
+      supplierGstin: cleanGstin(list[0].vendor.gstin),
+      supplierName: list[0].vendor.name,
+      invoiceNumber: written.join(" / "),
+      invoiceDate: isoDate(list[0].billDate),
+      booksTax: r2(extra),
+      portalTax: null,
+      claimable: null,
+      problem: `You entered this bill ${list.length} times${written.length > 1 ? ` (written as ${written.join(" and ")})` : ""}. Your GSTR-3B will count its tax ${list.length} times, which is ${rupees(extra)} too much.`,
+      fix: "Open Purchases & Bills, keep only ONE copy of this bill and delete the extra copy. Then upload the file here again.",
+    });
+  }
+
+  // Imports, reverse-charge and unregistered-supplier bills never appear in the B2B part of 2B
+  let skippedBooksBills = 0;
+  const books = new Map<string, { bill: Bill; inPeriod: boolean }>();
+  for (const [key, list] of groups) {
+    const bill = list[0];
+    const inPeriod = list.some(isInPeriod);
+    if (!cleanGstin(bill.vendor.gstin) || bill.isReverseCharge || bill.supplyType === "IMPORT_GOODS" || bill.supplyType === "IMPORT_SERVICES") {
+      if (inPeriod) skippedBooksBills++;
+      continue;
+    }
+    books.set(key, { bill, inPeriod });
+  }
+
+  const matched: ReconRow[] = [];
+  const mismatch: ReconRow[] = [];
+  const waiting: ReconRow[] = [];
+  const notInBooks: ReconRow[] = [];
+  const notClaimable: ReconRow[] = [];
+  const total = { claimNow: 0, needsChecking: 0, waitingOnSuppliers: 0, notClaimable: 0, notInBooks: 0 };
+
+  // ---------- Compare: official file -> your books ----------
+  for (const [key, p] of portal) {
+    const entry = books.get(key);
+    if (!entry) {
+      notInBooks.push({
+        supplierGstin: p.gstin,
+        supplierName: p.name,
+        invoiceNumber: p.number,
+        invoiceDate: p.date,
+        booksTax: null,
+        portalTax: p.tax,
+        claimable: null,
+        problem: `Your supplier says they sold to you (tax ${rupees(p.tax)}), but this bill is not in your books.`,
+        fix: "Check if this purchase is yours. If yes, add the bill in Purchases & Bills. If you already added it, check that the supplier GSTIN and invoice number are typed correctly. If it is not your purchase, ask the supplier to remove it.",
+      });
+      total.notInBooks += p.tax;
+      continue;
+    }
+
+    const bill = entry.bill;
+    const booksTaxable = bill.items.reduce((s, i) => s + i.taxableValue, 0);
+    const booksTax = taxOf(bill);
+    const eligibleTax = bill.items
+      .filter((i) => i.isItcEligible)
+      .reduce((s, i) => s + i.igstAmount + i.cgstAmount + i.sgstAmount + i.cessAmount, 0);
+
+    const base = {
+      supplierGstin: p.gstin,
+      supplierName: p.name || bill.vendor.name,
+      invoiceNumber: bill.billNumber,
+      invoiceDate: isoDate(bill.billDate),
+      booksTax: r2(booksTax),
+      portalTax: p.tax,
+    };
+
+    const taxDiff = r2(booksTax - p.tax);
+    const taxableDiff = r2(booksTaxable - p.taxable);
+    if (Math.abs(taxDiff) > RECON_TOLERANCE || Math.abs(taxableDiff) > RECON_TOLERANCE) {
+      let problem: string;
+      let fix: string;
+      if (Math.abs(taxDiff) > RECON_TOLERANCE) {
+        const more = taxDiff > 0;
+        problem = `The tax amount is different. Your bill shows ${rupees(booksTax)}, the government file shows ${rupees(p.tax)} (${rupees(Math.abs(taxDiff))} ${more ? "more" : "less"} in your books).`;
+        fix = more
+          ? "Compare your bill with your supplier's paper invoice. If you typed it wrong, correct the bill. If your bill is right, ask the supplier to correct their return. Until it is fixed, claim only the smaller amount."
+          : "Compare your bill with your supplier's paper invoice. You may have typed a smaller amount by mistake, so correct the bill if needed. Until it is fixed, claim only the smaller amount.";
+      } else {
+        problem = `The taxable value is different. Your bill shows ${rupees(booksTaxable)}, the government file shows ${rupees(p.taxable)}.`;
+        fix = "Check the price and quantity on your supplier's paper invoice, and correct your bill if you typed it wrong. If your bill is right, ask the supplier to correct their return.";
+      }
+      mismatch.push({ ...base, claimable: null, problem, fix });
+      total.needsChecking += booksTax;
+      continue;
+    }
+
+    // Amounts match. Now decide how much can really be claimed.
+    const claimable = p.itcAvailable ? eligibleTax : 0;
+    matched.push({
+      ...base,
+      claimable: r2(claimable),
+      problem: "No problem. This bill is the same in your books and in the government file.",
+      fix: "Nothing to do.",
+    });
+    total.claimNow += claimable;
+
+    const lost = booksTax - claimable;
+    if (lost > 0.005) {
+      total.notClaimable += lost;
+      const reason = bill.itcIneligibilityReason?.trim();
+      notClaimable.push({
+        ...base,
+        claimable: r2(claimable),
+        problem: !p.itcAvailable
+          ? "The government file says you cannot take credit (ITC) for this bill."
+          : `You marked this bill as "credit not allowed" in your books${reason ? ` (reason: ${reason})` : ""}.`,
+        fix: !p.itcAvailable
+          ? "Do not claim the tax on this bill. On gst.gov.in, open your GSTR-2B and look at the reason shown for this bill. If the reason is about your supplier, ask them."
+          : "If that is correct, nothing to do. If this bill is really for business use and credit is allowed, open the bill in Purchases & Bills and change it to ITC eligible.",
+      });
+    }
+  }
+
+  // ---------- Compare: your books -> official file ----------
+  for (const [key, entry] of books) {
+    if (!entry.inPeriod || portal.has(key)) continue;
+    const bill = entry.bill;
+    const tax = taxOf(bill);
+    waiting.push({
+      supplierGstin: cleanGstin(bill.vendor.gstin),
+      supplierName: bill.vendor.name,
+      invoiceNumber: bill.billNumber,
+      invoiceDate: isoDate(bill.billDate),
+      booksTax: r2(tax),
+      portalTax: null,
+      claimable: null,
+      problem: `This bill (tax ${rupees(tax)}) is in your books, but it is not in the government file for ${periodLabel(period)}.`,
+      fix: `Ask your supplier ${bill.vendor.name} to report this bill in their GSTR-1 and file their return. Do NOT claim this tax yet. It may appear in next month's file. Also check that the supplier GSTIN and invoice number in your bill are correct.`,
+    });
+    total.waitingOnSuppliers += tax;
+  }
+
+  return {
+    period,
+    periodLabel: periodLabel(period),
+    businessName: business.name,
+    businessGstin: business.gstin,
+    summary: {
+      claimNow: r2(total.claimNow),
+      needsChecking: r2(total.needsChecking),
+      waitingOnSuppliers: r2(total.waitingOnSuppliers),
+      notClaimable: r2(total.notClaimable),
+      notInBooks: r2(total.notInBooks),
+    },
+    matched,
+    mismatch,
+    waiting,
+    notInBooks,
+    notClaimable,
+    duplicates,
+    skippedBooksBills,
+  };
+}
+
+type ReconResult = Awaited<ReturnType<typeof reconcileGstr2b>>;
+
+// ---------- Excel report ----------
+function buildReconWorkbook(result: ReconResult) {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "GSTMitra";
+  workbook.created = new Date();
+  const peach = { type: "pattern" as const, pattern: "solid" as const, fgColor: { argb: "FFF8CBAD" } };
+  const label = result.periodLabel;
+
+  // Summary sheet
+  const head = workbook.addWorksheet("Summary");
+  head.columns = [{ width: 30 }, { width: 20 }, { width: 90 }];
+  head.addRow(["GSTR-2B comparison report"]).font = { bold: true, size: 14 };
+  head.addRow(["Business", result.businessName]);
+  head.addRow(["GSTIN", result.businessGstin]);
+  head.addRow(["Month", label]);
+  head.addRow([]);
+  const headerRow = head.addRow(["What", "Tax amount", "What it means"]);
+  headerRow.eachCell((c) => {
+    c.fill = peach;
+    c.font = { bold: true };
+  });
+  const s = result.summary;
+  const lines: [string, number, string][] = [
+    ["Claim now", s.claimNow, "Same bill and same amount in your books and the government file. You can claim this credit."],
+    ["Needs checking", s.needsChecking, "Bill is in both lists, but the amount is different. Check it before you claim."],
+    ["Waiting on suppliers", s.waitingOnSuppliers, "In your books but not in the government file. Ask the supplier to file. Do not claim yet."],
+    ["Cannot claim", s.notClaimable, "Matched, but credit is not allowed (blocked in your books, or the government file says no)."],
+    ["Not in your books", s.notInBooks, "Your supplier reported these bills, but you have not entered them."],
+  ];
+  lines.forEach(([a, b, c]) => {
+    const row = head.addRow([a, b, c]);
+    row.getCell(2).numFmt = "#,##0.00";
+    row.getCell(3).alignment = { wrapText: true };
+  });
+  head.addRow([`Duplicate bills found: ${result.duplicates.length}`]);
+  head.addRow([]);
+  head.addRow(["This is a helper report. Please check your official GSTR-2B on gst.gov.in before you file."]);
+
+  // One sheet per group
+  const sheets: { name: string; rows: ReconRow[]; message?: "mismatch" | "waiting" }[] = [
+    { name: "Needs checking", rows: result.mismatch, message: "mismatch" },
+    { name: "Waiting on suppliers", rows: result.waiting, message: "waiting" },
+    { name: "Not in your books", rows: result.notInBooks },
+    { name: "Duplicate bills", rows: result.duplicates },
+    { name: "Cannot claim", rows: result.notClaimable },
+    { name: "Matched", rows: result.matched },
+  ];
+
+  for (const group of sheets) {
+    if (group.rows.length === 0) continue;
+    const sheet = workbook.addWorksheet(group.name);
+    const columns = [
+      { header: "Supplier", width: 26 },
+      { header: "Supplier GSTIN", width: 18 },
+      { header: "Invoice number", width: 18 },
+      { header: "Invoice date", width: 13 },
+      { header: "Tax in your books", width: 16 },
+      { header: "Tax in government file", width: 18 },
+      { header: "What is the problem", width: 55 },
+      { header: "How to fix it", width: 60 },
+    ];
+    if (group.message) columns.push({ header: "Message you can send to the supplier", width: 70 });
+    sheet.columns = columns.map((c) => ({ width: c.width }));
+    const hr = sheet.addRow(columns.map((c) => c.header));
+    hr.eachCell((c) => {
+      c.fill = peach;
+      c.font = { bold: true };
+      c.alignment = { wrapText: true, vertical: "middle" };
+    });
+
+    for (const r of group.rows) {
+      let message = "";
+      if (group.message === "waiting") {
+        message = `Hello ${r.supplierName}, your invoice ${r.invoiceNumber} dated ${r.invoiceDate} (GST ${rupees(r.booksTax || 0)}) is not showing in my GSTR-2B for ${label}. Please check that you have reported it in your GSTR-1 and filed your return. Thank you.`;
+      } else if (group.message === "mismatch") {
+        message = `Hello ${r.supplierName}, for invoice ${r.invoiceNumber} dated ${r.invoiceDate}, my records show GST ${rupees(r.booksTax || 0)} but my GSTR-2B for ${label} shows ${rupees(r.portalTax || 0)}. Please check the invoice and correct it in your GSTR-1 if needed. Thank you.`;
+      }
+      const row = sheet.addRow([
+        r.supplierName,
+        r.supplierGstin,
+        r.invoiceNumber,
+        r.invoiceDate,
+        r.booksTax ?? "",
+        r.portalTax ?? "",
+        r.problem,
+        r.fix,
+        ...(group.message ? [message] : []),
+      ]);
+      [5, 6].forEach((c) => (row.getCell(c).numFmt = "#,##0.00"));
+      row.eachCell((c) => (c.alignment = { wrapText: true, vertical: "top" }));
+    }
+  }
+  return workbook;
+}
+
+router.post("/gstr2b/import", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) return res.status(400).json({ error: "No active business" });
+    const period = String(req.body?.period || "");
+    if (!isValidPeriod(period)) return res.status(400).json({ error: "Invalid filing period." });
+
+    const result = await reconcileGstr2b(businessId, period, req.body?.data);
+    res.json(result);
+  } catch (error) {
+    if (error instanceof ReconError) return res.status(400).json({ error: error.message });
+    console.error("GSTR-2B import error:", error);
+    res.status(500).json({ error: "Something went wrong while comparing. Please try again." });
+  }
+});
+
+router.post("/gstr2b/report", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) return res.status(400).json({ error: "No active business" });
+    const period = String(req.body?.period || "");
+    if (!isValidPeriod(period)) return res.status(400).json({ error: "Invalid filing period." });
+
+    const result = await reconcileGstr2b(businessId, period, req.body?.data);
+    const workbook = buildReconWorkbook(result);
+    await sendReviewWorkbook(res, workbook, `GSTR2B_RECONCILIATION_${safeReportFilePart(result.businessGstin)}_${period}.xlsx`);
+  } catch (error) {
+    if (error instanceof ReconError) return res.status(400).json({ error: error.message });
+    console.error("GSTR-2B report error:", error);
+    res.status(500).json({ error: "Could not create the Excel report. Please try again." });
+  }
+});
+
 export default router;

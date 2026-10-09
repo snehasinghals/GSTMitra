@@ -35,6 +35,7 @@ type Props = {
   month: string;
   variant: "compact" | "full" | "gate";
   autoRun?: boolean;
+  runToken?: number;
   onResult?: (
     status: HealthCheckStatus | null,
     counts?: { errors: number; warnings: number }
@@ -67,12 +68,20 @@ function relevantIssueCounts(result: HealthCheckResult, scope: HealthCheckScope)
   return result.issueTotals[scope];
 }
 
-export default function HealthCheckBanner({ scope, month, variant, onResult, autoRun = true }: Props) {
+export default function HealthCheckBanner({
+  scope,
+  month,
+  variant,
+  onResult,
+  autoRun = true,
+  runToken,
+}: Props) {
   const [result, setResult] = useState<HealthCheckResult | null>(null);
   const [requestState, setRequestState] = useState<"idle" | "loading" | "ready" | "failed">(
     autoRun ? "loading" : "idle"
   );
   const [now, setNow] = useState(0);
+  const [expanded, setExpanded] = useState(false); // NEW
   const requestId = useRef(0);
   const onResultRef = useRef(onResult);
 
@@ -112,6 +121,18 @@ export default function HealthCheckBanner({ scope, month, variant, onResult, aut
     };
   }, [autoRun, runCheck]);
 
+  const hasMounted = useRef(false);
+
+  useEffect(() => {
+    if (!hasMounted.current) {
+      hasMounted.current = true;
+      return;
+    }
+    if (runToken === undefined || runToken <= 0) return;
+    const timeout = window.setTimeout(() => void runCheck(), 0);
+    return () => window.clearTimeout(timeout);
+  }, [runToken, runCheck]);
+
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 60_000);
     return () => window.clearInterval(interval);
@@ -132,6 +153,45 @@ export default function HealthCheckBanner({ scope, month, variant, onResult, aut
   const omittedIssues = Math.max(0, totalIssues - visibleIssues.length);
   const errorCount = relevantTotals.errors;
   const warningCount = relevantTotals.warnings;
+
+  // NEW: the issues list is now reused in two places
+  const issuesList = visibleIssues.length > 0 && (
+    <div className="mt-2 space-y-3">
+      {(["error", "warning"] as const).map((severity) => {
+        const group = visibleIssues.filter((issue) => issue.severity === severity);
+        if (!group.length) return null;
+        return (
+          <div key={severity} className="space-y-2">
+            <h3 className="text-sm font-bold">
+              {severity === "error" ? "Problems to fix" : "Things to review"}
+            </h3>
+            {group.map((issue) => (
+              <article key={issue.id} className="rounded-xl border border-slate-300 bg-white p-4 text-slate-900">
+                <h4 className="text-sm font-bold">{issue.title}</h4>
+                <p className="mt-1 text-sm">{issue.explanation}</p>
+                <p className="mt-1 text-sm"><span className="font-semibold">How to fix:</span> {issue.howToFix}</p>
+                <p className="mt-1 text-sm text-slate-700">
+                  {issue.recordType === "invoice" ? "Invoice" : "Bill"}: {issue.recordLabel}
+                </p>
+                <Link
+                  href={issue.fixUrl}
+                  className="mt-3 inline-flex min-h-10 items-center rounded-lg bg-blue-700 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-800"
+                >
+                  Fix this
+                </Link>
+              </article>
+            ))}
+          </div>
+        );
+      })}
+      {omittedIssues > 0 && (
+        <p className="text-sm font-semibold">
+          and {omittedIssues} more {omittedIssues === 1 ? "issue" : "issues"}.{" "}
+          <Link href="/gst-filing" className="underline underline-offset-2">See all in GST Filing</Link>
+        </p>
+      )}
+    </div>
+  );
 
   return (
     <section
@@ -217,14 +277,20 @@ export default function HealthCheckBanner({ scope, month, variant, onResult, aut
               Add purchase bill
             </Link>
           )}
-          {variant === "compact" && requestState === "ready" && (
-            <Link
-              href="/gst-filing"
+
+          {/* CHANGED: was a Link to /gst-filing, now a button that opens the issues */}
+          {variant === "compact" && requestState === "ready" && totalIssues > 0 && (
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              aria-expanded={expanded}
+              aria-controls="health-check-details"
               className="inline-flex min-h-10 items-center rounded-lg px-3 py-2 text-sm font-semibold underline underline-offset-2"
             >
-              View details
-            </Link>
+              {expanded ? "Hide details" : "View details"}
+            </button>
           )}
+
           {requestState === "failed" && (
             <button
               type="button"
@@ -255,46 +321,21 @@ export default function HealthCheckBanner({ scope, month, variant, onResult, aut
         </div>
       </div>
 
+      {/* Full / gate variant (filing pages) - same as before */}
       {(variant === "full" || variant === "gate") && requestState === "ready" && result && result.status !== "empty" && (
         <details className="mt-4 border-t border-current/15 pt-3">
           <summary className="min-h-10 cursor-pointer py-2 text-sm font-semibold">
             {totalIssues ? "View check details" : "No problems were found"}
           </summary>
-          {visibleIssues.length > 0 && (
-            <div className="mt-2 space-y-3">
-              {(["error", "warning"] as const).map((severity) => {
-                const group = visibleIssues.filter((issue) => issue.severity === severity);
-                if (!group.length) return null;
-                return (
-                  <div key={severity} className="space-y-2">
-                    <h3 className="text-sm font-bold">
-                      {severity === "error" ? "Problems to fix" : "Things to review"}
-                    </h3>
-                    {group.map((issue) => (
-                      <article key={issue.id} className="rounded-xl border border-slate-300 bg-white p-4 text-slate-900">
-                        <h4 className="text-sm font-bold">{issue.title}</h4>
-                        <p className="mt-1 text-sm">{issue.explanation}</p>
-                        <p className="mt-1 text-sm"><span className="font-semibold">How to fix:</span> {issue.howToFix}</p>
-                        <p className="mt-1 text-sm text-slate-700">
-                          {issue.recordType === "invoice" ? "Invoice" : "Bill"}: {issue.recordLabel}
-                        </p>
-                        <Link
-                          href={issue.fixUrl}
-                          className="mt-3 inline-flex min-h-10 items-center rounded-lg bg-blue-700 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-800"
-                        >
-                          Fix this
-                        </Link>
-                      </article>
-                    ))}
-                  </div>
-                );
-              })}
-              {omittedIssues > 0 && (
-                <p className="text-sm font-semibold">and {omittedIssues} more {omittedIssues === 1 ? "issue" : "issues"}.</p>
-              )}
-            </div>
-          )}
+          {issuesList}
         </details>
+      )}
+
+      {/* NEW: compact variant (dashboard) - issues open here */}
+      {variant === "compact" && expanded && requestState === "ready" && result && totalIssues > 0 && (
+        <div id="health-check-details" className="mt-4 max-h-96 overflow-y-auto border-t border-current/15 pt-3 pr-1">
+          {issuesList}
+        </div>
       )}
     </section>
   );

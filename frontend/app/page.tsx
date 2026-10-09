@@ -175,7 +175,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Health Check & Return Filing Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="space-y-6">
         {/* Health Check Card */}
         <div className="space-y-3">
           <h2 className="text-base font-bold text-slate-900">Is my data ready to file?</h2>
@@ -183,7 +183,7 @@ export default function DashboardPage() {
         </div>
 
         {/* GST Filing Return Launchpad */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <FileSpreadsheet className="w-5 h-5 text-blue-600" />

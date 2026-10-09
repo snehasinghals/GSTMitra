@@ -33,6 +33,37 @@ export async function downloadFile(endpoint: string, filename: string): Promise<
   window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
 }
 
+export async function downloadFilePost(endpoint: string, body: unknown, filename: string): Promise<void> {
+  const token = typeof window !== "undefined" ? localStorage.getItem("gstmitra_token") : null;
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(60_000),
+  });
+
+  if (!response.ok) {
+    const contentType = response.headers.get("content-type") || "";
+    const message = contentType.includes("application/json")
+      ? (await response.json()).error
+      : `Download failed (${response.status}).`;
+    throw new Error(message || `Download failed (${response.status}).`);
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+}
+
 export async function apiFetch<T>(
   endpoint: string,
   options: RequestInit = {}

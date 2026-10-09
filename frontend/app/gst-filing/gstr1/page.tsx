@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { apiFetch, downloadFile } from "../../lib/api";
 import HealthCheckBanner, { type HealthCheckStatus } from "../../components/HealthCheckBanner";
+import HealthCheckGateDialog from "../../components/HealthCheckGateDialog";
+import { useHealthCheckGate } from "../../lib/useHealthCheckGate";
 import { Download, FileSpreadsheet } from "lucide-react";
 
 const formatCurrency = (amount: number) =>
@@ -39,17 +41,7 @@ export default function Gstr1SectionPage() {
     errors: number;
     warnings: number;
   }>({ status: null, errors: 0, warnings: 0 });
-  const healthCheckAllowsDownload =
-    healthCheck.status === "ok" || healthCheck.status === "warning";
-
-  const healthCheckMessage =
-    healthCheck.status === "empty"
-      ? "Add sales invoices first."
-      : healthCheck.status === "error"
-        ? `Fix ${healthCheck.errors} ${healthCheck.errors === 1 ? "problem" : "problems"} above to download.`
-        : healthCheck.status === "warning"
-          ? `${healthCheck.warnings} ${healthCheck.warnings === 1 ? "thing" : "things"} to review.`
-          : null;
+  const gate = useHealthCheckGate(healthCheck);
 
   useEffect(() => {
     let active = true;
@@ -83,6 +75,7 @@ export default function Gstr1SectionPage() {
             value={period}
             onChange={(e) => {
               setLoading(true);
+              gate.reset();
               setHealthCheck({ status: null, errors: 0, warnings: 0 });
               setPeriod(e.target.value);
             }}
@@ -95,20 +88,23 @@ export default function Gstr1SectionPage() {
         </div>
       </div>
 
-      <HealthCheckBanner
-        key={period}
-        scope="sales"
-        month={`${period.slice(2)}-${period.slice(0, 2)}`}
-        variant="full"
-        autoRun={false}
-        onResult={(status, counts) =>
-          setHealthCheck({
-            status,
-            errors: counts?.errors ?? 0,
-            warnings: counts?.warnings ?? 0,
-          })
-        }
-      />
+      <div id="health-check-section">
+        <HealthCheckBanner
+          key={period}
+          scope="sales"
+          month={`${period.slice(2)}-${period.slice(0, 2)}`}
+          variant="full"
+          autoRun={false}
+          runToken={gate.runToken}
+          onResult={(status, counts) =>
+            setHealthCheck({
+              status,
+              errors: counts?.errors ?? 0,
+              warnings: counts?.warnings ?? 0,
+            })
+          }
+        />
+      </div>
 
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
         <div className="flex items-center justify-between border-b pb-3">
@@ -203,26 +199,24 @@ export default function Gstr1SectionPage() {
               </p>
             </div>
             <button
-              disabled={!healthCheckAllowsDownload || loading}
+              disabled={loading}
               onClick={() =>
-                void downloadFile(
-                  `/filing/gstr1/excel?period=${period}`,
-                  `GSTR1_REVIEW_${gstr1Summary.gstin}_${period}.xlsx`
-                ).catch((error: unknown) => alert(error instanceof Error ? error.message : "Could not download the review workbook."))
+                gate.guard(() =>
+                  void downloadFile(
+                    `/filing/gstr1/excel?period=${period}`,
+                    `GSTR1_REVIEW_${gstr1Summary.gstin}_${period}.xlsx`
+                  ).catch((error: unknown) => alert(error instanceof Error ? error.message : "Could not download the review workbook."))
+                )
               }
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 font-bold text-white shadow-md transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Download className="h-4 w-4" />
               Download GSTR-1 review workbook (.xlsx)
             </button>
-            {healthCheckMessage && (
-              <p aria-live="polite" className={`text-sm font-semibold ${healthCheck.status === "warning" ? "text-amber-800" : "text-red-800"}`}>
-                {healthCheckMessage}
-              </p>
-            )}
           </div>
         )}
       </div>
+      <HealthCheckGateDialog {...gate.dialogProps} />
     </div>
   );
 }

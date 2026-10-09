@@ -154,6 +154,7 @@ export default function SalesPage() {
           return;
         }
         setHighlightedInvoice(data);
+        window.history.replaceState(null, "", window.location.pathname);
         void openInvoiceEditor(recordId, data);
       });
     }, 0);

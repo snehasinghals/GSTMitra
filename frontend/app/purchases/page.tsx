@@ -399,6 +399,7 @@ export default function PurchasesPage() {
           return;
         }
         setHighlightedBill(data);
+        window.history.replaceState(null, "", window.location.pathname);
         void openBillEditor(recordId, data);
       });
     }, 0);
