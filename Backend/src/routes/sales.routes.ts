@@ -100,6 +100,23 @@ router.get("/summary", authMiddleware, async (req: AuthenticatedRequest, res: Re
   }
 });
 
+router.get("/invoices/:id", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) return res.status(400).json({ error: "No active business" });
+
+    const invoice = await prisma.salesInvoice.findFirst({
+      where: { id: req.params.id as string, businessId },
+      include: { customer: true, items: true },
+    });
+    if (!invoice) return res.status(404).json({ error: "Sales invoice not found." });
+    res.json(invoice);
+  } catch (error) {
+    console.error("Fetch sales invoice error:", error);
+    res.status(500).json({ error: "Failed to fetch sales invoice." });
+  }
+});
+
 // Create sales invoice
 router.post("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -179,7 +196,7 @@ router.post("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: 
       if (discount < 0 || discount > qty * rate) {
         return res.status(400).json({ error: `Item ${i + 1}: invalid discount.` });
       }
-      if (!(gst >= 0 && gst <= 28)) {
+      if (!(gst >= 0 && gst <= 40)) {
         return res.status(400).json({ error: `Item ${i + 1}: invalid GST rate.` });
       }
     }
@@ -303,6 +320,155 @@ router.post("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: 
   } catch (error: any) {
     console.error("Create invoice error:", error);
     res.status(500).json({ error: "Failed to create sales invoice." });
+  }
+});
+
+router.put("/invoices/:id", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) return res.status(400).json({ error: "No active business" });
+
+    const existing = await prisma.salesInvoice.findFirst({
+      where: { id: req.params.id as string, businessId },
+      include: { items: true },
+    });
+    if (!existing) return res.status(404).json({ error: "Sales invoice not found." });
+
+    const {
+      customerId,
+      invoiceDate,
+      dueDate,
+      placeOfSupply,
+      notes,
+      items,
+      isReverseCharge = false,
+      applicablePercent: rawApplicablePercent,
+      ecomGstin: rawEcomGstin,
+    } = req.body;
+    if (!customerId || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: "Customer and at least one item are required." });
+    }
+    if (typeof isReverseCharge !== "boolean") {
+      return res.status(400).json({ error: "isReverseCharge must be a boolean." });
+    }
+    if (
+      rawApplicablePercent !== undefined &&
+      rawApplicablePercent !== null &&
+      rawApplicablePercent !== "" &&
+      (typeof rawApplicablePercent !== "number" || !Number.isFinite(rawApplicablePercent) || rawApplicablePercent < 0 || rawApplicablePercent > 100)
+    ) {
+      return res.status(400).json({ error: "Applicable % of Tax Rate must be a number between 0 and 100, or empty." });
+    }
+    let ecomGstin: string | null = null;
+    if (rawEcomGstin) {
+      if (typeof rawEcomGstin !== "string" || !/^[A-Z0-9]{15}$/i.test(rawEcomGstin)) {
+        return res.status(400).json({ error: "E-Commerce GSTIN must be exactly 15 uppercase letters or digits, or empty." });
+      }
+      ecomGstin = rawEcomGstin.toUpperCase();
+    }
+
+    for (const [index, item] of items.entries()) {
+      const quantity = Number(item.quantity);
+      const rate = Number(item.rate);
+      const gstRate = Number(item.gstRate ?? 18);
+      const discount = Number(item.discount ?? 0);
+      if (!item.description || !String(item.description).trim() || !(quantity > 0) || !(rate > 0) ||
+          quantity > MAX_QTY || rate > MAX_RATE || discount < 0 || discount > quantity * rate ||
+          !(gstRate >= 0 && gstRate <= 40)) {
+        return res.status(400).json({ error: `Item ${index + 1}: enter a valid description, quantity, rate, discount, and GST rate.` });
+      }
+    }
+
+    const parsedDate = new Date(invoiceDate);
+    if (Number.isNaN(parsedDate.getTime())) return res.status(400).json({ error: "Invalid invoice date." });
+    const parsedDueDate = dueDate ? new Date(dueDate) : null;
+    if (dueDate && (!parsedDueDate || Number.isNaN(parsedDueDate.getTime()) || parsedDueDate < parsedDate)) {
+      return res.status(400).json({ error: "Invalid due date." });
+    }
+    const customer = await prisma.customer.findFirst({ where: { id: String(customerId), businessId } });
+    if (!customer) return res.status(404).json({ error: "Customer not found." });
+    const business = await prisma.business.findUnique({ where: { id: businessId } });
+    if (!business) return res.status(404).json({ error: "Business profile not found." });
+
+    const pos = String(placeOfSupply || customer.stateCode || business.stateCode);
+    const intraState = business.stateCode === pos;
+    let subtotal = 0, totalCgst = 0, totalSgst = 0, totalIgst = 0, totalCess = 0;
+    const formattedItems = items.map((item: any) => {
+      const quantity = Number(item.quantity);
+      const rate = Number(item.rate);
+      const discount = Number(item.discount ?? 0);
+      const taxableValue = r2(Math.max(0, quantity * rate - discount));
+      const gstRate = Number(item.gstRate ?? 18);
+      const cessRate = Number(item.cessRate ?? 0);
+      const cgstAmount = intraState ? r2((taxableValue * (gstRate / 2)) / 100) : 0;
+      const sgstAmount = intraState ? cgstAmount : 0;
+      const igstAmount = intraState ? 0 : r2((taxableValue * gstRate) / 100);
+      const cessAmount = r2((taxableValue * cessRate) / 100);
+      subtotal += taxableValue;
+      totalCgst += cgstAmount;
+      totalSgst += sgstAmount;
+      totalIgst += igstAmount;
+      totalCess += cessAmount;
+      return {
+        itemId: item.itemId ? String(item.itemId) : null,
+        description: String(item.description).trim(),
+        hsnSacCode: item.hsnSacCode || "998313",
+        quantity,
+        unit: item.unit || "PCS",
+        rate,
+        discount,
+        taxableValue,
+        gstRate,
+        cgstAmount,
+        sgstAmount,
+        igstAmount,
+        cessRate,
+        cessAmount,
+        totalAmount: r2(taxableValue + cgstAmount + sgstAmount + igstAmount + cessAmount),
+      };
+    });
+    subtotal = r2(subtotal);
+    totalCgst = r2(totalCgst);
+    totalSgst = r2(totalSgst);
+    totalIgst = r2(totalIgst);
+    totalCess = r2(totalCess);
+    const beforeRound = subtotal + totalCgst + totalSgst + totalIgst + totalCess;
+    const totalAmount = Math.round(beforeRound);
+    if (totalAmount > MAX_INVOICE_TOTAL) return res.status(400).json({ error: "Invoice total is too large." });
+    if (totalAmount < existing.paidAmount - 0.01) {
+      return res.status(400).json({ error: "Updated total cannot be lower than the payments already recorded." });
+    }
+
+    const invoice = await prisma.$transaction(async (tx) => tx.salesInvoice.update({
+      where: { id: existing.id },
+      data: {
+        customerId: String(customerId),
+        invoiceDate: parsedDate,
+        dueDate: parsedDueDate,
+        supplyType: intraState ? "INTRA_STATE" : "INTER_STATE",
+        placeOfSupply: pos,
+        isReverseCharge,
+        applicablePercent: rawApplicablePercent === undefined || rawApplicablePercent === null || rawApplicablePercent === "" ? null : Number(rawApplicablePercent),
+        ecomGstin,
+        notes: notes ? String(notes) : null,
+        subtotal,
+        totalCgst,
+        totalSgst,
+        totalIgst,
+        totalCess,
+        roundOff: r2(totalAmount - beforeRound),
+        totalAmount,
+        items: {
+          deleteMany: {},
+          create: formattedItems,
+        },
+      },
+      include: { customer: true, items: true },
+    }));
+    res.json(invoice);
+  } catch (error: any) {
+    console.error("Update sales invoice error:", error);
+    res.status(500).json({ error: "Failed to update sales invoice." });
   }
 });
 

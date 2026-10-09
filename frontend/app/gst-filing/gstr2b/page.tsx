@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { apiFetch, downloadFile } from "../../lib/api";
+import HealthCheckBanner, { type HealthCheckStatus } from "../../components/HealthCheckBanner";
 import {
   FileSpreadsheet,
   Download,
@@ -53,6 +54,22 @@ type Gstr2bDrilldownResponse = { records: Gstr2bDrilldownRecord[] };
 export default function Gstr2bSectionPage() {
   const [activeTab, setActiveTab] = useState<"TAB1_BOOKS" | "TAB2_IMPORT" | "TAB3_RECONCILE">("TAB1_BOOKS");
   const [period, setPeriod] = useState("102026");
+  const [healthCheck, setHealthCheck] = useState<{
+    status: HealthCheckStatus | null;
+    errors: number;
+    warnings: number;
+  }>({ status: null, errors: 0, warnings: 0 });
+  const healthCheckAllowsActions =
+    healthCheck.status === "ok" || healthCheck.status === "warning";
+
+  const healthCheckMessage =
+    healthCheck.status === "empty"
+      ? "Add purchase bills first."
+      : healthCheck.status === "error"
+        ? `Fix ${healthCheck.errors} ${healthCheck.errors === 1 ? "problem" : "problems"} above to download.`
+        : healthCheck.status === "warning"
+          ? `${healthCheck.warnings} ${healthCheck.warnings === 1 ? "thing" : "things"} to review.`
+          : null;
 
   // Summary State
   const [summary, setSummary] = useState<Gstr2bSummary | null>(null);
@@ -117,6 +134,7 @@ export default function Gstr2bSectionPage() {
             value={period}
             onChange={(e) => {
               setLoading(true);
+              setHealthCheck({ status: null, errors: 0, warnings: 0 });
               setPeriod(e.target.value);
             }}
             className="px-3 py-2 border border-slate-300 rounded-xl text-xs font-bold text-blue-700 bg-white"
@@ -135,6 +153,21 @@ export default function Gstr2bSectionPage() {
           <strong>Important Label:</strong> Based on your own bills, not the official GSTR-2B. Final ITC depends on the portal.
         </span>
       </div>
+
+      <HealthCheckBanner
+        key={period}
+        scope="purchase"
+        month={`${period.slice(2)}-${period.slice(0, 2)}`}
+        variant="full"
+        autoRun={false}
+        onResult={(status, counts) =>
+          setHealthCheck({
+            status,
+            errors: counts?.errors ?? 0,
+            warnings: counts?.warnings ?? 0,
+          })
+        }
+      />
 
       {/* Three Tabs Header (Section 1.5.1) */}
       <div className="flex border-b border-slate-200 gap-4 text-xs font-bold bg-white px-4 pt-3 rounded-t-2xl shadow-xs">
@@ -187,12 +220,18 @@ export default function Gstr2bSectionPage() {
                 </span>
                 <button
                   onClick={() => void handleDownloadBooksWorkbook()}
-                  className="flex items-center gap-1.5 bg-white text-blue-900 font-bold text-xs px-3.5 py-1.5 rounded-lg shadow-sm hover:bg-blue-50 transition-all"
+                  disabled={!healthCheckAllowsActions || loading}
+                  className="flex items-center gap-1.5 bg-white text-blue-900 font-bold text-xs px-3.5 py-1.5 rounded-lg shadow-sm hover:bg-blue-50 transition-all disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Download className="w-3.5 h-3.5 text-blue-600" />
                   <span>Download Books Review (.xlsx)</span>
                 </button>
               </div>
+              {healthCheckMessage && (
+                <p aria-live="polite" className={`text-sm font-semibold ${healthCheck.status === "warning" ? "text-amber-200" : "text-amber-100"}`}>
+                  {healthCheckMessage}
+                </p>
+              )}
 
               <p className="text-base font-extrabold text-white">{summary.topBoxText}</p>
 
@@ -265,12 +304,18 @@ export default function Gstr2bSectionPage() {
           <div className="flex justify-end pt-2">
             <button
               onClick={() => setActiveTab("TAB2_IMPORT")}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-6 py-3 rounded-xl shadow-md transition-all"
+              disabled={!healthCheckAllowsActions || loading}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-6 py-3 rounded-xl shadow-md transition-all disabled:cursor-not-allowed disabled:opacity-50"
             >
               <span>Compare with official GSTR-2B</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
+          {healthCheckMessage && (
+            <p aria-live="polite" className={`text-right text-sm font-semibold ${healthCheck.status === "warning" ? "text-amber-800" : "text-red-800"}`}>
+              {healthCheckMessage}
+            </p>
+          )}
         </div>
       )}
 

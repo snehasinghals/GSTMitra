@@ -8,9 +8,10 @@ interface TooltipProps {
   text: string;
   example?: string;
   children?: React.ReactNode;
+  triggerClassName?: string;
 }
 
-export function Tooltip({ term, text, example, children }: TooltipProps) {
+export function Tooltip({ term, text, example, children, triggerClassName }: TooltipProps) {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLSpanElement>(null);
 
@@ -50,7 +51,7 @@ export function Tooltip({ term, text, example, children }: TooltipProps) {
           if (e.key === "Escape") setIsOpen(false);
         }}
         aria-label={`Meaning of ${term}`}
-        className="cursor-help font-medium text-blue-800 bg-blue-50 px-1 rounded border-b border-dashed border-blue-500 hover:bg-blue-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400"
+        className={`cursor-help font-medium text-blue-800 bg-blue-50 px-1 rounded border-b border-dashed border-blue-500 hover:bg-blue-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 ${triggerClassName ?? ""}`}
       >
         {children ?? term}
       </span>

@@ -2,16 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import { apiFetch } from "../lib/api";
-import { Tooltip } from "../components/Tooltip";
+import HealthCheckBanner from "../components/HealthCheckBanner";
 import Link from "next/link";
 import {
   FileSpreadsheet,
-  CheckCircle2,
-  AlertTriangle,
-  HelpCircle,
   ArrowRight,
-  FileText,
-  ShieldAlert,
 } from "lucide-react";
 
 export default function GstFilingHubPage() {
@@ -19,32 +14,20 @@ export default function GstFilingHubPage() {
 
   const [gstr1Summary, setGstr1Summary] = useState<any>(null);
   const [gstr3bSummary, setGstr3bSummary] = useState<any>(null);
-  const [healthCheck, setHealthCheck] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
 
   const loadFilingData = async () => {
-    setLoading(true);
-    const hcPromise = apiFetch<any>(`/healthcheck/run?period=${period}`, {
-      signal: AbortSignal.timeout(65_000),
-    });
     const [g1Res, g3Res] = await Promise.all([
       apiFetch<any>(`/filing/gstr1/summary?period=${period}`),
       apiFetch<any>(`/filing/gstr3b/summary?period=${period}`),
     ]);
-
     if (g1Res.data) setGstr1Summary(g1Res.data);
     if (g3Res.data) setGstr3bSummary(g3Res.data);
-    setLoading(false);
-
-    const hcRes = await hcPromise;
-    if (hcRes.data) setHealthCheck(hcRes.data);
+    if (g3Res.data) setGstr3bSummary(g3Res.data);
   };
 
   useEffect(() => {
     loadFilingData();
   }, [period]);
-
-  const mustFixCount = healthCheck?.summary?.mustFixCount || 0;
 
   return (
     <div className="space-y-8 animate-fadeIn">
@@ -56,7 +39,7 @@ export default function GstFilingHubPage() {
             GST Return Preparation Hub
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Review return summaries and pre-filing checks. These are working figures, not GST portal upload files.
+            Review return summaries and data checks. These are working figures, not GST portal upload files.
           </p>
         </div>
 
@@ -74,44 +57,13 @@ export default function GstFilingHubPage() {
         </div>
       </div>
 
-      {/* Pre-filing Health Check Banner (Section 2.1) */}
-      <div className={`p-6 rounded-2xl border shadow-xs space-y-4 ${mustFixCount > 0 ? "bg-red-50/70 border-red-200" : "bg-emerald-50/70 border-emerald-200"}`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {mustFixCount > 0 ? (
-              <ShieldAlert className="w-5 h-5 text-red-600" />
-            ) : (
-              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-            )}
-            <h2 className={`font-bold text-base ${mustFixCount > 0 ? "text-red-900" : "text-emerald-900"}`}>
-              Pre-filing Checks
-            </h2>
-          </div>
-          <span className={`text-3xs font-extrabold px-3 py-1 rounded-full ${mustFixCount > 0 ? "bg-red-200 text-red-900" : "bg-emerald-200 text-emerald-900"}`}>
-            {mustFixCount > 0 ? `${mustFixCount} Issues to Review` : "No issues found by these checks"}
-          </span>
-        </div>
-
-        {healthCheck?.results && healthCheck.results.length > 0 && (
-          <div className="space-y-2">
-            {healthCheck.results.map((item: any) => (
-              <div key={item.id} className="p-3 bg-white rounded-xl border border-slate-200 text-xs space-y-1">
-                <div className="flex items-center justify-between font-bold text-slate-900">
-                  <span className="flex items-center gap-1.5 text-red-700">
-                    <AlertTriangle className="w-4 h-4 text-red-600" />
-                    {item.title}
-                  </span>
-                  <span className="text-3xs font-mono bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
-                    {item.category}
-                  </span>
-                </div>
-                <p className="text-slate-700">{item.issue}</p>
-                <p className="text-3xs text-blue-700 font-semibold">Recommendation: {item.recommendation}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <HealthCheckBanner
+        key={period}
+        scope="all"
+        month={`${period.slice(2)}-${period.slice(0, 2)}`}
+        variant="full"
+        autoRun={false}
+      />
 
       {/* Return Generation Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

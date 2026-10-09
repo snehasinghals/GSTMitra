@@ -20,7 +20,7 @@ import vendorsRoutes from "./routes/vendors.routes.js";
 import salesRoutes from "./routes/sales.routes.js";
 import purchasesRoutes from "./routes/purchases.routes.js";
 import rulesRoutes from "./routes/rules.routes.js";
-import healthcheckRoutes from "./routes/healthcheck.routes.js";
+import healthCheckRoutes from "./routes/health-check.routes.js";
 import filingRoutes from "./routes/filing.routes.js";
 
 const app = express();
@@ -41,7 +41,7 @@ app.use("/api/vendors", vendorsRoutes);
 app.use("/api/sales", salesRoutes);
 app.use("/api/purchases", purchasesRoutes);
 app.use("/api/rules", rulesRoutes);
-app.use("/api/healthcheck", healthcheckRoutes);
+app.use("/api/health-check", healthCheckRoutes);
 app.use("/api/filing", filingRoutes);
 
 // Catch-all 404 handler for API routes (returns JSON, not HTML)

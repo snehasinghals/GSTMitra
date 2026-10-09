@@ -4,32 +4,30 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "./context/AuthContext";
 import { apiFetch } from "./lib/api";
 import { Tooltip } from "./components/Tooltip";
+import HealthCheckBanner from "./components/HealthCheckBanner";
 import Link from "next/link";
 import {
   TrendingUp,
   ShoppingBag,
   CreditCard,
   FileSpreadsheet,
-  CheckCircle2,
-  AlertTriangle,
   ArrowRight,
   PlusCircle,
-  HelpCircle,
   FileText,
   GraduationCap,
 } from "lucide-react";
 
 export default function DashboardPage() {
   const { user, business } = useAuth();
+  const now = new Date();
+  const healthCheckMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
   const [salesSummary, setSalesSummary] = useState<any>(null);
   const [expenseSummary, setExpenseSummary] = useState<any>(null);
-  const [healthCheck, setHealthCheck] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   const loadDashboardData = async () => {
     setLoading(true);
-    const hcPromise = apiFetch<any>("/healthcheck/run?period=102026");
     const [salesRes, expRes] = await Promise.all([
       apiFetch<any>("/sales/summary"),
       apiFetch<any>("/purchases/expenses-summary"),
@@ -38,9 +36,6 @@ export default function DashboardPage() {
     if (salesRes.data) setSalesSummary(salesRes.data);
     if (expRes.data) setExpenseSummary(expRes.data);
     setLoading(false);
-
-    const hcRes = await hcPromise;
-    if (hcRes.data) setHealthCheck(hcRes.data);
   };
 
   useEffect(() => {
@@ -58,7 +53,7 @@ export default function DashboardPage() {
           </div>
           <h1 className="text-2xl font-extrabold text-slate-900">Welcome to GSTMitra</h1>
           <p className="text-xs text-slate-600 leading-relaxed">
-            Prepare and file GST returns step-by-step in plain words without a CA and without fear.
+            Prepare and file GST returns step-by-step in plain words without fear.
           </p>
 
           <div className="pt-2 flex flex-col gap-2">
@@ -157,8 +152,9 @@ export default function DashboardPage() {
               <p className="text-xs text-blue-200">
                 <Tooltip
                   term="Eligible ITC"
-                  text="Input Tax Credit is the tax you paid on your business purchases. You can reduce this amount from your total tax payable."
+                  text="ITC is tax you paid on business purchases that you may be able to claim back and subtract from your tax bill."
                   example="Paid ₹60k tax on laptop stock -> reduce ₹60k from tax bill!"
+                  triggerClassName="!bg-transparent !px-0 !text-blue-200 !border-0 hover:!bg-transparent"
                 />
               </p>
               <p className="text-2xl font-extrabold text-emerald-400 mt-1">₹{itcAvailable.toLocaleString("en-IN")}</p>
@@ -180,51 +176,10 @@ export default function DashboardPage() {
 
       {/* Health Check & Return Filing Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Pre-filing Health Check Card (Section 2.1) */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-blue-600" />
-              Pre-filing Health Check
-            </h2>
-            <span className="text-3xs bg-slate-100 text-slate-700 font-bold px-2 py-0.5 rounded-full">
-              Automatic Rules
-            </span>
-          </div>
-
-          <p className="text-xs text-slate-500">
-            Checks your sales & purchases against official GST law rules before generating files.
-          </p>
-
-          {healthCheck ? (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
-                <span className="font-semibold text-red-700 flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 text-red-600" />
-                  Must Fix (Errors)
-                </span>
-                <span className="font-extrabold text-red-700 text-sm">{healthCheck.summary.mustFixCount}</span>
-              </div>
-
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
-                <span className="font-semibold text-amber-700 flex items-center gap-1.5">
-                  <HelpCircle className="w-4 h-4 text-amber-600" />
-                  Should Check (Warnings)
-                </span>
-                <span className="font-extrabold text-amber-700 text-sm">{healthCheck.summary.shouldCheckCount}</span>
-              </div>
-
-              <Link
-                href="/gst-filing"
-                className="w-full flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs py-2.5 rounded-xl border border-blue-200 transition-all"
-              >
-                <span>Run Full Health Audit</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-          ) : (
-            <div className="text-xs text-slate-400 py-4 text-center">Loading health status...</div>
-          )}
+        {/* Health Check Card */}
+        <div className="space-y-3">
+          <h2 className="text-base font-bold text-slate-900">Is my data ready to file?</h2>
+          <HealthCheckBanner scope="all" month={healthCheckMonth} variant="compact" />
         </div>
 
         {/* GST Filing Return Launchpad */}
@@ -239,18 +194,18 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 items-stretch">
             {/* GSTR-1 */}
-            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 hover:border-blue-300 transition-all space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-xs text-slate-900">GSTR-1</span>
-                <span className="text-3xs bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-md">Due 11th Oct</span>
+            <div className="flex h-full flex-col rounded-xl border border-slate-200 bg-slate-50 p-4 transition-all hover:border-blue-300">
+              <div className="flex items-center justify-between gap-2">
+                <span className="whitespace-nowrap font-bold text-xs text-slate-900">GSTR-1</span>
+                <span className="whitespace-nowrap rounded-md bg-blue-100 px-2.5 py-1 text-3xs font-bold text-blue-800">Due 11th Oct</span>
               </div>
-              <p className="text-3xs text-slate-500">Sales Invoices & Tax Output</p>
-              <div className="pt-2">
+              <p className="mt-2 text-3xs text-slate-500">Sales Invoices &amp; Tax Output</p>
+              <div className="mt-auto pt-4">
                 <Link
                   href="/gst-filing/gstr1"
-                  className="block text-center text-xs font-bold bg-white text-slate-800 py-1.5 rounded-lg border border-slate-300 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all"
+                  className="block w-full rounded-lg border border-slate-300 bg-white py-2 text-center text-xs font-bold text-slate-800 transition-all hover:border-blue-600 hover:bg-blue-600 hover:text-white"
                 >
                   Generate Files
                 </Link>
@@ -258,16 +213,16 @@ export default function DashboardPage() {
             </div>
 
             {/* GSTR-3B */}
-            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 hover:border-blue-300 transition-all space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-xs text-slate-900">GSTR-3B</span>
-                <span className="text-3xs bg-indigo-100 text-indigo-800 font-bold px-2 py-0.5 rounded-md">Due 20th Oct</span>
+            <div className="flex h-full flex-col rounded-xl border border-slate-200 bg-slate-50 p-4 transition-all hover:border-blue-300">
+              <div className="flex items-center justify-between gap-2">
+                <span className="whitespace-nowrap font-bold text-xs text-slate-900">GSTR-3B</span>
+                <span className="whitespace-nowrap rounded-md bg-indigo-100 px-2.5 py-1 text-3xs font-bold text-indigo-800">Due 20th Oct</span>
               </div>
-              <p className="text-3xs text-slate-500">Sales, Purchase & ITC Summary</p>
-              <div className="pt-2">
+              <p className="mt-2 text-3xs text-slate-500">Sales, Purchase &amp; ITC Summary</p>
+              <div className="mt-auto pt-4">
                 <Link
                   href="/gst-filing/gstr3b"
-                  className="block text-center text-xs font-bold bg-white text-slate-800 py-1.5 rounded-lg border border-slate-300 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all"
+                  className="block w-full rounded-lg border border-slate-300 bg-white py-2 text-center text-xs font-bold text-slate-800 transition-all hover:border-indigo-600 hover:bg-indigo-600 hover:text-white"
                 >
                   Generate Files
                 </Link>
@@ -275,16 +230,16 @@ export default function DashboardPage() {
             </div>
 
             {/* GSTR-2B Books */}
-            <div className="p-4 rounded-xl border border-blue-200 bg-blue-50/50 hover:border-blue-400 transition-all space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-xs text-blue-900">GSTR-2B (Books)</span>
-                <span className="text-3xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-md">Books Version</span>
+            <div className="flex h-full flex-col rounded-xl border border-blue-200 bg-blue-50/50 p-4 transition-all hover:border-blue-400">
+              <div className="flex items-center justify-between gap-2">
+                <span className="whitespace-nowrap font-bold text-xs text-blue-900">GSTR-2B (Books)</span>
+                <span className="whitespace-nowrap rounded-md bg-emerald-100 px-2.5 py-1 text-3xs font-bold text-emerald-800">From Books</span>
               </div>
-              <p className="text-3xs text-blue-800">Inward Purchase ITC Report</p>
-              <div className="pt-2">
+              <p className="mt-2 text-3xs text-blue-800">Inward Purchase ITC Report</p>
+              <div className="mt-auto pt-4">
                 <Link
                   href="/gst-filing/gstr2b"
-                  className="block text-center text-xs font-bold bg-blue-600 text-white py-1.5 rounded-lg shadow-sm hover:bg-blue-700 transition-all"
+                  className="block w-full rounded-lg bg-blue-600 py-2 text-center text-xs font-bold text-white shadow-sm transition-all hover:bg-blue-700"
                 >
                   View 2B Section
                 </Link>
@@ -308,7 +263,7 @@ export default function DashboardPage() {
               </span>
             </div>
             <p className="text-xs text-slate-600 mt-0.5">
-              Read our step-by-step plain words roadmap, simulate your monthly tax & ITC, and avoid common traps without a CA.
+              Read our step-by-step plain words roadmap, simulate your monthly tax & ITC, and avoid common traps.
             </p>
           </div>
         </div>

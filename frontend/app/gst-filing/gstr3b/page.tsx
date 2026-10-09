@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { apiFetch, downloadFile } from "../../lib/api";
+import HealthCheckBanner, { type HealthCheckStatus } from "../../components/HealthCheckBanner";
 import { Download, FileSpreadsheet } from "lucide-react";
 
 const formatCurrency = (amount: number) =>
@@ -42,8 +43,6 @@ type Gstr3bSummary = {
     plainSummary: string;
   };
 };
-
-type HealthCheck = { summary?: { mustFixCount?: number } };
 
 type SupplementField = { key: string; label: string; group: string };
 const SUPPLEMENT_FIELDS: SupplementField[] = [
@@ -97,8 +96,23 @@ type SupplementResponse = {
 
 export default function Gstr3bSectionPage() {
   const [period, setPeriod] = useState("102026");
+  const [healthCheck, setHealthCheck] = useState<{
+    status: HealthCheckStatus | null;
+    errors: number;
+    warnings: number;
+  }>({ status: null, errors: 0, warnings: 0 });
+  const healthCheckAllowsActions =
+    healthCheck.status === "ok" || healthCheck.status === "warning";
+
+  const healthCheckMessage =
+    healthCheck.status === "empty"
+      ? "Add invoices or bills first."
+      : healthCheck.status === "error"
+        ? `Fix ${healthCheck.errors} ${healthCheck.errors === 1 ? "problem" : "problems"} above to download.`
+        : healthCheck.status === "warning"
+          ? `${healthCheck.warnings} ${healthCheck.warnings === 1 ? "thing" : "things"} to review.`
+          : null;
   const [gstr3bSummary, setGstr3bSummary] = useState<Gstr3bSummary | null>(null);
-  const [healthCheck, setHealthCheck] = useState<HealthCheck | null>(null);
   const [loading, setLoading] = useState(true);
   const [supplementValues, setSupplementValues] = useState<Record<string, string>>({});
   const [supplementConfirmed, setSupplementConfirmed] = useState(false);
@@ -116,9 +130,6 @@ export default function Gstr3bSectionPage() {
       setSupplementSaved(false);
       setSupplementConfirmed(false);
       setSupplementError("");
-      const hcPromise = apiFetch<HealthCheck>(`/healthcheck/run?period=${period}`, {
-        signal: AbortSignal.timeout(65_000),
-      });
       const [g3Res, supplementRes] = await Promise.all([
         apiFetch<Gstr3bSummary>(`/filing/gstr3b/summary?period=${period}`),
         apiFetch<SupplementResponse>(`/filing/gstr3b/adjustments?period=${period}`),
@@ -142,8 +153,6 @@ export default function Gstr3bSectionPage() {
       if (active) setSupplementLoading(false);
       if (active) setLoading(false);
 
-      const hcRes = await hcPromise;
-      if (active && hcRes.data) setHealthCheck(hcRes.data);
     };
 
     void loadData();
@@ -172,8 +181,6 @@ export default function Gstr3bSectionPage() {
     setSupplementSaved(data?.confirmed === true);
   };
 
-  const mustFixCount = healthCheck?.summary?.mustFixCount || 0;
-
   return (
     <div className="space-y-6 animate-fadeIn">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
@@ -192,6 +199,7 @@ export default function Gstr3bSectionPage() {
             value={period}
             onChange={(e) => {
               setLoading(true);
+              setHealthCheck({ status: null, errors: 0, warnings: 0 });
               setPeriod(e.target.value);
             }}
             className="px-3 py-2 border border-slate-300 rounded-xl text-xs font-bold text-blue-700 bg-white"
@@ -202,6 +210,21 @@ export default function Gstr3bSectionPage() {
           </select>
         </div>
       </div>
+
+      <HealthCheckBanner
+        key={period}
+        scope="all"
+        month={`${period.slice(2)}-${period.slice(0, 2)}`}
+        variant="full"
+        autoRun={false}
+        onResult={(status, counts) =>
+          setHealthCheck({
+            status,
+            errors: counts?.errors ?? 0,
+            warnings: counts?.warnings ?? 0,
+          })
+        }
+      />
 
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
         <div className="flex items-center justify-between border-b pb-3">
@@ -365,11 +388,16 @@ export default function Gstr3bSectionPage() {
                   <button
                     type="button"
                     onClick={() => void saveSupplement()}
-                    disabled={!supplementConfirmed || savingSupplement}
+                    disabled={!supplementConfirmed || savingSupplement || !healthCheckAllowsActions}
                     className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {savingSupplement ? "Applying values…" : "Use calculated values"}
                   </button>
+                  {healthCheckMessage && (
+                    <p aria-live="polite" className={`text-sm font-semibold ${healthCheck.status === "warning" ? "text-amber-800" : "text-red-800"}`}>
+                      {healthCheckMessage}
+                    </p>
+                  )}
                   <button
                     type="button"
                     onClick={() => setEditDetailsOpen((open) => !open)}
@@ -431,7 +459,7 @@ export default function Gstr3bSectionPage() {
             </div>
 
             <button
-              disabled={!supplementSaved || supplementLoading}
+              disabled={!supplementSaved || supplementLoading || !healthCheckAllowsActions}
               onClick={() =>
                 void downloadFile(
                   `/filing/gstr3b/excel?period=${period}`,
@@ -443,9 +471,9 @@ export default function Gstr3bSectionPage() {
               <Download className="h-4 w-4" />
               {supplementSaved ? "Download GSTR-3B review workbook (.xlsx)" : "Confirm values above to enable download"}
             </button>
-            {mustFixCount > 0 && (
-              <p className="text-3xs text-red-600 font-semibold">
-                Review and resolve {mustFixCount} health-check issue(s) before relying on this summary.
+            {healthCheckMessage && (
+              <p aria-live="polite" className={`text-sm font-semibold ${healthCheck.status === "warning" ? "text-amber-800" : "text-red-800"}`}>
+                {healthCheckMessage}
               </p>
             )}
           </div>

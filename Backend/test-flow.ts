@@ -147,11 +147,11 @@ async function runTests() {
   console.log("6. Add Purchase Bill Result:", billRes.status, billData.billNumber, `Eligible ITC: ${billData.isItcEligible}`);
 
   // 7. Run Health Check
-  const hcRes = await fetch(`${API_BASE}/healthcheck/run?period=102026`, {
+  const hcRes = await fetch(`${API_BASE}/health-check?month=2026-10`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   const hcData: any = await hcRes.json();
-  console.log("7. Health Check Result:", hcRes.status, "Must Fix Errors:", hcData.summary?.mustFixCount);
+  console.log("7. Health Check Result:", hcRes.status, "Errors:", hcData.counts?.errors);
 
   // 8. Fetch GSTR-2B Books Summary
   const g2bRes = await fetch(`${API_BASE}/filing/gstr2b-books/summary?period=102026`, {

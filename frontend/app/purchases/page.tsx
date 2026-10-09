@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import { apiFetch, API_BASE_URL } from "../lib/api";
 import { useApi } from "../lib/useApi";
 import { INDIAN_STATES, stateNameFromCode, GSTIN_REGEX } from "../lib/states";
@@ -46,11 +46,37 @@ type ItcPaymentRisk = {
   level: "WARNING" | "REVERSE_NOW";
 };
 
-type CessEditItem = {
+type FocusedBill = {
   id: string;
-  description: string;
-  taxableValue: number;
-  cessAmount: string;
+  billNumber: string;
+  billDate: string;
+  vendor?: { name: string; gstin?: string | null } | null;
+  category: string;
+  vendorId: string;
+  isReverseCharge: boolean;
+  isItcEligible: boolean;
+  itcIneligibilityReason?: string | null;
+  totalCgst: number;
+  totalSgst: number;
+  totalIgst: number;
+  totalCess: number;
+  totalAmount: number;
+  paidAmount: number;
+  status: string;
+  dueDate?: string | null;
+  items: Array<{
+    id?: string;
+    itemId?: string | null;
+    description: string;
+    hsnSacCode: string;
+    quantity: number;
+    unit?: string;
+    rate: number;
+    gstRate: number;
+    cessAmount: number;
+    cessRate: number;
+    isItcEligible?: boolean;
+  }>;
 };
 
 // Local date (not UTC) so early-morning entries in India don't get yesterday's date.
@@ -69,31 +95,35 @@ export default function PurchasesPage() {
   const riskQ = useApi<ItcPaymentRisk[]>("/purchases/itc-payment-risk");
 
   const bills = billsQ.data ?? [];
+  const [highlightedBill, setHighlightedBill] = useState<FocusedBill | null>(null);
   const vendors = vendorsQ.data ?? [];
   const expenseSummary = summaryQ.data;
+  const displayBills =
+    highlightedBill && !bills.some((bill) => bill.id === highlightedBill.id)
+      ? [...bills, highlightedBill]
+      : bills;
 
   // Modals
   const [showVendorModal, setShowVendorModal] = useState(false);
   const [showBillModal, setShowBillModal] = useState(false);
+  const [editingBillId, setEditingBillId] = useState<string | null>(null);
   const [paymentBill, setPaymentBill] = useState<PaymentBill | null>(null);
-  const [cessBill, setCessBill] = useState<{ id: string; billNumber: string } | null>(null);
-  const [cessEditItems, setCessEditItems] = useState<CessEditItem[]>([]);
 
   // Saving state (UI feedback) + refs (instant double-click lock)
   const [savingVendor, setSavingVendor] = useState(false);
   const [savingBill, setSavingBill] = useState(false);
   const [savingPayment, setSavingPayment] = useState(false);
-  const [savingCess, setSavingCess] = useState(false);
   const [downloadingBillId, setDownloadingBillId] = useState<string | null>(null);
   const vendorLock = useRef(false);
   const billLock = useRef(false);
   const paymentLock = useRef(false);
+  const quickActionHandled = useRef(false);
 
   const [toast, setToast] = useState("");
-  const showToast = (msg: string) => {
+  const showToast = useCallback((msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(""), 3000);
-  };
+  }, []);
 
   // Vendor form
   const [vName, setVName] = useState("");
@@ -116,12 +146,17 @@ export default function PurchasesPage() {
   const [paymentMode, setPaymentMode] = useState("UPI");
   const [paymentReference, setPaymentReference] = useState("");
   const [paymentError, setPaymentError] = useState("");
-  const [cessError, setCessError] = useState("");
 
   // ITC can only be claimed on bills from GST-registered vendors.
   const selectedVendor = vendors.find((v) => v.id === selectedVendorId);
   const vendorRegistered = !!selectedVendor?.gstin;
   const itcClaimable = vendorRegistered && isItcEligible;
+
+  const updateBillItem = (index: number, patch: Record<string, unknown>) => {
+    setBillItems((previous) => previous.map((item, itemIndex) =>
+      itemIndex === index ? { ...item, ...patch } : item
+    ));
+  };
 
   const handleDownloadBill = async (billId: string, billNumber: string) => {
     if (downloadingBillId) return;
@@ -203,15 +238,19 @@ export default function PurchasesPage() {
     e.preventDefault();
     if (billLock.current) return;
     if (!selectedVendorId || !billNum.trim()) return alert("Vendor and Bill Number are required.");
-    if (!(billItems[0].rate > 0)) return alert("Taxable amount must be greater than 0.");
+    if (!billItems.every((item) =>
+      String(item.description || "").trim() && Number(item.rate) > 0 && Number(item.quantity) > 0
+    )) return alert("Each bill line needs a description, quantity, and taxable amount greater than 0.");
     if (billDueDate && billDueDate < billDate) return alert("Due date cannot be before the bill date.");
 
     billLock.current = true;
     setSavingBill(true);
 
     try {
-      const { data, error } = await apiFetch<any>("/purchases/bills", {
-        method: "POST",
+      const { data, error } = await apiFetch<any>(
+        editingBillId ? `/purchases/bills/${editingBillId}` : "/purchases/bills",
+        {
+        method: editingBillId ? "PUT" : "POST",
         body: JSON.stringify({
           vendorId: selectedVendorId,
           billNumber: billNum.trim(),
@@ -223,7 +262,8 @@ export default function PurchasesPage() {
           itcIneligibilityReason: itcClaimable ? "" : vendorRegistered ? itcReason : "Unregistered vendor",
           items: billItems,
         }),
-      });
+        }
+      );
 
       if (error) {
         alert(error);
@@ -234,7 +274,12 @@ export default function PurchasesPage() {
       const created: any = (data as any)?.bill ?? data;
       if (created?.id) {
         billsQ.mutate(
-          (prev) => [{ ...created, vendor: created.vendor ?? selectedVendor }, ...(prev ?? [])],
+          (prev) => {
+            const updated = { ...created, vendor: created.vendor ?? selectedVendor };
+            return prev?.some((bill) => bill.id === updated.id)
+              ? prev.map((bill) => bill.id === updated.id ? updated : bill)
+              : [updated, ...(prev ?? [])];
+          },
           { revalidate: true }
         );
       } else {
@@ -244,6 +289,7 @@ export default function PurchasesPage() {
       riskQ.mutate();
 
       setShowBillModal(false);
+      setEditingBillId(null);
       setTab("BILLS");
       setBillNum("");
       setBillDueDate("");
@@ -251,11 +297,11 @@ export default function PurchasesPage() {
       setIsReverseCharge(false);
       setIsItcEligible(true);
       setBillItems([{ ...EMPTY_ITEM }]);
-      if (created?.id && created?.billNumber) {
+      if (!editingBillId && created?.id && created?.billNumber) {
         showToast("Purchase bill saved. Your bill PDF is downloading.");
         void handleDownloadBill(created.id, created.billNumber);
       } else {
-        showToast("Purchase bill added successfully");
+        showToast(editingBillId ? "Purchase bill details updated" : "Purchase bill added successfully");
       }
     } finally {
       billLock.current = false;
@@ -304,45 +350,84 @@ export default function PurchasesPage() {
     }
   };
 
-  const handleEditCess = async (billId: string) => {
-    const { data, error } = await apiFetch<{ id: string; billNumber: string; items: Array<{ id: string; description: string; taxableValue: number; cessAmount: number }> }>(
-      `/purchases/bills/${billId}`
-    );
+  const openBillEditor = useCallback(async (billId: string, loadedBill?: FocusedBill) => {
+    const { data, error } = loadedBill
+      ? { data: loadedBill, error: null }
+      : await apiFetch<FocusedBill>(`/purchases/bills/${encodeURIComponent(billId)}`);
     if (error || !data) {
-      alert(error || "Could not load purchase bill tax details.");
+      showToast(error || "Could not load this purchase bill for editing.");
       return;
     }
-    setCessBill({ id: data.id, billNumber: data.billNumber });
-    setCessEditItems(
-      data.items.map((item) => ({
-        id: item.id,
-        description: item.description,
-        taxableValue: item.taxableValue,
-        cessAmount: String(item.cessAmount),
-      }))
-    );
-    setCessError("");
-  };
+    setEditingBillId(data.id);
+    setSelectedVendorId(data.vendorId);
+    setBillNum(data.billNumber);
+    setBillDate(String(data.billDate).slice(0, 10));
+    setBillDueDate(data.dueDate ? String(data.dueDate).slice(0, 10) : "");
+    setCategory(data.category || "STOCK");
+    setIsReverseCharge(Boolean(data.isReverseCharge));
+    setIsItcEligible(Boolean(data.isItcEligible));
+    setItcReason(data.itcIneligibilityReason || "");
+    setBillItems(data.items.map((item) => ({
+      id: item.id,
+      itemId: item.itemId || "",
+      description: item.description,
+      hsnSacCode: item.hsnSacCode,
+      quantity: item.quantity,
+      rate: item.rate,
+      gstRate: item.gstRate,
+      cessAmount: item.cessAmount,
+      cessRate: item.cessRate,
+      isItcEligible: item.isItcEligible,
+    })));
+    setTab("BILLS");
+    setShowBillModal(true);
+  }, [showToast]);
 
-  const handleSaveCess = async () => {
-    if (!cessBill || savingCess) return;
-    setCessError("");
-    setSavingCess(true);
-    const { error } = await apiFetch<unknown>(`/purchases/bills/${cessBill.id}/cess`, {
-      method: "PATCH",
-      body: JSON.stringify({
-        items: cessEditItems.map((item) => ({ id: item.id, cessAmount: Number(item.cessAmount || 0) })),
-      }),
-    });
-    setSavingCess(false);
-    if (error) {
-      setCessError(error);
-      return;
-    }
-    await Promise.all([billsQ.mutate(), summaryQ.mutate(), riskQ.mutate()]);
-    setCessBill(null);
-    showToast("Purchase bill cess details updated");
-  };
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const recordId = params.get("healthCheckRecord");
+    if (!recordId) return;
+
+    let active = true;
+    const timeout = window.setTimeout(() => {
+      setTab("BILLS");
+      void apiFetch<FocusedBill>(`/purchases/bills/${encodeURIComponent(recordId)}`).then(({ data, error }) => {
+        if (!active) return;
+        if (!data) {
+          setToast(error || "Could not open this purchase bill.");
+          window.setTimeout(() => setToast(""), 3000);
+          return;
+        }
+        setHighlightedBill(data);
+        void openBillEditor(recordId, data);
+      });
+    }, 0);
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
+  }, [openBillEditor]);
+
+  useEffect(() => {
+    if (quickActionHandled.current || vendorsQ.loading) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("addBill") !== "1") return;
+
+    const timeout = window.setTimeout(() => {
+      if (quickActionHandled.current) return;
+      quickActionHandled.current = true;
+      window.history.replaceState(null, "", window.location.pathname);
+      const loadedVendors = vendorsQ.data ?? [];
+      if (loadedVendors.length === 0) {
+        setShowVendorModal(true);
+        return;
+      }
+      setSelectedVendorId(loadedVendors[0].id);
+      setIsItcEligible(true);
+      setShowBillModal(true);
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, [vendorsQ.data, vendorsQ.loading]);
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -375,6 +460,15 @@ export default function PurchasesPage() {
                 setShowVendorModal(true);
                 return;
               }
+              setEditingBillId(null);
+              setBillNum("");
+              setBillDate(todayStr());
+              setBillDueDate("");
+              setCategory("STOCK");
+              setIsReverseCharge(false);
+              setIsItcEligible(true);
+              setItcReason("");
+              setBillItems([{ ...EMPTY_ITEM }]);
               setSelectedVendorId(vendors[0]?.id || "");
               setIsItcEligible(true);
               setShowBillModal(true);
@@ -471,7 +565,7 @@ export default function PurchasesPage() {
             <TableSkeleton />
           ) : billsQ.error && bills.length === 0 ? (
             <TableError message={billsQ.error.message} onRetry={() => billsQ.mutate()} />
-          ) : bills.length === 0 ? (
+          ) : displayBills.length === 0 ? (
             <div className="p-12 text-center space-y-3">
               <ShoppingBag className="w-12 h-12 text-slate-300 mx-auto" />
               <p className="text-sm font-bold text-slate-700">No purchase bills recorded</p>
@@ -494,10 +588,14 @@ export default function PurchasesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs text-slate-800">
-                  {bills.map((bill) => {
+                  {displayBills.map((bill) => {
                     const taxTotal = bill.totalCgst + bill.totalSgst + bill.totalIgst + bill.totalCess;
                     return (
-                      <tr key={bill.id} className="hover:bg-slate-50/80 transition-colors">
+                      <tr
+                        key={bill.id}
+                        id={`health-check-record-${bill.id}`}
+                        className={`transition-colors ${highlightedBill?.id === bill.id ? "bg-amber-50 outline outline-2 outline-amber-400" : "hover:bg-slate-50/80"}`}
+                      >
                         <td className="py-3 px-4 font-mono font-bold text-slate-900">{bill.billNumber}</td>
                         <td className="py-3 px-4 text-slate-600">{new Date(bill.billDate).toLocaleDateString("en-IN")}</td>
                         <td className="py-3 px-4 font-semibold text-slate-900">
@@ -543,11 +641,11 @@ export default function PurchasesPage() {
                         <td className="py-3 px-4 text-right">
                           <div className="inline-flex gap-2">
                             <button
-                              onClick={() => void handleEditCess(bill.id)}
+                              onClick={() => void openBillEditor(bill.id)}
                               className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
                             >
                               <Pencil className="h-3.5 w-3.5" />
-                              <span>Edit tax</span>
+                              <span>Edit details</span>
                             </button>
                             {bill.status !== "PAID" && (
                               <button
@@ -724,9 +822,12 @@ export default function PurchasesPage() {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl p-6 space-y-4 animate-fadeIn max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="font-bold text-base text-slate-900">Record Purchase Bill</h3>
+              <h3 className="font-bold text-base text-slate-900">{editingBillId ? "Edit Purchase Bill Details" : "Record Purchase Bill"}</h3>
               <button
-                onClick={() => setShowBillModal(false)}
+                onClick={() => {
+                  setShowBillModal(false);
+                  setEditingBillId(null);
+                }}
                 disabled={savingBill}
                 className="text-slate-400 hover:text-slate-600 disabled:opacity-50"
               >
@@ -862,66 +963,125 @@ export default function PurchasesPage() {
                 )}
               </div>
 
-              {/* Simple Amount & GST Rate Input */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Taxable Amount (₹) *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    value={billItems[0].rate}
-                    onChange={(e) => {
-                      const rate = parseFloat(e.target.value) || 0;
-                      setBillItems((prev) => [{ ...prev[0], rate }, ...prev.slice(1)]);
-                    }}
-                    placeholder="0.00"
-                    required
-                    disabled={savingBill}
-                    className="w-full px-3 py-2 border rounded-xl font-bold"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">GST Rate</label>
-                  <select
-                    value={billItems[0].gstRate}
-                    onChange={(e) => {
-                      const gstRate = parseFloat(e.target.value);
-                      setBillItems((prev) => [{ ...prev[0], gstRate }, ...prev.slice(1)]);
-                    }}
-                    disabled={savingBill}
-                    className="w-full px-3 py-2 border rounded-xl bg-white font-bold text-blue-700"
-                  >
-                    {[0, 5, 12, 18, 28].map((r) => (
-                      <option key={r} value={r}>
-                        {r}% GST
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Cess Amount (₹, optional)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={billItems[0].cessAmount ?? 0}
-                    onChange={(e) => {
-                      const cessAmount = parseFloat(e.target.value) || 0;
-                      setBillItems((prev) => [{ ...prev[0], cessAmount }, ...prev.slice(1)]);
-                    }}
-                    placeholder="0.00"
-                    disabled={savingBill}
-                    className="w-full px-3 py-2 border rounded-xl"
-                  />
-                </div>
+              <div className="space-y-3">
+                <p className="font-bold text-slate-800">Bill line items and tax details</p>
+                {billItems.map((item, index) => (
+                  <div key={item.id || index} className="grid grid-cols-2 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-4">
+                    <label className="col-span-2 text-xs font-semibold text-slate-700 sm:col-span-2">
+                      Description
+                      <input
+                        value={item.description}
+                        onChange={(event) => updateBillItem(index, { description: event.target.value })}
+                        required
+                        disabled={savingBill}
+                        className="mt-1 w-full rounded-lg border px-3 py-2"
+                      />
+                    </label>
+                    <label className="text-xs font-semibold text-slate-700">
+                      HSN/SAC
+                      <input
+                        value={item.hsnSacCode}
+                        onChange={(event) => updateBillItem(index, { hsnSacCode: event.target.value })}
+                        disabled={savingBill}
+                        className="mt-1 w-full rounded-lg border px-3 py-2"
+                      />
+                    </label>
+                    <label className="text-xs font-semibold text-slate-700">
+                      Unit
+                      <input
+                        value={item.unit || "PCS"}
+                        onChange={(event) => updateBillItem(index, { unit: event.target.value })}
+                        disabled={savingBill}
+                        className="mt-1 w-full rounded-lg border px-3 py-2"
+                      />
+                    </label>
+                    <label className="text-xs font-semibold text-slate-700">
+                      Quantity
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={item.quantity}
+                        onChange={(event) => updateBillItem(index, { quantity: Number(event.target.value) || 0 })}
+                        required
+                        disabled={savingBill}
+                        className="mt-1 w-full rounded-lg border px-3 py-2"
+                      />
+                    </label>
+                    <label className="text-xs font-semibold text-slate-700">
+                      Rate / taxable amount (₹)
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={item.rate}
+                        onChange={(event) => updateBillItem(index, { rate: Number(event.target.value) || 0 })}
+                        required
+                        disabled={savingBill}
+                        className="mt-1 w-full rounded-lg border px-3 py-2 font-bold"
+                      />
+                    </label>
+                    <label className="text-xs font-semibold text-slate-700">
+                      GST rate
+                      <select
+                        value={item.gstRate}
+                        onChange={(event) => updateBillItem(index, { gstRate: Number(event.target.value) })}
+                        disabled={savingBill}
+                        className="mt-1 w-full rounded-lg border bg-white px-3 py-2 font-bold text-blue-700"
+                      >
+                        {[0, 5, 18, 40].map((rate) => <option key={rate} value={rate}>{rate}%</option>)}
+                      </select>
+                    </label>
+                    <label className="text-xs font-semibold text-slate-700">
+                      Cess amount (₹)
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.cessAmount ?? 0}
+                        onChange={(event) => updateBillItem(index, { cessAmount: Number(event.target.value) || 0 })}
+                        disabled={savingBill}
+                        className="mt-1 w-full rounded-lg border px-3 py-2"
+                      />
+                    </label>
+                    <label className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={item.isItcEligible ?? isItcEligible}
+                        onChange={(event) => updateBillItem(index, { isItcEligible: event.target.checked })}
+                        disabled={savingBill || !itcClaimable}
+                      />
+                      ITC eligible for this line
+                    </label>
+                    {billItems.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setBillItems((previous) => previous.filter((_, itemIndex) => itemIndex !== index))}
+                        disabled={savingBill}
+                        className="self-end justify-self-start text-xs font-bold text-red-600"
+                      >
+                        Remove line
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setBillItems((previous) => [...previous, { ...EMPTY_ITEM }])}
+                  disabled={savingBill}
+                  className="text-xs font-bold text-blue-700 hover:underline"
+                >
+                  + Add bill line
+                </button>
               </div>
 
               <div className="pt-2 flex justify-end gap-2 border-t">
                 <button
                   type="button"
-                  onClick={() => setShowBillModal(false)}
+                  onClick={() => {
+                    setShowBillModal(false);
+                    setEditingBillId(null);
+                  }}
                   disabled={savingBill}
                   className="px-4 py-2 font-semibold disabled:opacity-50"
                 >
@@ -933,73 +1093,10 @@ export default function PurchasesPage() {
                   className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow-md flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {savingBill && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {savingBill ? "Saving..." : "Save Purchase Bill"}
+                  {savingBill ? "Saving..." : editingBillId ? "Save Bill Changes" : "Save Purchase Bill"}
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {cessBill && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-lg space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl animate-fadeIn">
-            <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="text-base font-bold text-slate-900">Edit cess · {cessBill.billNumber}</h3>
-              <button
-                onClick={() => setCessBill(null)}
-                disabled={savingCess}
-                className="text-slate-400 hover:text-slate-600 disabled:opacity-50"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <p className="text-xs text-slate-600">
-              Enter the cess amount shown on the supplier bill for each line. The workbook will use these saved amounts.
-            </p>
-            <div className="max-h-[50vh] space-y-3 overflow-y-auto">
-              {cessEditItems.map((item, index) => (
-                <label key={item.id} className="block rounded-xl border border-slate-200 p-3 text-xs">
-                  <span className="font-semibold text-slate-800">
-                    {index + 1}. {item.description} · taxable ₹{item.taxableValue.toFixed(2)}
-                  </span>
-                  <span className="mt-2 block text-slate-600">Cess amount (₹)</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={item.cessAmount}
-                    onChange={(event) =>
-                      setCessEditItems((items) =>
-                        items.map((current) =>
-                          current.id === item.id ? { ...current, cessAmount: event.target.value } : current
-                        )
-                      )
-                    }
-                    disabled={savingCess}
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-right"
-                  />
-                </label>
-              ))}
-            </div>
-            {cessError && <p className="rounded-lg bg-red-50 p-2.5 text-xs text-red-700">{cessError}</p>}
-            <div className="flex justify-end gap-2 border-t pt-3">
-              <button
-                onClick={() => setCessBill(null)}
-                disabled={savingCess}
-                className="px-4 py-2 font-semibold disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => void handleSaveCess()}
-                disabled={savingCess}
-                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2 font-bold text-white disabled:opacity-60"
-              >
-                {savingCess && <Loader2 className="h-4 w-4 animate-spin" />}
-                {savingCess ? "Saving…" : "Save cess details"}
-              </button>
-            </div>
           </div>
         </div>
       )}

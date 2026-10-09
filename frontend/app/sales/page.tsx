@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "../context/AuthContext";
 import { apiFetch, API_BASE_URL } from "../lib/api";
 import { useApi } from "../lib/useApi";
 import { INDIAN_STATES, stateNameFromCode, GSTIN_REGEX } from "../lib/states";
 import { TableSkeleton, TableError } from "../components/TableSkeleton";
-import { FileText, Plus, Download, Users, X, PlusCircle } from "lucide-react";
+import { FileText, Plus, Download, Users, X, PlusCircle, Pencil } from "lucide-react";
 
-const GST_RATES = [0, 5, 12, 18, 28];
+const GST_RATES = [0, 5, 18, 40];
 
 const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
@@ -28,6 +28,31 @@ const newLine = () => ({
   gstRate: 18,
 });
 
+type FocusedInvoice = {
+  id: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  customer?: { name: string; gstin?: string | null } | null;
+  supplyType: string;
+  subtotal: number;
+  totalAmount: number;
+  customerId: string;
+  dueDate?: string | null;
+  notes?: string | null;
+  isReverseCharge: boolean;
+  applicablePercent?: number | null;
+  ecomGstin?: string | null;
+  items: Array<{
+    itemId?: string | null;
+    description: string;
+    hsnSacCode: string;
+    quantity: number;
+    rate: number;
+    gstRate: number;
+    cessRate?: number | null;
+  }>;
+};
+
 export default function SalesPage() {
   const { business } = useAuth();
 
@@ -39,19 +64,25 @@ export default function SalesPage() {
   const itemsQ = useApi<any[]>("/items");
 
   const invoices = invoicesQ.data ?? [];
+  const [highlightedInvoice, setHighlightedInvoice] = useState<FocusedInvoice | null>(null);
   const customers = customersQ.data ?? [];
   const itemsList = itemsQ.data ?? [];
+  const displayInvoices =
+    highlightedInvoice && !invoices.some((invoice) => invoice.id === highlightedInvoice.id)
+      ? [...invoices, highlightedInvoice]
+      : invoices;
 
   // Modals
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
 
   // Toast
   const [toast, setToast] = useState("");
-  const showToast = (msg: string) => {
+  const showToast = useCallback((msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(""), 3000);
-  };
+  }, []);
 
   // Customer form
   const [custName, setCustName] = useState("");
@@ -60,10 +91,13 @@ export default function SalesPage() {
   const [custError, setCustError] = useState("");
   const [savingCustomer, setSavingCustomer] = useState(false);
   const customerLock = useRef(false);
+  const quickActionHandled = useRef(false);
 
   // Invoice form
   const [selectedCustId, setSelectedCustId] = useState("");
   const [invDate, setInvDate] = useState(todayStr());
+  const [invDueDate, setInvDueDate] = useState("");
+  const [invNotes, setInvNotes] = useState("");
   const [invItems, setInvItems] = useState<any[]>([newLine()]);
   const [isReverseCharge, setIsReverseCharge] = useState(false);
   const [applicablePercent, setApplicablePercent] = useState("");
@@ -74,6 +108,80 @@ export default function SalesPage() {
 
   // PDF
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  const openInvoiceEditor = useCallback(async (invoiceId: string, loadedInvoice?: FocusedInvoice) => {
+    const { data, error } = loadedInvoice
+      ? { data: loadedInvoice, error: null }
+      : await apiFetch<FocusedInvoice>(`/sales/invoices/${encodeURIComponent(invoiceId)}`);
+    if (error || !data) {
+      showToast(error || "Could not load this invoice for editing.");
+      return;
+    }
+    setEditingInvoiceId(data.id);
+    setSelectedCustId(data.customerId);
+    setInvDate(String(data.invoiceDate).slice(0, 10));
+    setInvDueDate(data.dueDate ? String(data.dueDate).slice(0, 10) : "");
+    setInvNotes(data.notes || "");
+    setIsReverseCharge(Boolean(data.isReverseCharge));
+    setApplicablePercent(data.applicablePercent == null ? "" : String(data.applicablePercent));
+    setEcomGstin(data.ecomGstin || "");
+    setIsEcommerceSale(Boolean(data.ecomGstin));
+    setInvItems(data.items.map((item) => ({
+      itemId: item.itemId || "",
+      description: item.description,
+      hsnSacCode: item.hsnSacCode,
+      quantity: item.quantity,
+      rate: item.rate,
+      gstRate: item.gstRate,
+      cessRate: item.cessRate || 0,
+    })));
+    setShowInvoiceModal(true);
+  }, [showToast]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const recordId = params.get("healthCheckRecord");
+    if (!recordId) return;
+
+    let active = true;
+    const timeout = window.setTimeout(() => {
+      setTab("INVOICES");
+      void apiFetch<FocusedInvoice>(`/sales/invoices/${encodeURIComponent(recordId)}`).then(({ data, error }) => {
+        if (!active) return;
+        if (!data) {
+          setToast(error || "Could not open this invoice.");
+          window.setTimeout(() => setToast(""), 3000);
+          return;
+        }
+        setHighlightedInvoice(data);
+        void openInvoiceEditor(recordId, data);
+      });
+    }, 0);
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
+  }, [openInvoiceEditor]);
+
+  useEffect(() => {
+    if (quickActionHandled.current || customersQ.loading) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("addInvoice") !== "1") return;
+
+    const timeout = window.setTimeout(() => {
+      if (quickActionHandled.current) return;
+      quickActionHandled.current = true;
+      window.history.replaceState(null, "", window.location.pathname);
+      const loadedCustomers = customersQ.data ?? [];
+      if (loadedCustomers.length === 0) {
+        setShowCustomerModal(true);
+        return;
+      }
+      setSelectedCustId(loadedCustomers[0].id);
+      setShowInvoiceModal(true);
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, [customersQ.data, customersQ.loading]);
 
   // ---------- Customer ----------
   const handleSaveCustomer = async (e: React.FormEvent) => {
@@ -158,11 +266,14 @@ export default function SalesPage() {
   let totalCgst = 0;
   let totalSgst = 0;
   let totalIgst = 0;
+  let totalCess = 0;
 
   invItems.forEach((itm) => {
     const taxable = r2((Number(itm.quantity) || 0) * (Number(itm.rate) || 0));
     const gst = Number(itm.gstRate) || 0;
+    const cess = r2((taxable * (Number(itm.cessRate) || 0)) / 100);
     totalTaxable += taxable;
+    totalCess += cess;
     if (isIntraState) {
       totalCgst += r2((taxable * (gst / 2)) / 100);
       totalSgst += r2((taxable * (gst / 2)) / 100);
@@ -171,7 +282,7 @@ export default function SalesPage() {
     }
   });
 
-  const grandTotal = Math.round(totalTaxable + totalCgst + totalSgst + totalIgst);
+  const grandTotal = Math.round(totalTaxable + totalCgst + totalSgst + totalIgst + totalCess);
 
   const hasValidItems =
     invItems.length > 0 &&
@@ -191,18 +302,23 @@ export default function SalesPage() {
     setSavingInvoice(true);
 
     try {
-      const { data, error } = await apiFetch<any>("/sales/invoices", {
-        method: "POST",
+      const { data, error } = await apiFetch<any>(
+        editingInvoiceId ? `/sales/invoices/${editingInvoiceId}` : "/sales/invoices",
+        {
+        method: editingInvoiceId ? "PUT" : "POST",
         body: JSON.stringify({
           customerId: selectedCustId,
           invoiceDate: invDate,
+          dueDate: invDueDate || null,
+          notes: invNotes,
           placeOfSupply: selectedCustomer?.stateCode || business?.stateCode,
           isReverseCharge,
           applicablePercent: applicablePercent === "" ? null : Number(applicablePercent),
           ecomGstin: isEcommerceSale ? ecomGstin : "",
           items: invItems,
         }),
-      });
+        }
+      );
 
       if (error) {
         alert(error);
@@ -213,7 +329,12 @@ export default function SalesPage() {
       const created: any = (data as any)?.invoice ?? data;
       if (created?.id) {
         invoicesQ.mutate(
-          (prev) => [{ ...created, customer: created.customer ?? selectedCustomer }, ...(prev ?? [])],
+          (prev) => {
+            const updated = { ...created, customer: created.customer ?? selectedCustomer };
+            return prev?.some((invoice) => invoice.id === updated.id)
+              ? prev.map((invoice) => invoice.id === updated.id ? updated : invoice)
+              : [updated, ...(prev ?? [])];
+          },
           { revalidate: true }
         );
       } else {
@@ -221,16 +342,19 @@ export default function SalesPage() {
       }
 
       setShowInvoiceModal(false);
+      setEditingInvoiceId(null);
       setTab("INVOICES");
       setInvItems([newLine()]);
       setInvDate(todayStr());
+      setInvDueDate("");
+      setInvNotes("");
       setSelectedCustId("");
       setIsReverseCharge(false);
       setApplicablePercent("");
       setIsEcommerceSale(false);
       setEcomGstin("");
-      showToast("Invoice generated. Your bill PDF is downloading.");
-      if (created?.id && created?.invoiceNumber) {
+      showToast(editingInvoiceId ? "Invoice details updated" : "Invoice generated. Your bill PDF is downloading.");
+      if (!editingInvoiceId && created?.id && created?.invoiceNumber) {
         void handleDownloadPdf(created.id, created.invoiceNumber, true);
       }
     } finally {
@@ -298,6 +422,15 @@ export default function SalesPage() {
                 setShowCustomerModal(true);
                 return;
               }
+              setEditingInvoiceId(null);
+              setInvDate(todayStr());
+              setInvDueDate("");
+              setInvNotes("");
+              setInvItems([newLine()]);
+              setIsReverseCharge(false);
+              setApplicablePercent("");
+              setIsEcommerceSale(false);
+              setEcomGstin("");
               setSelectedCustId(customers[0]?.id || "");
               setShowInvoiceModal(true);
             }}
@@ -336,7 +469,7 @@ export default function SalesPage() {
             <TableSkeleton />
           ) : invoicesQ.error && invoices.length === 0 ? (
             <TableError message={invoicesQ.error.message} onRetry={() => invoicesQ.mutate()} />
-          ) : invoices.length === 0 ? (
+          ) : displayInvoices.length === 0 ? (
             <div className="p-12 text-center space-y-3">
               <FileText className="w-12 h-12 text-slate-300 mx-auto" />
               <p className="text-sm font-bold text-slate-700">No sales invoices generated yet</p>
@@ -357,8 +490,12 @@ export default function SalesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs text-slate-800">
-                  {invoices.map((inv) => (
-                    <tr key={inv.id} className="hover:bg-slate-50/80 transition-colors">
+                  {displayInvoices.map((inv) => (
+                    <tr
+                      key={inv.id}
+                      id={`health-check-record-${inv.id}`}
+                      className={`transition-colors ${highlightedInvoice?.id === inv.id ? "bg-amber-50 outline outline-2 outline-amber-400" : "hover:bg-slate-50/80"}`}
+                    >
                       <td className="py-3 px-4 font-mono font-bold text-blue-700">{inv.invoiceNumber}</td>
                       <td className="py-3 px-4 text-slate-600">{new Date(inv.invoiceDate).toLocaleDateString("en-IN")}</td>
                       <td className="py-3 px-4 font-semibold text-slate-900">
@@ -379,6 +516,13 @@ export default function SalesPage() {
                       <td className="py-3 px-4 font-medium">₹{inv.subtotal.toFixed(2)}</td>
                       <td className="py-3 px-4 font-extrabold text-slate-900">₹{inv.totalAmount.toFixed(2)}</td>
                       <td className="py-3 px-4 text-right space-x-2">
+                        <button
+                          onClick={() => void openInvoiceEditor(inv.id)}
+                          className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
                         <button
                           onClick={() => handleDownloadPdf(inv.id, inv.invoiceNumber)}
                           disabled={downloadingId === inv.id}
@@ -538,11 +682,14 @@ export default function SalesPage() {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl p-6 space-y-4 animate-fadeIn max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="font-bold text-base text-slate-900">Create Tax Invoice</h3>
+              <h3 className="font-bold text-base text-slate-900">{editingInvoiceId ? "Edit Tax Invoice" : "Create Tax Invoice"}</h3>
               <button
                 type="button"
                 disabled={savingInvoice}
-                onClick={() => setShowInvoiceModal(false)}
+                onClick={() => {
+                  setShowInvoiceModal(false);
+                  setEditingInvoiceId(null);
+                }}
                 className="text-slate-400 hover:text-slate-600 disabled:opacity-50"
               >
                 <X className="w-5 h-5" />
@@ -577,7 +724,28 @@ export default function SalesPage() {
                     className="w-full px-3 py-2 border rounded-xl bg-white"
                   />
                 </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Due Date (optional)</label>
+                  <input
+                    type="date"
+                    value={invDueDate}
+                    min={invDate}
+                    onChange={(e) => setInvDueDate(e.target.value)}
+                    disabled={savingInvoice}
+                    className="w-full px-3 py-2 border rounded-xl bg-white"
+                  />
+                </div>
               </div>
+              <label className="block font-semibold text-slate-700">
+                Notes (optional)
+                <textarea
+                  value={invNotes}
+                  onChange={(event) => setInvNotes(event.target.value)}
+                  disabled={savingInvoice}
+                  rows={2}
+                  className="mt-1 w-full rounded-xl border px-3 py-2 font-normal"
+                />
+              </label>
 
               <details className="border border-slate-200 rounded-xl p-3">
                 <summary className="font-bold text-slate-800 cursor-pointer">Advanced (optional)</summary>
@@ -684,7 +852,7 @@ export default function SalesPage() {
 
                 {invItems.map((itm, idx) => (
                   <div key={idx} className="grid grid-cols-12 gap-2 p-3 bg-slate-50 rounded-xl border items-center">
-                    <div className="col-span-3">
+                    <div className="col-span-2">
                       <select
                         value={itm.itemId}
                         onChange={(e) => handleItemSelect(idx, e.target.value)}
@@ -751,6 +919,20 @@ export default function SalesPage() {
                       </select>
                     </div>
 
+                    <div className="col-span-1">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={itm.cessRate ?? 0}
+                        onChange={(e) => updateItem(idx, { cessRate: parseFloat(e.target.value) || 0 })}
+                        disabled={savingInvoice}
+                        title="Cess rate (%)"
+                        placeholder="Cess %"
+                        className="w-full px-1 py-1.5 border rounded-lg text-center"
+                      />
+                    </div>
                     <div className="col-span-1 text-right">
                       <button
                         type="button"
@@ -781,6 +963,12 @@ export default function SalesPage() {
                   <span>Taxable Subtotal:</span>
                   <span className="font-semibold">₹{totalTaxable.toFixed(2)}</span>
                 </div>
+                {totalCess > 0 && (
+                  <div className="flex justify-between text-amber-300">
+                    <span>Cess:</span>
+                    <span>₹{totalCess.toFixed(2)}</span>
+                  </div>
+                )}
                 {isIntraState ? (
                   <>
                     <div className="flex justify-between text-blue-300">
@@ -808,7 +996,10 @@ export default function SalesPage() {
                 <button
                   type="button"
                   disabled={savingInvoice}
-                  onClick={() => setShowInvoiceModal(false)}
+                  onClick={() => {
+                    setShowInvoiceModal(false);
+                    setEditingInvoiceId(null);
+                  }}
                   className="px-4 py-2 font-semibold disabled:opacity-50"
                 >
                   Cancel
@@ -821,7 +1012,7 @@ export default function SalesPage() {
                   {savingInvoice && (
                     <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                   )}
-                  {savingInvoice ? "Generating..." : "Generate Invoice"}
+                  {savingInvoice ? "Saving..." : editingInvoiceId ? "Save Invoice Changes" : "Generate Invoice"}
                 </button>
               </div>
             </form>

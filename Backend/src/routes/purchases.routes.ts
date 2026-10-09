@@ -581,7 +581,7 @@ router.post("/bills", authMiddleware, async (req: AuthenticatedRequest, res: Res
       if (!(rate > 0)) {
         return res.status(400).json({ error: `Item ${i + 1}: amount must be greater than 0.` });
       }
-      if (!(gst >= 0 && gst <= 28)) {
+      if (!(gst >= 0 && gst <= 40)) {
         return res.status(400).json({ error: `Item ${i + 1}: invalid GST rate.` });
       }
       if (!Number.isFinite(cessRate) || cessRate < 0 || cessRate > 100) {
@@ -732,6 +732,138 @@ router.post("/bills", authMiddleware, async (req: AuthenticatedRequest, res: Res
     }
     console.error("Create purchase bill error:", error);
     res.status(500).json({ error: "Failed to create purchase bill." });
+  }
+});
+
+router.put("/bills/:id", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) return res.status(400).json({ error: "No active business." });
+    const existing = await prisma.purchaseBill.findFirst({
+      where: { id: req.params.id as string, businessId },
+      include: { payments: true },
+    });
+    if (!existing) return res.status(404).json({ error: "Purchase bill not found." });
+
+    const {
+      vendorId, billNumber, billDate, dueDate, category, isReverseCharge,
+      isItcEligible, itcIneligibilityReason, items,
+    } = req.body;
+    const cleanBillNumber = String(billNumber || "").trim();
+    if (!vendorId || !cleanBillNumber || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: "Vendor, bill number, and at least one item are required." });
+    }
+    if (typeof isReverseCharge !== "boolean") {
+      return res.status(400).json({ error: "Reverse charge must be a boolean." });
+    }
+    if (typeof isItcEligible !== "boolean") {
+      return res.status(400).json({ error: "ITC eligibility must be a boolean." });
+    }
+    for (const [index, item] of items.entries()) {
+      const quantity = Number(item.quantity ?? 1);
+      const rate = Number(item.rate);
+      const gstRate = Number(item.gstRate ?? 18);
+      const cessAmount = Number(item.cessAmount ?? 0);
+      if (!(quantity > 0) || !(rate > 0) || !(gstRate >= 0 && gstRate <= 40) ||
+          !Number.isFinite(cessAmount) || cessAmount < 0) {
+        return res.status(400).json({ error: `Item ${index + 1}: enter a valid quantity, amount, GST rate, and cess amount.` });
+      }
+    }
+    const parsedBillDate = new Date(billDate);
+    const parsedDueDate = dueDate ? new Date(dueDate) : null;
+    if (Number.isNaN(parsedBillDate.getTime())) return res.status(400).json({ error: "Invalid bill date." });
+    if (dueDate && (!parsedDueDate || Number.isNaN(parsedDueDate.getTime()) || parsedDueDate < parsedBillDate)) {
+      return res.status(400).json({ error: "Invalid due date." });
+    }
+    const [vendor, business] = await Promise.all([
+      prisma.vendor.findFirst({ where: { id: String(vendorId), businessId } }),
+      prisma.business.findUnique({ where: { id: businessId } }),
+    ]);
+    if (!vendor) return res.status(404).json({ error: "Vendor not found." });
+    if (!business) return res.status(404).json({ error: "Business profile not found." });
+    if (vendor.vendorType !== "REGISTERED" && !isReverseCharge && items.some((item: any) => Number(item.gstRate ?? 18) > 0)) {
+      return res.status(400).json({ error: "An unregistered supplier should not charge GST. Use a 0% rate, or mark reverse charge when it legally applies." });
+    }
+
+    const pos = vendor.stateCode || business.stateCode;
+    const intraState = business.stateCode === pos;
+    const vendorCanGiveItc = vendor.vendorType === "REGISTERED" && !!vendor.gstin;
+    const eligible = vendorCanGiveItc && Boolean(isItcEligible);
+    const reason = eligible ? null : !vendorCanGiveItc
+      ? "Unregistered vendor - no GST charged, ITC not available"
+      : String(itcIneligibilityReason || "Blocked credit under Sec 17(5)");
+    let subtotal = 0, totalCgst = 0, totalSgst = 0, totalIgst = 0, totalCess = 0;
+    const formattedItems = items.map((item: any) => {
+      const quantity = Number(item.quantity ?? 1);
+      const rate = Number(item.rate);
+      const taxableValue = r2(quantity * rate);
+      const gstRate = Number(item.gstRate ?? 18);
+      const cessAmount = r2(Number(item.cessAmount ?? (taxableValue * Number(item.cessRate ?? 0)) / 100));
+      const cgstAmount = intraState ? r2((taxableValue * gstRate) / 200) : 0;
+      const sgstAmount = intraState ? cgstAmount : 0;
+      const igstAmount = intraState ? 0 : r2((taxableValue * gstRate) / 100);
+      subtotal += taxableValue;
+      totalCgst += cgstAmount;
+      totalSgst += sgstAmount;
+      totalIgst += igstAmount;
+      totalCess += cessAmount;
+      return {
+        itemId: item.itemId || null,
+        description: String(item.description || "Purchase Item / Expense"),
+        hsnSacCode: item.hsnSacCode || "998313",
+        quantity,
+        unit: item.unit || "PCS",
+        rate,
+        taxableValue,
+        gstRate,
+        cgstAmount,
+        sgstAmount,
+        igstAmount,
+        cessRate: taxableValue > 0 ? r2((cessAmount / taxableValue) * 100) : 0,
+        cessAmount,
+        isItcEligible: eligible && (item.isItcEligible === undefined || Boolean(item.isItcEligible)),
+        totalAmount: r2(taxableValue + cgstAmount + sgstAmount + igstAmount + cessAmount),
+      };
+    });
+    subtotal = r2(subtotal);
+    totalCgst = r2(totalCgst);
+    totalSgst = r2(totalSgst);
+    totalIgst = r2(totalIgst);
+    totalCess = r2(totalCess);
+    const totalAmount = Math.round(subtotal + totalCgst + totalSgst + totalIgst + totalCess);
+    if (totalAmount < existing.paidAmount - 0.01) {
+      return res.status(400).json({ error: "Updated total cannot be lower than the payments already recorded." });
+    }
+    const status = existing.paidAmount <= 0 ? "UNPAID" : existing.paidAmount >= totalAmount - 0.01 ? "PAID" : "PARTIAL";
+    const bill = await prisma.purchaseBill.update({
+      where: { id: existing.id },
+      data: {
+        vendorId: String(vendorId),
+        billNumber: cleanBillNumber,
+        billDate: parsedBillDate,
+        dueDate: parsedDueDate,
+        category: category || "STOCK",
+        isReverseCharge,
+        isItcEligible: eligible,
+        itcIneligibilityReason: reason,
+        supplyType: intraState ? "INTRA_STATE" : "INTER_STATE",
+        placeOfSupply: pos,
+        subtotal,
+        totalCgst,
+        totalSgst,
+        totalIgst,
+        totalCess,
+        totalAmount,
+        status,
+        items: { deleteMany: {}, create: formattedItems },
+      },
+      include: { vendor: true, items: true, payments: true },
+    });
+    res.json(bill);
+  } catch (error: any) {
+    if (error?.code === "P2002") return res.status(409).json({ error: "A bill with this number already exists for this vendor." });
+    console.error("Update purchase bill error:", error);
+    res.status(500).json({ error: "Failed to update purchase bill." });
   }
 });
 

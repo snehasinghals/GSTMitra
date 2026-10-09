@@ -330,7 +330,7 @@ export default function ItemsPage() {
                     onChange={(e) => setGstRate(parseFloat(e.target.value))}
                     className="px-3 py-2 border border-slate-300 rounded-xl font-bold text-blue-700 bg-white"
                   >
-                    {[0, 5, 12, 18, 28].map((rate) => (
+                    {[0, 5, 18, 40].map((rate) => (
                       <option key={rate} value={rate}>
                         {rate}% GST
                       </option>

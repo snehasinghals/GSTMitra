@@ -138,10 +138,12 @@ The backend mounts its API under `/api`:
 | `/api/sales` | Sales invoices, invoice PDFs, and credit/debit notes |
 | `/api/purchases` | Purchase bills, payments, and expense summaries |
 | `/api/filing` | GST return summaries, exports, and reconciliation |
-| `/api/healthcheck` | Filing and data checks |
+| `/api/health-check` | Month-based sales and purchase checks for the signed-in business |
 | `/api/rules` | GST rules and audit logs |
 
 Most API routes require authentication.
+
+The separate `GET /health` endpoint only reports whether the backend process is responding. The authenticated `GET /api/health-check?month=YYYY-MM&scope=all|sales|purchase` endpoint checks the signed-in business's saved invoice and bill data for the selected month.
 
 ## Notes
 

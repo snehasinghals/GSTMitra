@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { apiFetch, downloadFile } from "../../lib/api";
+import HealthCheckBanner, { type HealthCheckStatus } from "../../components/HealthCheckBanner";
 import { Download, FileSpreadsheet } from "lucide-react";
 
 const formatCurrency = (amount: number) =>
@@ -29,26 +30,33 @@ type Gstr1Summary = {
   hsnSummary: HsnSummaryRow[];
 };
 
-type HealthCheck = { summary?: { mustFixCount?: number } };
-
 export default function Gstr1SectionPage() {
   const [period, setPeriod] = useState("102026");
   const [gstr1Summary, setGstr1Summary] = useState<Gstr1Summary | null>(null);
-  const [healthCheck, setHealthCheck] = useState<HealthCheck | null>(null);
   const [loading, setLoading] = useState(true);
+  const [healthCheck, setHealthCheck] = useState<{
+    status: HealthCheckStatus | null;
+    errors: number;
+    warnings: number;
+  }>({ status: null, errors: 0, warnings: 0 });
+  const healthCheckAllowsDownload =
+    healthCheck.status === "ok" || healthCheck.status === "warning";
+
+  const healthCheckMessage =
+    healthCheck.status === "empty"
+      ? "Add sales invoices first."
+      : healthCheck.status === "error"
+        ? `Fix ${healthCheck.errors} ${healthCheck.errors === 1 ? "problem" : "problems"} above to download.`
+        : healthCheck.status === "warning"
+          ? `${healthCheck.warnings} ${healthCheck.warnings === 1 ? "thing" : "things"} to review.`
+          : null;
 
   useEffect(() => {
     let active = true;
     const loadData = async () => {
-      const hcPromise = apiFetch<HealthCheck>(`/healthcheck/run?period=${period}`, {
-        signal: AbortSignal.timeout(65_000),
-      });
       const g1Res = await apiFetch<Gstr1Summary>(`/filing/gstr1/summary?period=${period}`);
       if (active && g1Res.data) setGstr1Summary(g1Res.data);
       if (active) setLoading(false);
-
-      const hcRes = await hcPromise;
-      if (active && hcRes.data) setHealthCheck(hcRes.data);
     };
 
     void loadData();
@@ -56,8 +64,6 @@ export default function Gstr1SectionPage() {
       active = false;
     };
   }, [period]);
-
-  const mustFixCount = healthCheck?.summary?.mustFixCount || 0;
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -77,6 +83,7 @@ export default function Gstr1SectionPage() {
             value={period}
             onChange={(e) => {
               setLoading(true);
+              setHealthCheck({ status: null, errors: 0, warnings: 0 });
               setPeriod(e.target.value);
             }}
             className="px-3 py-2 border border-slate-300 rounded-xl text-xs font-bold text-blue-700 bg-white"
@@ -87,6 +94,21 @@ export default function Gstr1SectionPage() {
           </select>
         </div>
       </div>
+
+      <HealthCheckBanner
+        key={period}
+        scope="sales"
+        month={`${period.slice(2)}-${period.slice(0, 2)}`}
+        variant="full"
+        autoRun={false}
+        onResult={(status, counts) =>
+          setHealthCheck({
+            status,
+            errors: counts?.errors ?? 0,
+            warnings: counts?.warnings ?? 0,
+          })
+        }
+      />
 
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
         <div className="flex items-center justify-between border-b pb-3">
@@ -176,25 +198,26 @@ export default function Gstr1SectionPage() {
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
               <p className="font-bold">Review summary only — not a GST portal upload file.</p>
               <p className="mt-1">
-                Compare these figures with your records, review the pre-filing checks, and complete your return on the
+                Compare these figures with your records, review the health check, and complete your return on the
                 GST portal. These checks are decision support, not a guarantee that a return is error-free.
               </p>
             </div>
             <button
+              disabled={!healthCheckAllowsDownload || loading}
               onClick={() =>
                 void downloadFile(
                   `/filing/gstr1/excel?period=${period}`,
                   `GSTR1_REVIEW_${gstr1Summary.gstin}_${period}.xlsx`
                 ).catch((error: unknown) => alert(error instanceof Error ? error.message : "Could not download the review workbook."))
               }
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 font-bold text-white shadow-md transition-all hover:bg-blue-700"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 font-bold text-white shadow-md transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Download className="h-4 w-4" />
               Download GSTR-1 review workbook (.xlsx)
             </button>
-            {mustFixCount > 0 && (
-              <p className="text-3xs text-red-600 font-semibold">
-                Review and resolve {mustFixCount} health-check issue(s) before relying on this summary.
+            {healthCheckMessage && (
+              <p aria-live="polite" className={`text-sm font-semibold ${healthCheck.status === "warning" ? "text-amber-800" : "text-red-800"}`}>
+                {healthCheckMessage}
               </p>
             )}
           </div>
