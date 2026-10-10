@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { prisma } from "../lib/db.js";
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -10,8 +11,6 @@ export interface AuthenticatedRequest extends Request {
 }
 
 // Read lazily (at call time) so it works regardless of when dotenv loads .env.
-// In production the secret MUST come from the environment: a secret hardcoded in source
-// means anyone who sees the code can forge a login token for any user.
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
   if (secret) return secret;
@@ -22,7 +21,7 @@ function getJwtSecret(): string {
   return "gstmitra-dev-only-secret";
 }
 
-export function authMiddleware(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+export async function authMiddleware(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ error: "Unauthorized. Missing or invalid token." });
@@ -30,7 +29,31 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
 
   const token = authHeader.split(" ")[1];
   try {
-    const decoded = jwt.verify(token, getJwtSecret()) as { userId: string; email: string; businessId?: string };
+    const decoded = jwt.verify(token, getJwtSecret()) as {
+      userId: string;
+      email: string;
+      businessId?: string;
+      iat?: number;
+    };
+
+    // If password was changed after this token was issued, invalidate session
+    if (decoded.userId && decoded.iat) {
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: { passwordChangedAt: true },
+      });
+
+      if (user?.passwordChangedAt) {
+        const passwordChangedSec = Math.floor(user.passwordChangedAt.getTime() / 1000);
+        // If token issued before password change, reject
+        if (decoded.iat < passwordChangedSec) {
+          return res.status(401).json({
+            error: "Session expired due to a recent password change. Please log in again.",
+          });
+        }
+      }
+    }
+
     req.user = decoded;
     next();
   } catch (err) {

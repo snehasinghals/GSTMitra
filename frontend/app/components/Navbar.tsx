@@ -9,19 +9,21 @@ export function Navbar() {
   const { user, business, logout } = useAuth();
 
   return (
-    <header className="h-16 bg-white border-b border-gray-200 sticky top-0 z-30 flex items-center justify-between px-4 sm:px-6 shadow-xs">
-      <div className="flex items-center gap-3">
-        <Link href="/" className="flex items-center gap-2 font-bold text-xl text-blue-700">
-          <span className="w-9 h-9 rounded-lg bg-blue-600 text-white flex items-center justify-center font-extrabold text-lg shadow-sm">
+    <header className="h-14 sm:h-16 bg-white border-b border-gray-200 sticky top-0 z-30 flex items-center justify-between px-3 sm:px-6 shadow-xs">
+      {/* Logo — compact on mobile */}
+      <div className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2 font-bold text-lg sm:text-xl text-blue-700">
+          <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-blue-600 text-white flex items-center justify-center font-extrabold text-base sm:text-lg shadow-sm">
             GM
           </span>
           <span>GSTMitra</span>
-          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium ml-1">
+          <span className="hidden sm:inline text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium ml-1">
             Plain & Simple GST
           </span>
         </Link>
       </div>
 
+      {/* Business info — only on md+ */}
       {business && (
         <div className="hidden md:flex items-center gap-4 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs">
           <div className="flex items-center gap-1.5 font-medium text-gray-800">
@@ -52,17 +54,18 @@ export function Navbar() {
         </div>
       )}
 
+      {/* User & Logout */}
       {user && (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <span className="text-xs text-gray-600 font-medium hidden sm:inline">
             Hello, <strong className="text-gray-900">{user.name}</strong>
           </span>
           <button
             onClick={logout}
-            className="flex items-center gap-1.5 text-xs text-red-600 hover:text-red-800 hover:bg-red-50 font-medium px-2.5 py-1.5 rounded-md transition-colors"
+            className="flex items-center gap-1 sm:gap-1.5 text-xs text-red-600 hover:text-red-800 hover:bg-red-50 font-medium px-2 py-1.5 rounded-md transition-colors"
           >
             <LogOut className="w-4 h-4" />
-            <span>Logout</span>
+            <span className="hidden sm:inline">Logout</span>
           </button>
         </div>
       )}

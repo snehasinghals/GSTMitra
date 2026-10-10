@@ -46,7 +46,7 @@ export function Sidebar() {
     }`;
 
   return (
-    <aside className="w-64 bg-slate-900 text-slate-300 min-h-[calc(100vh-4rem)] p-4 flex flex-col justify-between shrink-0 shadow-md">
+    <aside className="hidden md:flex w-64 bg-slate-900 text-slate-300 min-h-[calc(100vh-4rem)] p-4 flex-col justify-between shrink-0 shadow-md">
       <div className="space-y-6">
         {/* ---------- Core Modules ---------- */}
         <div>

@@ -30,14 +30,31 @@ export interface Business {
   isOnboarded: boolean;
 }
 
+interface AuthResponse {
+  token?: string;
+  user?: User;
+  business?: Business;
+  needsOtp?: boolean;
+  email?: string;
+  purpose?: "SIGNUP" | "LOGIN";
+  message?: string;
+  error?: string;
+  attemptsLeft?: number;
+  code?: string;
+  secondsLeft?: number;
+}
+
 interface AuthContextType {
   user: User | null;
   business: Business | null;
   token: string | null;
   loading: boolean;
-  authError: string | null;   // add this line
-  login: (email: string, password: string) => Promise<{ error?: string }>;
-  signup: (email: string, password: string, name: string, businessName: string) => Promise<{ error?: string }>;
+  authError: string | null;
+  login: (email: string, password: string) => Promise<AuthResponse>;
+  signup: (email: string, password: string, name: string, businessName: string) => Promise<AuthResponse>;
+  verifySignupOtp: (email: string, code: string) => Promise<AuthResponse>;
+  verifyLoginOtp: (email: string, code: string) => Promise<AuthResponse>;
+  resendOtp: (email: string, purpose: "SIGNUP" | "LOGIN") => Promise<AuthResponse>;
   logout: () => void;
   refreshContext: () => Promise<void>;
   updateBusinessState: (updated: Partial<Business>) => void;
@@ -77,40 +94,103 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     fetchCurrentContext();
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const { data, error } = await apiFetch<{ token: string; user: User; business: Business }>("/auth/login", {
+  const login = async (email: string, password: string): Promise<AuthResponse> => {
+    const { data, error } = await apiFetch<AuthResponse>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
 
     if (error) return { error };
 
-    if (data) {
+    if (data?.needsOtp) {
+      return data;
+    }
+
+    if (data?.token && data?.user) {
       localStorage.setItem("gstmitra_token", data.token);
       setToken(data.token);
       setUser(data.user);
-      setBusiness(data.business);
-      return {};
+      setBusiness(data.business || null);
+      return data;
     }
-    return { error: "Unknown login error" };
+
+    return { error: data?.error || "Unknown login error" };
   };
 
-  const signup = async (email: string, password: string, name: string, businessName: string) => {
-    const { data, error } = await apiFetch<{ token: string; user: User; business: Business }>("/auth/signup", {
+  const signup = async (
+    email: string,
+    password: string,
+    name: string,
+    businessName: string
+  ): Promise<AuthResponse> => {
+    const { data, error } = await apiFetch<AuthResponse>("/auth/signup", {
       method: "POST",
       body: JSON.stringify({ email, password, name, businessName }),
     });
 
     if (error) return { error };
 
-    if (data) {
+    if (data?.needsOtp) {
+      return data;
+    }
+
+    if (data?.token && data?.user) {
       localStorage.setItem("gstmitra_token", data.token);
       setToken(data.token);
       setUser(data.user);
-      setBusiness(data.business);
-      return {};
+      setBusiness(data.business || null);
+      return data;
     }
-    return { error: "Unknown signup error" };
+
+    return { error: data?.error || "Unknown signup error" };
+  };
+
+  const verifySignupOtp = async (email: string, code: string): Promise<AuthResponse> => {
+    const { data, error } = await apiFetch<AuthResponse>("/auth/verify-signup-otp", {
+      method: "POST",
+      body: JSON.stringify({ email, code }),
+    });
+
+    if (error) return { error };
+
+    if (data?.token && data?.user) {
+      localStorage.setItem("gstmitra_token", data.token);
+      setToken(data.token);
+      setUser(data.user);
+      setBusiness(data.business || null);
+      return data;
+    }
+
+    return { error: data?.error || "Failed to verify signup code." };
+  };
+
+  const verifyLoginOtp = async (email: string, code: string): Promise<AuthResponse> => {
+    const { data, error } = await apiFetch<AuthResponse>("/auth/verify-login-otp", {
+      method: "POST",
+      body: JSON.stringify({ email, code }),
+    });
+
+    if (error) return { error };
+
+    if (data?.token && data?.user) {
+      localStorage.setItem("gstmitra_token", data.token);
+      setToken(data.token);
+      setUser(data.user);
+      setBusiness(data.business || null);
+      return data;
+    }
+
+    return { error: data?.error || "Failed to verify login code." };
+  };
+
+  const resendOtp = async (email: string, purpose: "SIGNUP" | "LOGIN"): Promise<AuthResponse> => {
+    const { data, error } = await apiFetch<AuthResponse>("/auth/resend-otp", {
+      method: "POST",
+      body: JSON.stringify({ email, purpose }),
+    });
+
+    if (error) return { error };
+    return data || { error: "Failed to resend code" };
   };
 
   const logout = () => {
@@ -139,6 +219,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         authError,
         login,
         signup,
+        verifySignupOtp,
+        verifyLoginOtp,
+        resendOtp,
         logout,
         refreshContext: fetchCurrentContext,
         updateBusinessState,

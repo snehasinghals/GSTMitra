@@ -180,7 +180,7 @@ export default function ItemsPage() {
             Items & Services Catalog
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Manage your goods and services. GST rates auto-fill based on HSN/SAC code selection.
+            Manage your goods and services.
           </p>
         </div>
 

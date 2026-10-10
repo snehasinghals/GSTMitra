@@ -136,7 +136,7 @@ export default function DashboardPage() {
         <div className="relative z-10 space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider bg-blue-500/30 text-blue-200 px-3 py-1 rounded-full border border-blue-400/30">
-              Plain Language Tax Summary
+              Tax Summary
             </span>
             <span className="text-xs text-blue-200 font-medium">Auto-calculated from your books</span>
           </div>

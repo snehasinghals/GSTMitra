@@ -117,6 +117,16 @@ export type SalesInvoiceItem = Prisma.SalesInvoiceItemModel
  */
 export type User = Prisma.UserModel
 /**
+ * Model OtpCode
+ * 
+ */
+export type OtpCode = Prisma.OtpCodeModel
+/**
+ * Model ResetToken
+ * 
+ */
+export type ResetToken = Prisma.ResetTokenModel
+/**
  * Model Vendor
  * 
  */

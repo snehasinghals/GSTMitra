@@ -301,14 +301,44 @@ model SalesInvoiceItem {
 }
 
 model User {
-  id         String         @id @default(uuid())
-  email      String         @unique
-  password   String
-  name       String
-  phone      String?
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
-  businesses BusinessUser[]
+  id                String         @id @default(uuid())
+  email             String         @unique
+  password          String
+  name              String
+  phone             String?
+  emailVerified     DateTime?
+  passwordChangedAt DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  businesses        BusinessUser[]
+  otpCodes          OtpCode[]
+  resetTokens       ResetToken[]
+}
+
+model OtpCode {
+  id          String   @id @default(uuid())
+  userId      String
+  purpose     String
+  codeHash    String
+  expiresAt   DateTime
+  attempts    Int      @default(0)
+  resendCount Int      @default(0)
+  lastSentAt  DateTime
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+}
+
+model ResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Vendor {

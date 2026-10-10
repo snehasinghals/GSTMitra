@@ -3,6 +3,7 @@
 import React, { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "./Sidebar";
+import { MobileBottomNav } from "./MobileBottomNav";
 import { useAuth } from "../context/AuthContext";
 
 const PREFETCH_ROUTES = [
@@ -50,7 +51,11 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, loading } = useAuth();
 
-  const isAuthPage = pathname === "/login" || pathname === "/signup" || pathname === "/onboarding";
+  const isAuthPage =
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname === "/onboarding" ||
+    pathname === "/forgot-password";
 
   if (isAuthPage || (!loading && !user)) {
     return <main className="flex-1">{children}</main>;
@@ -60,7 +65,8 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
     <div className="flex flex-1 min-h-[calc(100vh-4rem)]">
       <Sidebar />
       <RoutePrefetcher enabled={!loading && !!user} />
-      <main className="flex-1 p-6 overflow-y-auto max-w-7xl mx-auto w-full">
+      {/* pb-20 on mobile to account for the fixed bottom nav bar height */}
+      <main className="flex-1 p-4 sm:p-6 overflow-y-auto max-w-7xl mx-auto w-full pb-20 md:pb-6">
         {loading ? (
           <div className="flex items-center justify-center min-h-[50vh]">
             <div className="text-center space-y-3">
@@ -72,7 +78,8 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
           children
         )}
       </main>
+      {/* Mobile bottom navigation — hidden on md+ */}
+      <MobileBottomNav />
     </div>
   );
 }
-
