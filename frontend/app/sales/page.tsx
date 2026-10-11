@@ -354,10 +354,7 @@ export default function SalesPage() {
       setApplicablePercent("");
       setIsEcommerceSale(false);
       setEcomGstin("");
-      showToast(editingInvoiceId ? "Invoice details updated" : "Invoice generated. Your bill PDF is downloading.");
-      if (!editingInvoiceId && created?.id && created?.invoiceNumber) {
-        void handleDownloadPdf(created.id, created.invoiceNumber, true);
-      }
+      showToast(editingInvoiceId ? "Invoice details updated" : "Invoice generated successfully.");
     } finally {
       submitLock.current = false;
       setSavingInvoice(false);
@@ -365,33 +362,31 @@ export default function SalesPage() {
   };
 
   // ---------- PDF ----------
-  const handleDownloadPdf = async (invId: string, invNum: string, billLayout = false) => {
+  const handleDownloadPdf = async (invId: string, invNum: string) => {
     if (downloadingId) return;
     setDownloadingId(invId);
     try {
       const token = localStorage.getItem("gstmitra_token");
-      const pdfPath = billLayout ? "bill.pdf" : "pdf";
-      const response = await fetch(`${API_BASE_URL}/sales/invoices/${invId}/${pdfPath}`, {
+      const response = await fetch(`${API_BASE_URL}/sales/invoices/${invId}/pdf`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) {
-        alert(`Could not download the ${billLayout ? "bill" : "invoice"} PDF. Please try again.`);
+        alert("Could not download the invoice PDF. Please try again.");
         return;
       }
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = billLayout ? `BILL-${invNum}.pdf` : `${invNum}.pdf`;
+      a.download = `${invNum}.pdf`;
       a.click();
       window.URL.revokeObjectURL(url);
     } catch {
-      alert(`Could not download the ${billLayout ? "bill" : "invoice"} PDF. Please check your connection.`);
+      alert("Could not download the invoice PDF. Please check your connection.");
     } finally {
       setDownloadingId(null);
     }
   };
-
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Header */}
@@ -402,7 +397,7 @@ export default function SalesPage() {
             Sales & Customer Invoices
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Auto CGST+SGST for same state sales, IGST for interstate sales. Download the invoice or bill layout after creation.
+            Auto CGST+SGST for same state sales, IGST for interstate sales. Download the invoice PDF anytime from the table.
           </p>
         </div>
 

@@ -297,12 +297,7 @@ export default function PurchasesPage() {
       setIsReverseCharge(false);
       setIsItcEligible(true);
       setBillItems([{ ...EMPTY_ITEM }]);
-      if (!editingBillId && created?.id && created?.billNumber) {
-        showToast("Purchase bill saved. Your bill PDF is downloading.");
-        void handleDownloadBill(created.id, created.billNumber);
-      } else {
-        showToast(editingBillId ? "Purchase bill details updated" : "Purchase bill added successfully");
-      }
+      showToast(editingBillId ? "Purchase bill details updated" : "Purchase bill added successfully");
     } finally {
       billLock.current = false;
       setSavingBill(false);
