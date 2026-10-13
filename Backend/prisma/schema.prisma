@@ -301,18 +301,23 @@ model SalesInvoiceItem {
 }
 
 model User {
-  id                String         @id @default(uuid())
-  email             String         @unique
-  password          String
-  name              String
-  phone             String?
-  emailVerified     DateTime?
-  passwordChangedAt DateTime?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  businesses        BusinessUser[]
-  otpCodes          OtpCode[]
-  resetTokens       ResetToken[]
+  id                      String         @id @default(uuid())
+  email                   String         @unique
+  password                String?
+  name                    String
+  phone                   String?
+  mitraId                 String?        @unique
+  address                 String?
+  pan                     String?
+  emailVerified           DateTime?
+  passwordChangedAt       DateTime?
+  failedPasswordAttempts  Int            @default(0)
+  passwordLockedUntil     DateTime?
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
+  businesses              BusinessUser[]
+  otpCodes                OtpCode[]
+  resetTokens             ResetToken[]
 }
 
 model OtpCode {

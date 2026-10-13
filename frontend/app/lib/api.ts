@@ -3,6 +3,8 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost
 export type ApiResult<T> = {
   data?: T;
   error?: string;
+  code?: string;
+  attemptsLeft?: number;
   /** HTTP status. 0 = network failure / timeout (no response received). */
   status: number;
 };
@@ -87,7 +89,7 @@ export async function apiFetch<T>(
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
-      signal: options.signal ?? AbortSignal.timeout(15000),
+      signal: options.signal ?? AbortSignal.timeout(60000),
     });
 
     if (response.status === 401) {
@@ -113,7 +115,9 @@ export async function apiFetch<T>(
 
     if (!response.ok) {
       return {
-        error: json.error || `Request failed with status ${response.status}`,
+        error: json.error || json.message || `Request failed with status ${response.status}`,
+        code: json.code,
+        attemptsLeft: json.attemptsLeft,
         status: response.status,
       };
     }

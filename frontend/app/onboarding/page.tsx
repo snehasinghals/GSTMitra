@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "../context/AuthContext";
 import { apiFetch } from "../lib/api";
 import { CheckCircle2, ArrowRight, Building, ShieldCheck, Sparkles, HelpCircle } from "lucide-react";
@@ -28,7 +29,7 @@ const INDIAN_STATES = [
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { user, business, updateBusinessState } = useAuth();
+  const { user, business, updateBusinessState, refreshContext, loading } = useAuth();
 
   const [step, setStep] = useState(1);
   const [businessName, setBusinessName] = useState("");
@@ -43,9 +44,21 @@ export default function OnboardingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  // Rule 4: If a user with isOnboarded = true opens /onboarding, redirect them to Shop Dashboard
+  useEffect(() => {
+    if (!loading && business?.isOnboarded) {
+      router.replace("/");
+    }
+  }, [loading, business, router]);
+
+  // Rule 2: business name field must start EMPTY and be required.
+  // Only pre-fill the name when isOnboarded is already true (editing existing shop).
+  // Never show placeholder names like "<name>'s Business" in the field.
   useEffect(() => {
     if (business) {
-      if (business.name) setBusinessName(business.name);
+      if (business.isOnboarded && business.name && !business.name.endsWith("'s Business")) {
+        setBusinessName(business.name);
+      }
       if (business.tradeName) setTradeName(business.tradeName);
       if (business.stateCode) setStateCode(business.stateCode);
       if (business.gstin) setGstin(business.gstin);
@@ -95,13 +108,13 @@ export default function OnboardingPage() {
     const { data, error } = await apiFetch<{ business: any }>("/auth/onboarding", {
       method: "POST",
       body: JSON.stringify({
-        businessName,
-        tradeName,
+        businessName: businessName.trim(),
+        tradeName: tradeName.trim() || undefined,
         businessType,
         stateCode,
         turnoverRange,
         filingFrequency,
-        gstin,
+        gstin: gstin.trim() || undefined,
       }),
     });
 
@@ -113,30 +126,34 @@ export default function OnboardingPage() {
     }
 
     if (data?.business) {
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("justOnboarded", "1");
+      }
       updateBusinessState(data.business);
-      router.push("/");
+      await refreshContext();
+      router.push("/?justOnboarded=1");
     }
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 bg-slate-100">
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-3 sm:p-6 bg-slate-100">
       <div className="max-w-2xl w-full bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
         {/* Progress Header */}
-        <div className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white p-6 sm:p-8">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white p-5 sm:p-8">
+          <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold uppercase tracking-wider bg-blue-500/30 text-blue-200 px-3 py-1 rounded-full border border-blue-400/30">
               Step {step} of 3 • Quick Setup
             </span>
-            <span className="text-xs text-blue-200 font-medium">Plain Words Guidance</span>
+            <span className="text-xs text-blue-200 font-medium hidden sm:inline">Plain Words Guidance</span>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-bold">Set up your business for GST</h1>
-          <p className="text-blue-100 text-sm mt-1">
-            Answer 3 quick questions so GSTMitra shows only the features relevant to your business.
+          <h1 className="text-xl sm:text-3xl font-extrabold">Start your shop on GSTMitra</h1>
+          <p className="text-blue-100 text-xs sm:text-sm mt-1">
+            Answer 3 quick questions so GSTMitra shows only the features relevant to your shop.
           </p>
 
           {/* Steps Indicator */}
-          <div className="flex items-center gap-2 mt-6">
+          <div className="flex items-center gap-2 mt-5 sm:mt-6">
             <div className={`h-2 flex-1 rounded-full transition-all ${step >= 1 ? "bg-white" : "bg-blue-900/50"}`}></div>
             <div className={`h-2 flex-1 rounded-full transition-all ${step >= 2 ? "bg-white" : "bg-blue-900/50"}`}></div>
             <div className={`h-2 flex-1 rounded-full transition-all ${step >= 3 ? "bg-white" : "bg-blue-900/50"}`}></div>
@@ -167,13 +184,13 @@ export default function OnboardingPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Legal Business Name <span className="text-red-500">*</span>
+                    Shop / Business Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
-                    placeholder="e.g. Ramesh Traders or Apex Tech Solutions"
+                    placeholder="e.g. Ramesh Kirana Store, Priya Electronics"
                     className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     required
                   />
@@ -222,12 +239,18 @@ export default function OnboardingPage() {
                 </div>
               </div>
 
-              <div className="pt-4 flex justify-end">
+              <div className="pt-4 flex items-center justify-between">
+                <Link
+                  href="/home"
+                  className="text-xs text-slate-500 hover:text-slate-800 font-medium px-2 py-1 transition-colors"
+                >
+                  Not now
+                </Link>
                 <button
                   type="button"
                   onClick={() => setStep(2)}
                   disabled={!businessName.trim()}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-6 py-2.5 rounded-xl shadow-md transition-all disabled:opacity-50"
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-6 py-2.5 rounded-xl shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span>Next: State & Turnover</span>
                   <ArrowRight className="w-4 h-4" />
@@ -299,7 +322,7 @@ export default function OnboardingPage() {
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     GST Return Filing Frequency
                   </label>
-                  <div className="flex gap-4">
+                  <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-4">
                     <label className={`flex-1 p-3 rounded-xl border cursor-pointer text-xs font-medium transition-all ${filingFrequency === "MONTHLY" ? "border-blue-600 bg-blue-50 text-blue-900 font-bold" : "border-slate-200"}`}>
                       <input
                         type="radio"
@@ -326,7 +349,7 @@ export default function OnboardingPage() {
                 </div>
               </div>
 
-              <div className="pt-4 flex justify-between">
+              <div className="pt-4 flex items-center justify-between">
                 <button
                   type="button"
                   onClick={() => setStep(1)}
@@ -411,11 +434,11 @@ export default function OnboardingPage() {
                 </div>
               </div>
 
-              <div className="pt-4 flex justify-between">
+              <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <button
                   type="button"
                   onClick={() => setStep(2)}
-                  className="text-xs text-slate-600 hover:text-slate-900 font-medium px-4 py-2"
+                  className="w-full sm:w-auto text-xs text-slate-600 hover:text-slate-900 font-medium px-4 py-2 order-2 sm:order-1 text-center"
                 >
                   Back
                 </button>
@@ -423,7 +446,7 @@ export default function OnboardingPage() {
                   type="button"
                   onClick={handleCompleteOnboarding}
                   disabled={submitting || Boolean(gstinError)}
-                  className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-7 py-3 rounded-xl shadow-lg transition-all disabled:opacity-50"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-7 py-3 rounded-xl shadow-lg transition-all disabled:opacity-50 order-1 sm:order-2"
                 >
                   {submitting ? "Setting up..." : "Complete Setup & Launch Dashboard"}
                   <ArrowRight className="w-4 h-4" />

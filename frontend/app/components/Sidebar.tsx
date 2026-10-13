@@ -1,28 +1,35 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "../context/AuthContext";
 import {
-  LayoutDashboard,
-  Package,
-  FileText,
-  ShoppingBag,
-  FileSpreadsheet,
+  Home,
+  Receipt,
   BookOpen,
   HelpCircle,
+  LayoutDashboard,
+  PlusCircle,
+  FileText,
+  ShoppingBag,
+  Package,
+  Users,
+  FileSpreadsheet,
   ChevronDown,
-  ChevronRight,
+  ArrowRight,
+  Store,
 } from "lucide-react";
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { business } = useAuth();
+  const isOnboarded = !!business?.isOnboarded;
+
+  const [filingOpen, setFilingOpen] = useState(false);
 
   const isExact = (path: string) => pathname === path;
   const isUnder = (path: string) => pathname === path || pathname.startsWith(`${path}/`);
-
-  const filingOpen = isUnder("/gst-filing");
-  const guidanceActive = isUnder("/guidance");
 
   const filingChildren = [
     { label: "GSTR-1", href: "/gst-filing/gstr1" },
@@ -30,163 +37,156 @@ export function Sidebar() {
     { label: "GSTR-3B", href: "/gst-filing/gstr3b" },
   ];
 
-  const navItems = [
-    { label: "Dashboard", href: "/", icon: LayoutDashboard },
-    { label: "Items & Services", href: "/items", icon: Package },
-    { label: "Sales & Invoices", href: "/sales", icon: FileText },
-    { label: "Purchases & Bills", href: "/purchases", icon: ShoppingBag },
-    { label: "GST Rules & Rates", href: "/rules", icon: BookOpen },
-  ];
-
   const itemClass = (active: boolean) =>
-    `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+    `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
       active
         ? "bg-blue-600 text-white shadow-sm font-semibold"
         : "hover:bg-slate-800 hover:text-white text-slate-300"
     }`;
 
   return (
-    <aside className="hidden md:flex w-64 bg-slate-900 text-slate-300 min-h-[calc(100vh-4rem)] p-4 flex-col justify-between shrink-0 shadow-md">
-      <div className="space-y-6">
-        {/* ---------- Core Modules ---------- */}
+    <aside className="hidden md:flex w-64 bg-slate-900 text-slate-300 sticky top-14 sm:top-16 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] p-4 pb-8 flex-col justify-between shrink-0 shadow-md overflow-y-auto">
+      <div className="space-y-5">
+        {/* ================= PERSONAL SECTION ================= */}
         <div>
-          <p className="px-3 text-2xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-            Core Modules
-          </p>
+          {isOnboarded && (
+            <p className="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+              Personal
+            </p>
+          )}
           <nav className="space-y-1">
-            {navItems.slice(0, 4).map((item) => {
-              const Icon = item.icon;
-              const active = item.href === "/" ? isExact("/") : isUnder(item.href);
-              return (
-                <Link key={item.href} href={item.href} className={itemClass(active)}>
-                  <Icon className={`w-4 h-4 ${active ? "text-white" : "text-slate-400"}`} />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
+            <Link href="/home" className={itemClass(isExact("/home"))}>
+              <Home className={`w-4 h-4 ${isExact("/home") ? "text-white" : "text-slate-400"}`} />
+              <span>Home</span>
+            </Link>
 
-            <div>
-              <Link
-                href="/gst-filing"
-                className={`${itemClass(isExact("/gst-filing"))} justify-between`}
-              >
-                <span className="flex items-center gap-3">
-                  <FileSpreadsheet
-                    className={`w-4 h-4 ${isExact("/gst-filing") ? "text-white" : "text-slate-400"}`}
-                  />
-                  GST Filing Hub
-                </span>
-                <ChevronDown
-                  className={`w-3.5 h-3.5 transition-transform ${filingOpen ? "rotate-180" : ""}`}
-                />
-              </Link>
-              {filingOpen && (
-                <div className="mt-1 ml-4 pl-3 border-l border-slate-700 space-y-1">
-                  {filingChildren.map((child) => {
-                    const active = isUnder(child.href);
-                    return (
-                      <Link
-                        key={child.href}
-                        href={child.href}
-                        className={`flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                          active
-                            ? "bg-blue-600/80 text-white font-semibold"
-                            : "hover:bg-slate-800 hover:text-white text-slate-400"
-                        }`}
-                      >
-                        {child.label}
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <Link href="/my-bills" className={itemClass(isUnder("/my-bills"))}>
+              <Receipt className={`w-4 h-4 ${isUnder("/my-bills") ? "text-white" : "text-slate-400"}`} />
+              <span>My Bills</span>
+            </Link>
 
-            {navItems.slice(4).map((item) => {
-              const Icon = item.icon;
-              const active = isUnder(item.href);
-              return (
-                <Link key={item.href} href={item.href} className={itemClass(active)}>
-                  <Icon className={`w-4 h-4 ${active ? "text-white" : "text-slate-400"}`} />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
+            <Link href="/rules" className={itemClass(isUnder("/rules"))}>
+              <BookOpen className={`w-4 h-4 ${isUnder("/rules") ? "text-white" : "text-slate-400"}`} />
+              <span>Rules & Rates</span>
+            </Link>
+
+            <Link href="/help" className={itemClass(isUnder("/help"))}>
+              <HelpCircle className={`w-4 h-4 ${isUnder("/help") ? "text-white" : "text-slate-400"}`} />
+              <span>Help</span>
+            </Link>
           </nav>
         </div>
 
-        {/* ---------- Help / Beginner Guidance ---------- */}
-        <div className="pt-4 border-t border-slate-800">
-          <p className="px-3 text-2xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-            Help
-          </p>
-
-          <Link
-            href="/guidance"
-            className={`group flex items-center gap-3 rounded-xl p-3 border transition-all ${
-              guidanceActive
-                ? "bg-blue-600/30 border-blue-500 ring-1 ring-blue-500 shadow-sm"
-                : "bg-slate-800/80 border-slate-700/60 hover:bg-slate-800 hover:border-blue-400"
-            }`}
-          >
-            {/* icon box */}
-            <div
-              className={`w-9 h-9 shrink-0 rounded-lg flex items-center justify-center transition-colors ${
-                guidanceActive
-                  ? "bg-blue-600 text-white"
-                  : "bg-blue-500/15 text-blue-400 group-hover:bg-blue-500/25"
-              }`}
-            >
-              <HelpCircle className="w-5 h-5" />
-            </div>
-
-            {/* text */}
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-white leading-tight">
-                Beginner Guidance
+        {/* ================= IF NOT ONBOARDED: START YOUR SHOP BOX ================= */}
+        {!isOnboarded && (
+          <div className="pt-2">
+            <div className="rounded-xl p-4 bg-gradient-to-br from-blue-900/60 to-indigo-950/80 border border-blue-500/40 shadow-sm text-white">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white">
+                  <Store className="w-4 h-4" />
+                </div>
+                <h4 className="font-bold text-sm">Start your shop</h4>
+              </div>
+              <p className="text-xs text-slate-300 mb-3 leading-relaxed">
+                Create GST invoices, track purchases, manage stock, and file GST returns easily.
               </p>
-              
+              <Link
+                href="/onboarding"
+                className="flex items-center justify-between w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+              >
+                <span>Set up shop</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
+          </div>
+        )}
 
-            {/* arrow */}
-            <ChevronRight className="w-4 h-4 shrink-0 text-slate-500 group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all" />
-          </Link>
+        {/* ================= IF ONBOARDED: MY SHOP SECTION ================= */}
+        {isOnboarded && (
+          <div className="pt-3 border-t border-slate-800">
+            <p className="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+              My Shop
+            </p>
+            <nav className="space-y-1">
+              <Link href="/" className={itemClass(isExact("/"))}>
+                <LayoutDashboard className={`w-4 h-4 ${isExact("/") ? "text-white" : "text-slate-400"}`} />
+                <span>Shop Dashboard</span>
+              </Link>
 
-          <Link
-            href="/glossary"
-            className={`group flex items-center gap-3 rounded-xl p-3 border transition-all mt-2 ${
-              isUnder("/glossary")
-                ? "bg-emerald-600/30 border-emerald-500 ring-1 ring-emerald-500 shadow-sm"
-                : "bg-slate-800/80 border-slate-700/60 hover:bg-slate-800 hover:border-emerald-400"
-            }`}
-          >
-            {/* icon box */}
-            <div
-              className={`w-9 h-9 shrink-0 rounded-lg flex items-center justify-center transition-colors ${
-                isUnder("/glossary")
-                  ? "bg-emerald-600 text-white"
-                  : "bg-emerald-500/15 text-emerald-400 group-hover:bg-emerald-500/25"
-              }`}
-            >
-              <BookOpen className="w-5 h-5" />
-            </div>
+              <Link href="/sales?addInvoice=1" className={itemClass(false)}>
+                <PlusCircle className="w-4 h-4 text-emerald-400" />
+                <span className="text-emerald-300 font-semibold">New Bill</span>
+              </Link>
 
-            {/* text */}
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-white leading-tight">
-                GST Dictionary
-              </p>
-            </div>
+              <Link href="/sales" className={itemClass(isExact("/sales"))}>
+                <FileText className={`w-4 h-4 ${isExact("/sales") ? "text-white" : "text-slate-400"}`} />
+                <span>Sales</span>
+              </Link>
 
-            {/* arrow */}
-            <ChevronRight className="w-4 h-4 shrink-0 text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all" />
-          </Link>
-        </div>
+              <Link href="/purchases" className={itemClass(isUnder("/purchases"))}>
+                <ShoppingBag className={`w-4 h-4 ${isUnder("/purchases") ? "text-white" : "text-slate-400"}`} />
+                <span>Purchases</span>
+              </Link>
+
+              <Link href="/items" className={itemClass(isUnder("/items"))}>
+                <Package className={`w-4 h-4 ${isUnder("/items") ? "text-white" : "text-slate-400"}`} />
+                <span>Items</span>
+              </Link>
+
+              {/* GST Filing (collapsible) */}
+              <div>
+                <div className={`${itemClass(isExact("/gst-filing"))} justify-between`}>
+                  <Link
+                    href="/gst-filing"
+                    onClick={() => setFilingOpen(true)}
+                    className="flex flex-1 items-center gap-3"
+                  >
+                    <FileSpreadsheet
+                      className={`w-4 h-4 ${isUnder("/gst-filing") ? "text-white" : "text-slate-400"}`}
+                    />
+                    <span>GST Filing</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setFilingOpen(!filingOpen)}
+                    aria-label="Toggle GST Filing menu"
+                    className="p-1 -mr-1"
+                  >
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 transition-transform ${filingOpen ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                </div>
+
+                {filingOpen && (
+                  <div className="mt-1 ml-4 pl-3 border-l border-slate-700 space-y-1">
+                    {filingChildren.map((child) => {
+                      const active = isUnder(child.href);
+                      return (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          className={`flex items-center px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                            active
+                              ? "bg-blue-600/80 text-white font-semibold"
+                              : "hover:bg-slate-800 hover:text-white text-slate-400"
+                          }`}
+                        >
+                          {child.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </nav>
+          </div>
+        )}
       </div>
 
       {/* ---------- Footer ---------- */}
       <div className="text-center pt-4 border-t border-slate-800 text-3xs text-slate-500">
-        <p>GSTMitra v1.0 · Phase 1 MVP</p>
+        <p>GSTMitra · Plain & Simple GST</p>
       </div>
     </aside>
   );

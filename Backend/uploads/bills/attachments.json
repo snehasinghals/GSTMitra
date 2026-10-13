@@ -1,0 +1,44 @@
+{
+  "40719055-b448-41de-8cfa-9bf7dc37afd2:num:112": {
+    "filename": "40719055_1791769528537_h2vno_BILL-112_pdf.pdf",
+    "originalName": "BILL-112.pdf",
+    "mimeType": "application/pdf",
+    "url": "/api/purchases/bills/files/40719055_1791769528537_h2vno_BILL-112_pdf.pdf",
+    "uploadedAt": "2026-10-12T01:45:42.542Z"
+  },
+  "40719055-b448-41de-8cfa-9bf7dc37afd2:id:097acc12-e01f-41c5-8f79-7f68397a54a2": {
+    "filename": "40719055_1791769528537_h2vno_BILL-112_pdf.pdf",
+    "originalName": "BILL-112.pdf",
+    "mimeType": "application/pdf",
+    "url": "/api/purchases/bills/files/40719055_1791769528537_h2vno_BILL-112_pdf.pdf",
+    "uploadedAt": "2026-10-12T01:45:42.542Z"
+  },
+  "40719055-b448-41de-8cfa-9bf7dc37afd2:num:559107": {
+    "filename": "40719055_1791769559100_14gxf_bill_scan_1791769556462_1_jpg.jpg",
+    "originalName": "bill_scan_1791769556462_1.jpg",
+    "mimeType": "image/jpeg",
+    "url": "/api/purchases/bills/files/40719055_1791769559100_14gxf_bill_scan_1791769556462_1_jpg.jpg",
+    "uploadedAt": "2026-10-12T01:46:16.590Z"
+  },
+  "40719055-b448-41de-8cfa-9bf7dc37afd2:num:112-4463": {
+    "filename": "40719055_1791769528537_h2vno_BILL-112_pdf.pdf",
+    "originalName": "BILL-112.pdf",
+    "mimeType": "application/pdf",
+    "url": "/api/purchases/bills/files/40719055_1791769528537_h2vno_BILL-112_pdf.pdf",
+    "uploadedAt": "2026-10-12T01:46:15.240Z"
+  },
+  "40719055-b448-41de-8cfa-9bf7dc37afd2:id:9fc2d596-1b99-4fe4-898a-19520b4f4031": {
+    "filename": "40719055_1791769528537_h2vno_BILL-112_pdf.pdf",
+    "originalName": "BILL-112.pdf",
+    "mimeType": "application/pdf",
+    "url": "/api/purchases/bills/files/40719055_1791769528537_h2vno_BILL-112_pdf.pdf",
+    "uploadedAt": "2026-10-12T01:46:15.240Z"
+  },
+  "40719055-b448-41de-8cfa-9bf7dc37afd2:id:7f559b08-103b-4b29-a45b-1250841ca202": {
+    "filename": "40719055_1791769559100_14gxf_bill_scan_1791769556462_1_jpg.jpg",
+    "originalName": "bill_scan_1791769556462_1.jpg",
+    "mimeType": "image/jpeg",
+    "url": "/api/purchases/bills/files/40719055_1791769559100_14gxf_bill_scan_1791769556462_1_jpg.jpg",
+    "uploadedAt": "2026-10-12T01:46:16.590Z"
+  }
+}

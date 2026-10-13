@@ -6,6 +6,15 @@ import { prisma } from "../lib/db.js";
 import { authMiddleware, AuthenticatedRequest } from "../middleware/auth.js";
 import { r2 } from "../lib/money.js";
 import { Prisma } from "../../app/generated/prisma/client.js";
+import { extractBillDetails } from "../lib/billExtractor.js";
+import {
+  saveBillAttachment,
+  linkBillIdToAttachment,
+  getBillAttachment,
+  getBusinessAttachmentsMap,
+  UPLOADS_DIR,
+} from "../lib/billAttachments.js";
+import { INDIAN_STATES } from "../lib/constants.js";
 
 const router = Router();
 
@@ -58,7 +67,13 @@ router.get("/bills", authMiddleware, async (req: AuthenticatedRequest, res: Resp
       ...(isListView ? { take } : {}),
     });
 
-    res.json(bills);
+    const attachmentsMap = getBusinessAttachmentsMap(businessId);
+    const enrichedBills = bills.map((b) => ({
+      ...b,
+      attachment: attachmentsMap[b.id] || attachmentsMap[b.billNumber] || null,
+    }));
+
+    res.json(enrichedBills);
   } catch (error: any) {
     console.error("Fetch purchase bills error:", error);
     res.status(500).json({ error: "Failed to fetch purchase bills." });
@@ -74,7 +89,8 @@ router.get("/bills/:id", authMiddleware, async (req: AuthenticatedRequest, res: 
       include: { vendor: true, items: true },
     });
     if (!bill) return res.status(404).json({ error: "Purchase bill not found." });
-    res.json(bill);
+    const attachment = getBillAttachment(businessId, bill.id) || getBillAttachment(businessId, bill.billNumber);
+    res.json({ ...bill, attachment });
   } catch (error) {
     console.error("Fetch purchase bill error:", error);
     res.status(500).json({ error: "Failed to fetch purchase bill." });
@@ -950,6 +966,441 @@ router.delete("/bills/:id/payments/:paymentId", authMiddleware, async (req: Auth
   } catch (error: any) {
     console.error("Delete purchase bill payment error:", error);
     res.status(500).json({ error: "Failed to delete purchase bill payment." });
+  }
+});
+
+// -------------------------------------------------------------
+// BILL OCR & AI EXTRACTION ENDPOINT
+// Handles single or multiple files (PDFs, images, camera captures)
+// -------------------------------------------------------------
+router.post("/extract-bill", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) return res.status(400).json({ error: "No active business" });
+
+    const business = await prisma.business.findUnique({ where: { id: businessId } });
+    if (!business) return res.status(404).json({ error: "Business profile not found" });
+
+    // Accept { files: [{ name, type, data }] } or { file: { name, type, data } } or base64 data directly
+    let incomingFiles: Array<{ name?: string; type?: string; data?: string }> = [];
+    if (Array.isArray(req.body.files)) {
+      incomingFiles = req.body.files;
+    } else if (req.body.file) {
+      incomingFiles = [req.body.file];
+    } else if (req.body.data) {
+      incomingFiles = [{ name: req.body.name, type: req.body.type, data: req.body.data }];
+    }
+
+    if (incomingFiles.length === 0) {
+      return res.status(400).json({ error: "No files provided for extraction." });
+    }
+
+    if (!fs.existsSync(UPLOADS_DIR)) {
+      fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+    }
+
+    const results = [];
+
+    for (const [idx, item] of incomingFiles.entries()) {
+      if (!item || !item.data) continue;
+
+      let base64String = item.data;
+      let detectedType = item.type || "image/jpeg";
+      const originalName = item.name || `scanned_bill_${idx + 1}.jpg`;
+
+      // If data is a data URI like "data:image/jpeg;base64,..."
+      if (base64String.includes(";base64,")) {
+        const parts = base64String.split(";base64,");
+        detectedType = parts[0].replace(/^data:/, "");
+        base64String = parts[1];
+      }
+
+      const fileBuffer = Buffer.from(base64String, "base64");
+      const ext =
+        detectedType.includes("pdf") || originalName.toLowerCase().endsWith(".pdf")
+          ? ".pdf"
+          : detectedType.includes("png")
+            ? ".png"
+            : detectedType.includes("webp")
+              ? ".webp"
+              : ".jpg";
+
+      const safeBase = originalName.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 30);
+      const savedFileName = `${businessId.slice(0, 8)}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}_${safeBase}${ext}`;
+      const savedPath = path.join(UPLOADS_DIR, savedFileName);
+
+      fs.writeFileSync(savedPath, fileBuffer);
+
+      // Perform extraction (multimodal Gemini AI or local PDF/heuristic parser)
+      const extracted = await extractBillDetails(
+        fileBuffer,
+        detectedType,
+        originalName,
+        business.gstin,
+        business.stateCode
+      );
+
+      // Check if vendor already exists for this business
+      let matchedVendor: any = null;
+      if (extracted.vendorGstin) {
+        matchedVendor = await prisma.vendor.findFirst({
+          where: { businessId, gstin: extracted.vendorGstin },
+        });
+      }
+
+      if (!matchedVendor && extracted.vendorName) {
+        matchedVendor = await prisma.vendor.findFirst({
+          where: {
+            businessId,
+            name: { equals: extracted.vendorName.trim(), mode: "insensitive" },
+          },
+        });
+      }
+
+      const vendorInfo = matchedVendor
+        ? {
+            id: matchedVendor.id,
+            name: matchedVendor.name,
+            gstin: matchedVendor.gstin,
+            stateCode: matchedVendor.stateCode,
+            stateName: matchedVendor.stateName,
+            vendorType: matchedVendor.vendorType,
+          }
+        : {
+            id: null,
+            name: extracted.vendorName,
+            gstin: extracted.vendorGstin,
+            stateCode: extracted.vendorStateCode,
+            stateName: extracted.vendorStateName,
+            vendorType: extracted.vendorGstin ? "REGISTERED" : "UNREGISTERED",
+          };
+
+      // Save initial attachment mapping
+      saveBillAttachment(
+        businessId,
+        extracted.billNumber,
+        null,
+        savedFileName,
+        originalName,
+        detectedType
+      );
+
+      results.push({
+        id: `extracted_${Date.now()}_${idx}`,
+        fileName: originalName,
+        fileType: detectedType,
+        fileUrl: `/api/purchases/bills/files/${savedFileName}`,
+        filename: savedFileName,
+        vendor: vendorInfo,
+        vendorExists: !!matchedVendor,
+        vendorId: matchedVendor?.id || null,
+        billNumber: extracted.billNumber,
+        billDate: extracted.billDate,
+        dueDate: extracted.dueDate,
+        placeOfSupply: extracted.placeOfSupply,
+        category: extracted.category,
+        supplyType: extracted.supplyType,
+        isReverseCharge: extracted.isReverseCharge,
+        isItcEligible: extracted.isItcEligible,
+        itcIneligibilityReason: extracted.itcIneligibilityReason,
+        subtotal: extracted.subtotal,
+        totalCgst: extracted.totalCgst,
+        totalSgst: extracted.totalSgst,
+        totalIgst: extracted.totalIgst,
+        totalCess: extracted.totalCess,
+        totalAmount: extracted.totalAmount,
+        items: extracted.items,
+        confidence: extracted.confidence,
+        extractionMethod: extracted.extractionMethod,
+      });
+    }
+
+    res.json({
+      success: true,
+      count: results.length,
+      bills: results,
+    });
+  } catch (error: any) {
+    console.error("Bill extraction error:", error);
+    res.status(500).json({ error: error.message || "Failed to extract bill details." });
+  }
+});
+
+// -------------------------------------------------------------
+// BATCH SAVE EXTRACTED BILLS ENDPOINT
+// Automatically creates missing vendors & saves multiple bills
+// -------------------------------------------------------------
+router.post("/batch-save-bills", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) return res.status(400).json({ error: "No active business" });
+
+    const business = await prisma.business.findUnique({ where: { id: businessId } });
+    if (!business) return res.status(404).json({ error: "Business profile not found" });
+
+    const incomingBills = req.body.bills;
+    if (!Array.isArray(incomingBills) || incomingBills.length === 0) {
+      return res.status(400).json({ error: "No bills provided to save." });
+    }
+
+    const savedBills = [];
+    const errors: Array<{ billIndex: number; billNumber: string; error: string }> = [];
+
+    for (const [index, billData] of incomingBills.entries()) {
+      try {
+        let vendorId = billData.vendorId;
+
+        // Auto-resolve or create vendor if not specified or doesn't exist
+        if (!vendorId) {
+          const vName = String(billData.vendor?.name || billData.vendorName || "").trim();
+          const vGstin = billData.vendor?.gstin ? String(billData.vendor.gstin).trim().toUpperCase() : null;
+
+          if (!vName && !vGstin) {
+            throw new Error(`Bill ${index + 1}: vendor name or GSTIN is required.`);
+          }
+
+          let existingVendor: any = null;
+          if (vGstin) {
+            existingVendor = await prisma.vendor.findFirst({
+              where: { businessId, gstin: vGstin },
+            });
+          }
+          if (!existingVendor && vName) {
+            existingVendor = await prisma.vendor.findFirst({
+              where: { businessId, name: { equals: vName, mode: "insensitive" } },
+            });
+          }
+
+          if (existingVendor) {
+            vendorId = existingVendor.id;
+          } else {
+            const vStateCode = vGstin ? vGstin.substring(0, 2) : String(billData.vendor?.stateCode || business.stateCode);
+            const stateMatch = INDIAN_STATES.find((s) => s.code === vStateCode);
+            const vStateName = stateMatch ? stateMatch.name : "Maharashtra";
+            const newVendor = await prisma.vendor.create({
+              data: {
+                businessId,
+                name: vName || `Vendor ${vGstin}`,
+                gstin: vGstin,
+                stateCode: vStateCode,
+                stateName: vStateName,
+                vendorType: vGstin ? "REGISTERED" : "UNREGISTERED",
+              },
+            });
+            vendorId = newVendor.id;
+          }
+        }
+
+        const vendor = await prisma.vendor.findFirstOrThrow({ where: { id: vendorId, businessId } });
+
+        let cleanBillNumber = String(billData.billNumber || "").trim();
+        if (!cleanBillNumber) {
+          cleanBillNumber = `BILL-${Date.now().toString().slice(-6)}`;
+        }
+
+        // Check if a bill with same business, vendor, and billNumber already exists
+        const existingBill = await prisma.purchaseBill.findUnique({
+          where: {
+            businessId_vendorId_billNumber: {
+              businessId,
+              vendorId,
+              billNumber: cleanBillNumber,
+            },
+          },
+        });
+
+        if (existingBill) {
+          cleanBillNumber = `${cleanBillNumber}-${Date.now().toString().slice(-4)}`;
+        }
+
+        const parsedBillDate = billData.billDate ? new Date(billData.billDate) : new Date();
+        const parsedDueDate = billData.dueDate ? new Date(billData.dueDate) : null;
+
+        const pos = billData.placeOfSupply || vendor.stateCode || business.stateCode;
+        const isIntraState = business.stateCode === pos;
+        const supplyType = isIntraState ? "INTRA_STATE" : "INTER_STATE";
+
+        const vendorCanGiveItc = vendor.vendorType === "REGISTERED" && !!vendor.gstin;
+        const requestedItc = billData.isItcEligible !== undefined ? Boolean(billData.isItcEligible) : true;
+        const overallItcEligible = vendorCanGiveItc && requestedItc;
+        const reason = !overallItcEligible
+          ? !vendorCanGiveItc
+            ? "Unregistered vendor - no GST charged, ITC not available"
+            : billData.itcIneligibilityReason || "Blocked credit under Sec 17(5)"
+          : null;
+
+        const rawItems = Array.isArray(billData.items) && billData.items.length > 0
+          ? billData.items
+          : [
+              {
+                description: "Purchase Goods / Services",
+                hsnSacCode: "998313",
+                quantity: 1,
+                unit: "PCS",
+                rate: billData.subtotal || billData.totalAmount || 1000,
+                gstRate: 18,
+              },
+            ];
+
+        let subtotal = 0;
+        let totalCgst = 0;
+        let totalSgst = 0;
+        let totalIgst = 0;
+        let totalCess = 0;
+
+        const formattedItems = rawItems.map((item: any) => {
+          const qty = Math.max(0.01, Number(item.quantity ?? 1));
+          const rate = Math.max(0, Number(item.rate ?? 0));
+          const taxableVal = r2(qty * rate);
+          const gstRate = Number(item.gstRate ?? 18);
+          const cessRate = Number(item.cessRate ?? 0);
+          const requestedCess = item.cessAmount === undefined ? null : Number(item.cessAmount);
+          const itemItcEligible = overallItcEligible && (item.isItcEligible !== undefined ? Boolean(item.isItcEligible) : true);
+
+          let cgst = 0, sgst = 0, igst = 0;
+          if (isIntraState) {
+            cgst = r2((taxableVal * (gstRate / 2)) / 100);
+            sgst = r2((taxableVal * (gstRate / 2)) / 100);
+          } else {
+            igst = r2((taxableVal * gstRate) / 100);
+          }
+
+          const cess = requestedCess === null ? r2((taxableVal * cessRate) / 100) : r2(requestedCess);
+          const storedCessRate = requestedCess === null ? cessRate : taxableVal > 0 ? r2((cess / taxableVal) * 100) : 0;
+          const itemTotal = r2(taxableVal + cgst + sgst + igst + cess);
+
+          subtotal += taxableVal;
+          totalCgst += cgst;
+          totalSgst += sgst;
+          totalIgst += igst;
+          totalCess += cess;
+
+          return {
+            itemId: item.itemId || null,
+            description: item.description || "Purchase Item",
+            hsnSacCode: item.hsnSacCode || "998313",
+            quantity: qty,
+            unit: item.unit || "PCS",
+            rate,
+            taxableValue: taxableVal,
+            gstRate,
+            cgstAmount: cgst,
+            sgstAmount: sgst,
+            igstAmount: igst,
+            cessRate: storedCessRate,
+            cessAmount: cess,
+            isItcEligible: itemItcEligible,
+            totalAmount: itemTotal,
+          };
+        });
+
+        subtotal = r2(subtotal);
+        totalCgst = r2(totalCgst);
+        totalSgst = r2(totalSgst);
+        totalIgst = r2(totalIgst);
+        totalCess = r2(totalCess);
+
+        const totalAmount = Math.round(subtotal + totalCgst + totalSgst + totalIgst + totalCess);
+
+        const savedBill = await prisma.purchaseBill.create({
+          data: {
+            businessId,
+            vendorId,
+            billNumber: cleanBillNumber,
+            billDate: parsedBillDate,
+            dueDate: parsedDueDate,
+            supplyType,
+            placeOfSupply: pos,
+            category: billData.category || "STOCK",
+            isReverseCharge: Boolean(billData.isReverseCharge),
+            isItcEligible: overallItcEligible,
+            itcIneligibilityReason: reason,
+            status: "UNPAID",
+            subtotal,
+            totalCgst,
+            totalSgst,
+            totalIgst,
+            totalCess,
+            totalAmount,
+            paidAmount: 0,
+            items: {
+              create: formattedItems,
+            },
+          },
+          include: {
+            vendor: true,
+            items: true,
+          },
+        });
+
+        // Link attachment if filename or previous attachment exists
+        if (billData.filename) {
+          saveBillAttachment(
+            businessId,
+            savedBill.billNumber,
+            savedBill.id,
+            billData.filename,
+            billData.fileName || billData.filename,
+            billData.fileType || "image/jpeg"
+          );
+        } else {
+          linkBillIdToAttachment(businessId, cleanBillNumber, savedBill.id);
+        }
+
+        const attachment = getBillAttachment(businessId, savedBill.id);
+        savedBills.push({ ...savedBill, attachment });
+      } catch (err: any) {
+        console.error(`Error saving bill ${index + 1}:`, err);
+        errors.push({
+          billIndex: index + 1,
+          billNumber: billData.billNumber || `Bill ${index + 1}`,
+          error: err.message || "Failed to save bill.",
+        });
+      }
+    }
+
+    res.json({
+      success: savedBills.length > 0,
+      savedCount: savedBills.length,
+      savedBills,
+      errors: errors.length > 0 ? errors : undefined,
+    });
+  } catch (error: any) {
+    console.error("Batch save bills error:", error);
+    res.status(500).json({ error: error.message || "Failed to batch save bills." });
+  }
+});
+
+// -------------------------------------------------------------
+// SERVE SAVED BILL ATTACHMENT (IMAGE OR PDF)
+// -------------------------------------------------------------
+router.get("/bills/files/:filename", (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const rawParam = Array.isArray(req.params.filename) ? req.params.filename[0] : req.params.filename;
+    const filename = path.basename(String(rawParam || ""));
+    const filePath = path.join(UPLOADS_DIR, filename);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: "Bill attachment not found." });
+    }
+
+    const ext = path.extname(filename).toLowerCase();
+    const mimeTypes: Record<string, string> = {
+      ".pdf": "application/pdf",
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".png": "image/png",
+      ".webp": "image/webp",
+      ".gif": "image/gif",
+    };
+
+    const contentType = mimeTypes[ext] || "application/octet-stream";
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
+    res.sendFile(filePath);
+  } catch (error: any) {
+    console.error("Serve bill file error:", error);
+    res.status(500).json({ error: "Failed to load bill attachment." });
   }
 });
 

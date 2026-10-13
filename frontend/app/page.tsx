@@ -15,6 +15,8 @@ import {
   PlusCircle,
   FileText,
   GraduationCap,
+  Sparkles,
+  X,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -25,6 +27,19 @@ export default function DashboardPage() {
   const [salesSummary, setSalesSummary] = useState<any>(null);
   const [expenseSummary, setExpenseSummary] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showJustOnboarded, setShowJustOnboarded] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const isJust =
+        sessionStorage.getItem("justOnboarded") === "1" ||
+        new URLSearchParams(window.location.search).get("justOnboarded") === "1";
+      if (isJust) {
+        setShowJustOnboarded(true);
+        sessionStorage.removeItem("justOnboarded");
+      }
+    }
+  }, []);
 
   const loadDashboardData = async () => {
     setLoading(true);
@@ -100,7 +115,42 @@ export default function DashboardPage() {
 
   
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-6 sm:space-y-8 animate-fadeIn">
+      {/* One-time post-onboarding welcome banner */}
+      {showJustOnboarded && (
+        <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-4 sm:p-5 rounded-2xl shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fadeIn">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center shrink-0">
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm sm:text-base">
+                Your shop is ready. Make your first bill
+              </h3>
+              <p className="text-emerald-100 text-xs">
+                Create and print GST-compliant invoices in seconds
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <Link
+              href="/sales?addInvoice=1"
+              className="bg-white text-emerald-800 hover:bg-emerald-50 font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs transition-all flex items-center gap-1.5"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>New Bill</span>
+            </Link>
+            <button
+              onClick={() => setShowJustOnboarded(false)}
+              className="text-white/80 hover:text-white p-2 rounded-lg hover:bg-white/10 transition-colors"
+              aria-label="Dismiss banner"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
         <div>

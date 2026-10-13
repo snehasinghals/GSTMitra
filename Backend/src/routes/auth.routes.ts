@@ -44,14 +44,14 @@ function getClientIp(req: Request): string {
 }
 
 // ==========================================
-// 1. SIGNUP
+// 1. SIGNUP — Step 1: Send OTP to email
 // ==========================================
-router.post("/signup", async (req: Request, res: Response) => {
+router.post("/signup/send-otp", async (req: Request, res: Response) => {
   try {
-    const { email, password, name, businessName } = req.body;
+    const { email } = req.body;
 
-    if (!email || !password || !name || !businessName) {
-      return res.status(400).json({ error: "Email, password, name, and business name are required." });
+    if (!email) {
+      return res.status(400).json({ error: "Email is required." });
     }
 
     const cleanEmail = email.toLowerCase().trim();
@@ -59,42 +59,175 @@ router.post("/signup", async (req: Request, res: Response) => {
     const existingUser = await prisma.user.findUnique({ where: { email: cleanEmail } });
     if (existingUser) {
       if (existingUser.emailVerified) {
-        return res.status(400).json({ error: "An account with this email already exists." });
+        return res.status(409).json({
+          error: "This email is already registered. Please login.",
+          code: "EMAIL_EXISTS",
+        });
       }
-      // If user exists but is unverified, send a fresh SIGNUP OTP
+      // Unverified user exists — send a fresh SIGNUP OTP
       try {
         await createAndSendOtp(
           { id: existingUser.id, email: existingUser.email, name: existingUser.name },
           "SIGNUP"
         );
         return res.json({
-          needsOtp: true,
+          success: true,
           email: existingUser.email,
-          purpose: "SIGNUP",
-          message: "Account already exists but unverified. A verification code has been sent to your email.",
+          message: "A 6-digit code has been sent to your email.",
         });
       } catch (mailErr: any) {
         return res.status(500).json({ error: mailErr?.message || "Failed to send verification email." });
       }
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // No user exists yet — create a minimal placeholder so OTP can be linked
+    const placeholderUser = await prisma.user.create({
+      data: {
+        email: cleanEmail,
+        name: cleanEmail.split("@")[0], // temporary name
+        emailVerified: null,
+      },
+    });
 
-    // Create User with emailVerified = null & Business in transaction
-    const result = await prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          email: cleanEmail,
-          password: hashedPassword,
-          name: name.trim(),
-          emailVerified: null,
-        },
+    try {
+      await createAndSendOtp(
+        { id: placeholderUser.id, email: placeholderUser.email, name: placeholderUser.name },
+        "SIGNUP"
+      );
+    } catch (mailErr: any) {
+      console.error("[Auth] Signup OTP email failed:", mailErr);
+      return res.status(500).json({
+        error: "Failed to send verification email. Please try again.",
       });
+    }
 
+    return res.json({
+      success: true,
+      email: placeholderUser.email,
+      message: "A 6-digit code has been sent to your email.",
+    });
+  } catch (error: any) {
+    console.error("Signup send-otp error:", error);
+    res.status(500).json({ error: "Something went wrong. Please try again." });
+  }
+});
+
+// ==========================================
+// 1b. SIGNUP — Step 2: Verify OTP
+// ==========================================
+router.post("/signup/verify-otp", async (req: Request, res: Response) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({ error: "Email and code are required." });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+
+    const user = await prisma.user.findUnique({ where: { email: cleanEmail } });
+    if (!user) {
+      return res.status(400).json({ error: "No account found. Please start again." });
+    }
+
+    const verifyRes = await verifyOtp(user.id, "SIGNUP", code);
+    if (!verifyRes.success) {
+      return res.status(400).json({
+        error: verifyRes.error,
+        code: verifyRes.code,
+        attemptsLeft: verifyRes.attemptsLeft,
+      });
+    }
+
+    // Mark email as verified
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { emailVerified: new Date() },
+    });
+
+    // Return a short-lived signup token so the frontend can complete registration
+    const signupToken = generateToken({
+      userId: user.id,
+      email: user.email,
+    });
+
+    return res.json({
+      success: true,
+      message: "Email verified!",
+      signupToken,
+    });
+  } catch (error: any) {
+    console.error("Signup verify-otp error:", error);
+    res.status(500).json({ error: "Failed to verify code." });
+  }
+});
+
+// ==========================================
+// 1c. SIGNUP — Step 3: Complete registration
+// ==========================================
+router.post("/signup/complete", async (req: Request, res: Response) => {
+  try {
+    const { signupToken, name, address, phone, password } = req.body;
+
+    if (!signupToken || !name || !address || !phone) {
+      return res.status(400).json({ error: "Name, address and phone are required." });
+    }
+
+    // Validate phone: 10-digit Indian mobile number
+    const cleanPhone = phone.trim().replace(/\s+/g, "");
+    if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+      return res.status(400).json({ error: "Please enter a valid 10-digit Indian mobile number." });
+    }
+
+    // Verify the signup token
+    let decoded: { userId: string; email: string };
+    try {
+      const jwt = await import("jsonwebtoken");
+      const secret = process.env.JWT_SECRET || "gstmitra-dev-only-secret";
+      decoded = jwt.default.verify(signupToken, secret) as { userId: string; email: string };
+    } catch {
+      return res.status(401).json({ error: "Session expired. Please start signup again." });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: "Account not found. Please start again." });
+    }
+
+    if (!user.emailVerified) {
+      return res.status(400).json({ error: "Email not verified. Please start again." });
+    }
+
+    // Hash password if provided
+    let hashedPassword: string | null = null;
+    if (password && password.length >= 6) {
+      hashedPassword = await bcrypt.hash(password, 10);
+    }
+
+    // Update user with profile info
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        name: name.trim(),
+        address: address.trim(),
+        phone: cleanPhone,
+        ...(hashedPassword ? { password: hashedPassword } : {}),
+      },
+    });
+
+    // Generate Mitra ID
+    const { assignMitraId } = await import("../lib/mitraId.js");
+    const mitraId = await assignMitraId(user.id, name.trim());
+
+    // Create a default Business + BusinessUser link for the onboarding flow
+    const result = await prisma.$transaction(async (tx) => {
       const business = await tx.business.create({
         data: {
-          name: businessName.trim(),
-          stateCode: "27", // Default Maharashtra, updated during onboarding
+          name: `${name.trim()}'s Business`,
+          stateCode: "27",
           stateName: "Maharashtra",
         },
       });
@@ -107,35 +240,48 @@ router.post("/signup", async (req: Request, res: Response) => {
         },
       });
 
-      return { user, business };
+      return business;
     });
 
-    // Send SIGNUP OTP to verify email (do NOT log in yet)
-    try {
-      await createAndSendOtp(
-        { id: result.user.id, email: result.user.email, name: result.user.name },
-        "SIGNUP"
-      );
-    } catch (mailErr: any) {
-      console.error("[Auth] Signup OTP email failed:", mailErr);
-      return res.status(500).json({
-        error: "Account created, but failed to send verification email. Please click resend code.",
-        needsOtp: true,
-        email: result.user.email,
-        purpose: "SIGNUP",
-      });
-    }
+    // Send welcome email
+    sendSignupWelcomeEmail({
+      to: user.email,
+      name: name.trim(),
+      businessName: result.name,
+    }).catch((err) => console.error("[Auth] Welcome email error:", err));
+
+    // Generate session JWT
+    const token = generateToken({
+      userId: user.id,
+      email: user.email,
+      businessId: result.id,
+    });
 
     return res.json({
-      needsOtp: true,
-      email: result.user.email,
-      purpose: "SIGNUP",
-      message: "Registration successful. A 6-digit verification code has been sent to your email.",
+      success: true,
+      message: "Account created!",
+      mitraId,
+      token,
+      user: {
+        id: user.id,
+        name: name.trim(),
+        email: user.email,
+        mitraId,
+      },
+      business: result,
     });
   } catch (error: any) {
-    console.error("Signup error:", error);
-    res.status(500).json({ error: "Internal server error during signup." });
+    console.error("Signup complete error:", error);
+    res.status(500).json({ error: "Failed to create account. Please try again." });
   }
+});
+
+// Legacy signup endpoint — disabled so nobody can create an account without a Mitra ID
+router.post("/signup", async (_req: Request, res: Response) => {
+  return res.status(400).json({
+    error: "Please use the new signup.",
+    code: "LEGACY_SIGNUP_DISABLED",
+  });
 });
 
 // ==========================================
@@ -203,6 +349,7 @@ router.post("/verify-signup-otp", async (req: Request, res: Response) => {
         id: user.id,
         name: user.name,
         email: user.email,
+        mitraId: user.mitraId,
       },
       business: firstBusiness || null,
     });
@@ -237,6 +384,13 @@ router.post("/login", async (req: Request, res: Response) => {
     // Same generic error for wrong email or wrong password
     if (!user) {
       return res.status(400).json({ error: "Invalid email or password." });
+    }
+
+    // If user has no password set (skipped during signup), they cannot log in with password
+    if (!user.password) {
+      return res.status(400).json({
+        error: "This account has no password set. Please use OTP login or set a password first.",
+      });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -285,6 +439,175 @@ router.post("/login", async (req: Request, res: Response) => {
   }
 });
 
+const MAX_PASSWORD_ATTEMPTS = 5;
+const PASSWORD_LOCK_MINUTES = 15;
+
+// ==========================================
+// 3a. LOGIN WITH OTP (email only, no password)
+// ==========================================
+router.post("/login/otp", async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: "Email is required." });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+
+    const user = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+    });
+
+    if (!user || !user.emailVerified) {
+      return res.status(404).json({
+        error: "This email is not registered. Sign up?",
+        code: "NOT_REGISTERED",
+      });
+    }
+
+    try {
+      await createAndSendOtp(
+        { id: user.id, email: user.email, name: user.name },
+        "LOGIN"
+      );
+    } catch (mailErr: any) {
+      return res.status(500).json({ error: mailErr?.message || "Failed to send code. Try again." });
+    }
+
+    return res.json({
+      success: true,
+      email: user.email,
+      message: "A 6-digit code has been sent to your email.",
+    });
+  } catch (error: any) {
+    console.error("Login OTP error:", error);
+    res.status(500).json({ error: "Something went wrong. Please try again." });
+  }
+});
+
+// ==========================================
+// 3b. LOGIN WITH PASSWORD (direct, no OTP after)
+// ==========================================
+router.post("/login/password", async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required." });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const clientIp = getClientIp(req);
+
+    const user = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+      include: { businesses: { include: { business: true } } },
+    });
+
+    if (!user || !user.emailVerified) {
+      return res.status(404).json({
+        error: "This email is not registered. Sign up?",
+        code: "NOT_REGISTERED",
+      });
+    }
+
+    // Check if user has no password set
+    if (!user.password) {
+      return res.status(400).json({
+        error: "No password set. Login with OTP instead",
+        code: "NO_PASSWORD",
+      });
+    }
+
+    // Check if password login is temporarily locked
+    if (user.passwordLockedUntil && new Date() < user.passwordLockedUntil) {
+      return res.status(429).json({
+        error: "Too many tries. Please login with OTP.",
+        code: "PASSWORD_LOCKED",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      const newAttempts = (user.failedPasswordAttempts || 0) + 1;
+
+      if (newAttempts >= MAX_PASSWORD_ATTEMPTS) {
+        // Lock password login for PASSWORD_LOCK_MINUTES
+        const lockedUntil = new Date(Date.now() + PASSWORD_LOCK_MINUTES * 60 * 1000);
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { failedPasswordAttempts: newAttempts, passwordLockedUntil: lockedUntil },
+        });
+        return res.status(429).json({
+          error: "Too many tries. Please login with OTP.",
+          code: "PASSWORD_LOCKED",
+        });
+      }
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { failedPasswordAttempts: newAttempts },
+      });
+
+      return res.status(400).json({
+        error: "Wrong password. Try again or login with OTP.",
+        code: "WRONG_PASSWORD",
+        attemptsLeft: MAX_PASSWORD_ATTEMPTS - newAttempts,
+      });
+    }
+
+    // Password correct — clear failed attempt counters
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { failedPasswordAttempts: 0, passwordLockedUntil: null },
+    });
+
+    const firstBusiness = user.businesses[0]?.business;
+
+    // Generate JWT — same as existing behavior
+    const token = generateToken({
+      userId: user.id,
+      email: user.email,
+      businessId: firstBusiness?.id,
+    });
+
+    // Send login alert email (same as OTP login)
+    const clientUserAgent = req.headers["user-agent"] as string;
+    sendLoginAlertEmail({
+      to: user.email,
+      name: user.name,
+      ip: clientIp,
+      userAgent: clientUserAgent,
+    }).catch((err) => console.error("[Auth] Login alert email error:", err));
+
+    let userMitraId = user.mitraId;
+    if (!userMitraId) {
+      const { assignMitraId } = await import("../lib/mitraId.js");
+      userMitraId = await assignMitraId(user.id, user.name || user.email.split("@")[0]);
+    }
+
+    return res.json({
+      message: "Logged in successfully.",
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        mitraId: userMitraId,
+        phone: user.phone,
+        address: user.address,
+        pan: user.pan,
+      },
+      business: firstBusiness || null,
+    });
+  } catch (error: any) {
+    console.error("Password login error:", error);
+    res.status(500).json({ error: "Something went wrong. Please try again." });
+  }
+});
+
 // ==========================================
 // 4. VERIFY LOGIN OTP
 // ==========================================
@@ -321,6 +644,15 @@ router.post("/verify-login-otp", async (req: Request, res: Response) => {
       });
     }
 
+    // Reset password lockout on successful OTP login
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        failedPasswordAttempts: 0,
+        passwordLockedUntil: null,
+      },
+    });
+
     const firstBusiness = user.businesses[0]?.business;
 
     // Generate JWT session
@@ -341,6 +673,12 @@ router.post("/verify-login-otp", async (req: Request, res: Response) => {
       userAgent: clientUserAgent,
     }).catch((err) => console.error("[Auth] Login alert email error:", err));
 
+    let userMitraId = user.mitraId;
+    if (!userMitraId) {
+      const { assignMitraId } = await import("../lib/mitraId.js");
+      userMitraId = await assignMitraId(user.id, user.name || user.email.split("@")[0]);
+    }
+
     return res.json({
       message: "Login successful",
       token,
@@ -348,6 +686,10 @@ router.post("/verify-login-otp", async (req: Request, res: Response) => {
         id: user.id,
         name: user.name,
         email: user.email,
+        mitraId: userMitraId,
+        phone: user.phone,
+        address: user.address,
+        pan: user.pan,
       },
       business: firstBusiness || null,
     });
@@ -541,12 +883,14 @@ router.post("/reset-password", async (req: Request, res: Response) => {
       });
     }
 
-    // Disallow using the same password as the current one
-    const isSamePassword = await bcrypt.compare(newPassword, user.password);
-    if (isSamePassword) {
-      return res.status(400).json({
-        error: "New password cannot be the same as your old password.",
-      });
+    // Disallow using the same password as the current one (skip if user has no password set)
+    if (user.password) {
+      const isSamePassword = await bcrypt.compare(newPassword, user.password);
+      if (isSamePassword) {
+        return res.status(400).json({
+          error: "New password cannot be the same as your old password.",
+        });
+      }
     }
 
     // Hash with bcrypt (10 rounds)
@@ -559,6 +903,8 @@ router.post("/reset-password", async (req: Request, res: Response) => {
       data: {
         password: hashedPassword,
         passwordChangedAt: now,
+        failedPasswordAttempts: 0,
+        passwordLockedUntil: null,
       },
     });
 
@@ -590,13 +936,29 @@ router.post("/reset-password", async (req: Request, res: Response) => {
 router.get("/me", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
-    const user = await prisma.user.findUnique({
+    let user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, name: true, phone: true, emailVerified: true },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        mitraId: true,
+        address: true,
+        pan: true,
+        emailVerified: true,
+      },
     });
 
     if (!user) return res.status(404).json({ error: "User not found" });
 
+    // Accounts created before Mitra IDs existed (or via old signup) may have none
+    if (!user.mitraId) {
+      const { assignMitraId } = await import("../lib/mitraId.js");
+      const newMitraId = await assignMitraId(user.id, user.name || user.email.split("@")[0]);
+      user = { ...user, mitraId: newMitraId };
+    }
+    
     const businessId = req.user?.businessId;
     let business = null;
     if (businessId) {
@@ -628,6 +990,68 @@ router.get("/me", authMiddleware, async (req: AuthenticatedRequest, res: Respons
     res.json({ user, business });
   } catch (error: any) {
     res.status(500).json({ error: "Failed to fetch user context." });
+  }
+});
+
+// ==========================================
+// 9b. UPDATE USER PROFILE (/profile)
+// ==========================================
+router.patch("/profile", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    const { name, address, phone, pan } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: "Name is required." });
+    }
+
+    let cleanPhone: string | null = null;
+    if (typeof phone === "string" && phone.trim()) {
+      const sanitizedPhone = phone.trim().replace(/\s+/g, "");
+      if (!/^[6-9]\d{9}$/.test(sanitizedPhone)) {
+        return res.status(400).json({ error: "Please enter a valid 10-digit Indian mobile number." });
+      }
+      cleanPhone = sanitizedPhone;
+    }
+
+    let cleanPan: string | null = null;
+    if (typeof pan === "string" && pan.trim()) {
+      const sanitizedPan = pan.trim().toUpperCase();
+      if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(sanitizedPan)) {
+        return res.status(400).json({ error: "Invalid PAN format. Example: ABCDE1234F" });
+      }
+      cleanPan = sanitizedPan;
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        name: name.trim(),
+        address: address !== undefined ? (address ? address.trim() : null) : undefined,
+        phone: cleanPhone !== undefined ? cleanPhone : undefined,
+        pan: cleanPan !== undefined ? cleanPan : undefined,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        mitraId: true,
+        address: true,
+        pan: true,
+        emailVerified: true,
+      },
+    });
+
+    res.json({
+      message: "Profile updated successfully.",
+      user: updatedUser,
+    });
+  } catch (error: any) {
+    console.error("Profile update error:", error);
+    res.status(500).json({ error: "Failed to update profile." });
   }
 });
 

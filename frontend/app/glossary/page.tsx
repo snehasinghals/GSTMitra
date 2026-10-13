@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Search, ArrowRight, BookOpen } from "lucide-react";
 
 type Category = "credit" | "filing" | "tax-type" | "codes" | "rules";
@@ -233,6 +234,11 @@ const GLOSSARY_DATA: GlossaryItem[] = [
 ];
 
 export default function GlossaryPage() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/help?tab=words");
+  }, [router]);
+
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<"all" | Category>("all");
 

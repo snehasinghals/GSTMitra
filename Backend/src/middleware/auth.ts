@@ -61,6 +61,48 @@ export async function authMiddleware(req: AuthenticatedRequest, res: Response, n
   }
 }
 
+export async function requireShop(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    let businessId = req.user?.businessId;
+
+    // If businessId is not in the token payload, look up user's active business
+    if (!businessId && req.user?.userId) {
+      const bu = await prisma.businessUser.findFirst({
+        where: { userId: req.user.userId },
+        select: { businessId: true },
+      });
+      businessId = bu?.businessId;
+      if (businessId && req.user) {
+        req.user.businessId = businessId;
+      }
+    }
+
+    if (!businessId) {
+      return res.status(403).json({
+        code: "SHOP_NOT_STARTED",
+        message: "Start your shop to use this feature.",
+      });
+    }
+
+    const business = await prisma.business.findUnique({
+      where: { id: businessId },
+      select: { isOnboarded: true },
+    });
+
+    if (!business || !business.isOnboarded) {
+      return res.status(403).json({
+        code: "SHOP_NOT_STARTED",
+        message: "Start your shop to use this feature.",
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error("requireShop middleware error:", error);
+    return res.status(500).json({ error: "Failed to verify shop status." });
+  }
+}
+
 export function generateToken(payload: { userId: string; email: string; businessId?: string }) {
   return jwt.sign(payload, getJwtSecret(), { expiresIn: "30d" });
 }

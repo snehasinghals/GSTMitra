@@ -6,7 +6,26 @@ import { useApi } from "../lib/useApi";
 import { INDIAN_STATES, stateNameFromCode, GSTIN_REGEX } from "../lib/states";
 import { Tooltip } from "../components/Tooltip";
 import { TableSkeleton, TableError, CardSkeleton } from "../components/TableSkeleton";
-import { ShoppingBag, Plus, Users, CheckCircle2, AlertOctagon, X, Loader2, Download, Wallet, AlertTriangle, Pencil } from "lucide-react";
+import {
+  ShoppingBag,
+  Plus,
+  Users,
+  CheckCircle2,
+  AlertOctagon,
+  X,
+  Loader2,
+  Download,
+  Wallet,
+  AlertTriangle,
+  Pencil,
+  Camera,
+  Upload,
+  Paperclip,
+  Eye,
+  Sparkles,
+} from "lucide-react";
+import { SmartBillModal } from "../components/SmartBillModal";
+import { BillCameraScanner } from "../components/BillCameraScanner";
 
 const EMPTY_ITEM = { description: "Purchase Item / Service", hsnSacCode: "998313", quantity: 1, rate: 0, gstRate: 18, cessAmount: 0 };
 
@@ -106,6 +125,10 @@ export default function PurchasesPage() {
   // Modals
   const [showVendorModal, setShowVendorModal] = useState(false);
   const [showBillModal, setShowBillModal] = useState(false);
+  const [showSmartBillModal, setShowSmartBillModal] = useState(false);
+  const [showCameraScanner, setShowCameraScanner] = useState(false);
+  const [cameraCapturedFiles, setCameraCapturedFiles] = useState<Array<{ name: string; type: string; data: string }>>([]);
+  const [viewingAttachment, setViewingAttachment] = useState<any>(null);
   const [editingBillId, setEditingBillId] = useState<string | null>(null);
   const [paymentBill, setPaymentBill] = useState<PaymentBill | null>(null);
 
@@ -439,12 +462,13 @@ export default function PurchasesPage() {
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          
           <button
             onClick={() => setShowVendorModal(true)}
-            className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs px-3.5 py-2.5 rounded-xl shadow-xs transition-all"
+            className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs px-3 py-2.5 rounded-xl border border-slate-200 transition-all"
           >
-            <Users className="w-4 h-4" />
+            <Users className="w-4 h-4 text-slate-500" />
             <span>Add Vendor</span>
           </button>
           <button
@@ -469,11 +493,50 @@ export default function PurchasesPage() {
               setIsItcEligible(true);
               setShowBillModal(true);
             }}
-            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus className="w-4 h-4" />
-            <span>Add Purchase Bill</span>
+            <span>Manual Entry</span>
           </button>
+        </div>
+      </div>
+
+      {/* Smart Bill Import Banner */}
+      <div className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-teal-50/40 to-white p-5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div className="p-2.5 bg-emerald-500/15 text-emerald-700 rounded-xl mt-0.5">
+              <Sparkles className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <span>AI & OCR Smart Bill Import</span>
+                <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-300">
+                  Auto-Detects Vendor & Line Items
+                </span>
+              </h3>
+              <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
+                Skip typing every invoice! Upload single or bulk PDFs/photos, or snap bills directly from your camera.
+                Details are fetched, vendors are auto-matched or created, and line items are filled into your table.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5 flex-shrink-0">
+            <button
+              onClick={() => setShowSmartBillModal(true)}
+              className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm transition"
+            >
+              <Upload className="w-4 h-4" />
+              <span>Upload Bill(s)</span>
+            </button>
+            <button
+              onClick={() => setShowCameraScanner(true)}
+              className="flex items-center gap-1.5 bg-slate-900 hover:bg-black text-white font-semibold text-xs px-3.5 py-2.5 rounded-xl shadow-sm transition"
+            >
+              <Camera className="w-4 h-4 text-emerald-400" />
+              <span>Scan / Take Photo</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -592,7 +655,20 @@ export default function PurchasesPage() {
                         id={`health-check-record-${bill.id}`}
                         className={`transition-colors ${highlightedBill?.id === bill.id ? "bg-amber-50 outline outline-2 outline-amber-400" : "hover:bg-slate-50/80"}`}
                       >
-                        <td className="py-3 px-4 font-mono font-bold text-slate-900">{bill.billNumber}</td>
+                        <td className="py-3 px-4 font-mono font-bold text-slate-900">
+                          <div className="flex items-center gap-1.5">
+                            <span>{bill.billNumber}</span>
+                            {bill.attachment && (
+                              <button
+                                onClick={() => setViewingAttachment(bill.attachment)}
+                                className="p-1 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition"
+                                title={`View Original Receipt: ${bill.attachment.originalName}`}
+                              >
+                                <Paperclip className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
                         <td className="py-3 px-4 text-slate-600">{new Date(bill.billDate).toLocaleDateString("en-IN")}</td>
                         <td className="py-3 px-4 font-semibold text-slate-900">
                           {bill.vendor?.name}
@@ -657,6 +733,16 @@ export default function PurchasesPage() {
                               >
                                 <Wallet className="h-3.5 w-3.5" />
                                 <span>Record Payment</span>
+                              </button>
+                            )}
+                            {bill.attachment && (
+                              <button
+                                onClick={() => setViewingAttachment(bill.attachment)}
+                                className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-900 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200"
+                                title="View uploaded/scanned receipt"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                <span>Receipt</span>
                               </button>
                             )}
                             <button
@@ -1187,6 +1273,83 @@ export default function PurchasesPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Smart Bill Auto-Import Modal */}
+      <SmartBillModal
+        isOpen={showSmartBillModal}
+        initialFiles={cameraCapturedFiles}
+        onClose={() => {
+          setShowSmartBillModal(false);
+          setCameraCapturedFiles([]);
+        }}
+        onBillsSaved={() => {
+          billsQ.mutate();
+          vendorsQ.mutate();
+          summaryQ.mutate();
+          riskQ.mutate();
+        }}
+        showToast={showToast}
+      />
+
+      {/* Direct Camera Scanner Modal */}
+      <BillCameraScanner
+        isOpen={showCameraScanner}
+        onClose={() => setShowCameraScanner(false)}
+        onCapture={(captured) => {
+          setCameraCapturedFiles(captured);
+          setShowCameraScanner(false);
+          setShowSmartBillModal(true);
+        }}
+      />
+
+      {/* Bill Receipt Image / PDF Viewer Modal */}
+      {viewingAttachment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 bg-slate-50">
+              <div className="flex items-center gap-2">
+                <Paperclip className="w-4 h-4 text-emerald-600" />
+                <span className="text-sm font-bold text-slate-800 truncate max-w-md">
+                  {viewingAttachment.originalName}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={`${API_BASE_URL}${viewingAttachment.url}`}
+                  download={viewingAttachment.originalName}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1 rounded-lg border border-emerald-200 transition"
+                >
+                  Download
+                </a>
+                <button
+                  onClick={() => setViewingAttachment(null)}
+                  className="p-1 text-slate-400 hover:text-slate-600 rounded transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 p-4 bg-slate-100 overflow-auto flex items-center justify-center min-h-[400px]">
+              {viewingAttachment.mimeType?.includes("pdf") ? (
+                <iframe
+                  src={`${API_BASE_URL}${viewingAttachment.url}`}
+                  className="w-full h-[600px] rounded-lg border border-slate-300 bg-white"
+                  title="PDF Bill Preview"
+                />
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={`${API_BASE_URL}${viewingAttachment.url}`}
+                  alt={viewingAttachment.originalName}
+                  className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-sm"
+                />
+              )}
+            </div>
           </div>
         </div>
       )}

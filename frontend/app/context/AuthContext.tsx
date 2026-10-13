@@ -7,6 +7,10 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  mitraId?: string;
+  phone?: string;
+  address?: string;
+  pan?: string;
 }
 
 export interface Business {
@@ -42,6 +46,10 @@ interface AuthResponse {
   attemptsLeft?: number;
   code?: string;
   secondsLeft?: number;
+  // New signup flow
+  success?: boolean;
+  signupToken?: string;
+  mitraId?: string;
 }
 
 interface AuthContextType {
@@ -51,12 +59,19 @@ interface AuthContextType {
   loading: boolean;
   authError: string | null;
   login: (email: string, password: string) => Promise<AuthResponse>;
+  loginWithOtp: (email: string) => Promise<AuthResponse>;
+  loginWithPassword: (email: string, password: string) => Promise<AuthResponse>;
   signup: (email: string, password: string, name: string, businessName: string) => Promise<AuthResponse>;
+  // New 3-step signup
+  sendSignupOtp: (email: string) => Promise<AuthResponse>;
+  verifySignupOtpNew: (email: string, code: string) => Promise<AuthResponse>;
+  completeSignup: (signupToken: string, name: string, address: string, phone: string, password?: string) => Promise<AuthResponse>;
   verifySignupOtp: (email: string, code: string) => Promise<AuthResponse>;
   verifyLoginOtp: (email: string, code: string) => Promise<AuthResponse>;
   resendOtp: (email: string, purpose: "SIGNUP" | "LOGIN") => Promise<AuthResponse>;
   logout: () => void;
   refreshContext: () => Promise<void>;
+  updateUserState: (updated: Partial<User>) => void;
   updateBusinessState: (updated: Partial<Business>) => void;
 }
 
@@ -117,6 +132,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: data?.error || "Unknown login error" };
   };
 
+  const loginWithOtp = async (email: string): Promise<AuthResponse> => {
+    const { data, error, code, attemptsLeft } = await apiFetch<AuthResponse>("/auth/login/otp", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+
+    if (error) return { error, code, attemptsLeft };
+    return data || { error: "Failed to send login code." };
+  };
+
+  const loginWithPassword = async (email: string, password: string): Promise<AuthResponse> => {
+    const { data, error, code, attemptsLeft } = await apiFetch<AuthResponse>("/auth/login/password", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (error) return { error, code, attemptsLeft };
+
+    if (data?.token && data?.user) {
+      localStorage.setItem("gstmitra_token", data.token);
+      setToken(data.token);
+      setUser(data.user);
+      setBusiness(data.business || null);
+      await fetchCurrentContext();
+      return data;
+    }
+
+    return { error: data?.error || "Unknown login error", code: data?.code };
+  };
+
   const signup = async (
     email: string,
     password: string,
@@ -145,6 +190,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: data?.error || "Unknown signup error" };
   };
 
+  // New 3-step signup: Step 1 — send OTP
+  const sendSignupOtp = async (email: string): Promise<AuthResponse> => {
+    const { data, error } = await apiFetch<AuthResponse>("/auth/signup/send-otp", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+
+    if (error) return { error };
+    return data || { error: "Failed to send OTP." };
+  };
+
+  // New 3-step signup: Step 2 — verify OTP, get signupToken
+  const verifySignupOtpNew = async (email: string, code: string): Promise<AuthResponse> => {
+    const { data, error } = await apiFetch<AuthResponse>("/auth/signup/verify-otp", {
+      method: "POST",
+      body: JSON.stringify({ email, code }),
+    });
+
+    if (error) return { error };
+    return data || { error: "Failed to verify code." };
+  };
+
+  // New 3-step signup: Step 3 — complete registration
+  const completeSignup = async (
+    signupToken: string,
+    name: string,
+    address: string,
+    phone: string,
+    password?: string
+  ): Promise<AuthResponse> => {
+    const { data, error } = await apiFetch<AuthResponse>("/auth/signup/complete", {
+      method: "POST",
+      body: JSON.stringify({ signupToken, name, address, phone, password }),
+    });
+
+    if (error) return { error };
+
+    if (data?.token && data?.user) {
+      localStorage.setItem("gstmitra_token", data.token);
+      setToken(data.token);
+      setUser(data.user);
+      setBusiness(data.business || null);
+      await fetchCurrentContext();
+    }
+
+    return data || { error: "Failed to complete signup." };
+  };
+
   const verifySignupOtp = async (email: string, code: string): Promise<AuthResponse> => {
     const { data, error } = await apiFetch<AuthResponse>("/auth/verify-signup-otp", {
       method: "POST",
@@ -158,6 +251,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(data.token);
       setUser(data.user);
       setBusiness(data.business || null);
+      await fetchCurrentContext();
       return data;
     }
 
@@ -177,6 +271,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(data.token);
       setUser(data.user);
       setBusiness(data.business || null);
+      await fetchCurrentContext();
       return data;
     }
 
@@ -203,6 +298,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateUserState = (updated: Partial<User>) => {
+    if (user) {
+      setUser({ ...user, ...updated });
+    }
+  };
+
   const updateBusinessState = (updated: Partial<Business>) => {
     if (business) {
       setBusiness({ ...business, ...updated });
@@ -218,12 +319,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         authError,
         login,
+        loginWithOtp,
+        loginWithPassword,
         signup,
+        sendSignupOtp,
+        verifySignupOtpNew,
+        completeSignup,
         verifySignupOtp,
         verifyLoginOtp,
         resendOtp,
         logout,
         refreshContext: fetchCurrentContext,
+        updateUserState,
         updateBusinessState,
       }}
     >

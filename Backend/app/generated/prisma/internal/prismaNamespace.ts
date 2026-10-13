@@ -2093,8 +2093,13 @@ export const UserScalarFieldEnum = {
   password: 'password',
   name: 'name',
   phone: 'phone',
+  mitraId: 'mitraId',
+  address: 'address',
+  pan: 'pan',
   emailVerified: 'emailVerified',
   passwordChangedAt: 'passwordChangedAt',
+  failedPasswordAttempts: 'failedPasswordAttempts',
+  passwordLockedUntil: 'passwordLockedUntil',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
