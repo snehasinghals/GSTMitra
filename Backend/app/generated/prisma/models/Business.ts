@@ -318,6 +318,7 @@ export type BusinessWhereInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentListRelationFilter
   returnFilings?: Prisma.ReturnFilingHistoryListRelationFilter
   salesInvoices?: Prisma.SalesInvoiceListRelationFilter
+  salesPayments?: Prisma.SalesPaymentListRelationFilter
   vendors?: Prisma.VendorListRelationFilter
 }
 
@@ -351,6 +352,7 @@ export type BusinessOrderByWithRelationInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentOrderByRelationAggregateInput
   returnFilings?: Prisma.ReturnFilingHistoryOrderByRelationAggregateInput
   salesInvoices?: Prisma.SalesInvoiceOrderByRelationAggregateInput
+  salesPayments?: Prisma.SalesPaymentOrderByRelationAggregateInput
   vendors?: Prisma.VendorOrderByRelationAggregateInput
 }
 
@@ -387,6 +389,7 @@ export type BusinessWhereUniqueInput = Prisma.AtLeast<{
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentListRelationFilter
   returnFilings?: Prisma.ReturnFilingHistoryListRelationFilter
   salesInvoices?: Prisma.SalesInvoiceListRelationFilter
+  salesPayments?: Prisma.SalesPaymentListRelationFilter
   vendors?: Prisma.VendorListRelationFilter
 }, "id" | "gstin">
 
@@ -474,6 +477,7 @@ export type BusinessCreateInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentCreateNestedManyWithoutBusinessInput
   returnFilings?: Prisma.ReturnFilingHistoryCreateNestedManyWithoutBusinessInput
   salesInvoices?: Prisma.SalesInvoiceCreateNestedManyWithoutBusinessInput
+  salesPayments?: Prisma.SalesPaymentCreateNestedManyWithoutBusinessInput
   vendors?: Prisma.VendorCreateNestedManyWithoutBusinessInput
 }
 
@@ -507,6 +511,7 @@ export type BusinessUncheckedCreateInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUncheckedCreateNestedManyWithoutBusinessInput
   returnFilings?: Prisma.ReturnFilingHistoryUncheckedCreateNestedManyWithoutBusinessInput
   salesInvoices?: Prisma.SalesInvoiceUncheckedCreateNestedManyWithoutBusinessInput
+  salesPayments?: Prisma.SalesPaymentUncheckedCreateNestedManyWithoutBusinessInput
   vendors?: Prisma.VendorUncheckedCreateNestedManyWithoutBusinessInput
 }
 
@@ -540,6 +545,7 @@ export type BusinessUpdateInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUpdateManyWithoutBusinessNestedInput
   returnFilings?: Prisma.ReturnFilingHistoryUpdateManyWithoutBusinessNestedInput
   salesInvoices?: Prisma.SalesInvoiceUpdateManyWithoutBusinessNestedInput
+  salesPayments?: Prisma.SalesPaymentUpdateManyWithoutBusinessNestedInput
   vendors?: Prisma.VendorUpdateManyWithoutBusinessNestedInput
 }
 
@@ -573,6 +579,7 @@ export type BusinessUncheckedUpdateInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUncheckedUpdateManyWithoutBusinessNestedInput
   returnFilings?: Prisma.ReturnFilingHistoryUncheckedUpdateManyWithoutBusinessNestedInput
   salesInvoices?: Prisma.SalesInvoiceUncheckedUpdateManyWithoutBusinessNestedInput
+  salesPayments?: Prisma.SalesPaymentUncheckedUpdateManyWithoutBusinessNestedInput
   vendors?: Prisma.VendorUncheckedUpdateManyWithoutBusinessNestedInput
 }
 
@@ -867,6 +874,20 @@ export type BusinessUpdateOneRequiredWithoutVendorsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.BusinessUpdateToOneWithWhereWithoutVendorsInput, Prisma.BusinessUpdateWithoutVendorsInput>, Prisma.BusinessUncheckedUpdateWithoutVendorsInput>
 }
 
+export type BusinessCreateNestedOneWithoutSalesPaymentsInput = {
+  create?: Prisma.XOR<Prisma.BusinessCreateWithoutSalesPaymentsInput, Prisma.BusinessUncheckedCreateWithoutSalesPaymentsInput>
+  connectOrCreate?: Prisma.BusinessCreateOrConnectWithoutSalesPaymentsInput
+  connect?: Prisma.BusinessWhereUniqueInput
+}
+
+export type BusinessUpdateOneRequiredWithoutSalesPaymentsNestedInput = {
+  create?: Prisma.XOR<Prisma.BusinessCreateWithoutSalesPaymentsInput, Prisma.BusinessUncheckedCreateWithoutSalesPaymentsInput>
+  connectOrCreate?: Prisma.BusinessCreateOrConnectWithoutSalesPaymentsInput
+  upsert?: Prisma.BusinessUpsertWithoutSalesPaymentsInput
+  connect?: Prisma.BusinessWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.BusinessUpdateToOneWithWhereWithoutSalesPaymentsInput, Prisma.BusinessUpdateWithoutSalesPaymentsInput>, Prisma.BusinessUncheckedUpdateWithoutSalesPaymentsInput>
+}
+
 export type BusinessCreateWithoutGstr3bAdjustmentsInput = {
   id?: string
   name: string
@@ -896,6 +917,7 @@ export type BusinessCreateWithoutGstr3bAdjustmentsInput = {
   purchaseBills?: Prisma.PurchaseBillCreateNestedManyWithoutBusinessInput
   returnFilings?: Prisma.ReturnFilingHistoryCreateNestedManyWithoutBusinessInput
   salesInvoices?: Prisma.SalesInvoiceCreateNestedManyWithoutBusinessInput
+  salesPayments?: Prisma.SalesPaymentCreateNestedManyWithoutBusinessInput
   vendors?: Prisma.VendorCreateNestedManyWithoutBusinessInput
 }
 
@@ -928,6 +950,7 @@ export type BusinessUncheckedCreateWithoutGstr3bAdjustmentsInput = {
   purchaseBills?: Prisma.PurchaseBillUncheckedCreateNestedManyWithoutBusinessInput
   returnFilings?: Prisma.ReturnFilingHistoryUncheckedCreateNestedManyWithoutBusinessInput
   salesInvoices?: Prisma.SalesInvoiceUncheckedCreateNestedManyWithoutBusinessInput
+  salesPayments?: Prisma.SalesPaymentUncheckedCreateNestedManyWithoutBusinessInput
   vendors?: Prisma.VendorUncheckedCreateNestedManyWithoutBusinessInput
 }
 
@@ -976,6 +999,7 @@ export type BusinessUpdateWithoutGstr3bAdjustmentsInput = {
   purchaseBills?: Prisma.PurchaseBillUpdateManyWithoutBusinessNestedInput
   returnFilings?: Prisma.ReturnFilingHistoryUpdateManyWithoutBusinessNestedInput
   salesInvoices?: Prisma.SalesInvoiceUpdateManyWithoutBusinessNestedInput
+  salesPayments?: Prisma.SalesPaymentUpdateManyWithoutBusinessNestedInput
   vendors?: Prisma.VendorUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1008,6 +1032,7 @@ export type BusinessUncheckedUpdateWithoutGstr3bAdjustmentsInput = {
   purchaseBills?: Prisma.PurchaseBillUncheckedUpdateManyWithoutBusinessNestedInput
   returnFilings?: Prisma.ReturnFilingHistoryUncheckedUpdateManyWithoutBusinessNestedInput
   salesInvoices?: Prisma.SalesInvoiceUncheckedUpdateManyWithoutBusinessNestedInput
+  salesPayments?: Prisma.SalesPaymentUncheckedUpdateManyWithoutBusinessNestedInput
   vendors?: Prisma.VendorUncheckedUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1040,6 +1065,7 @@ export type BusinessCreateWithoutUsersInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentCreateNestedManyWithoutBusinessInput
   returnFilings?: Prisma.ReturnFilingHistoryCreateNestedManyWithoutBusinessInput
   salesInvoices?: Prisma.SalesInvoiceCreateNestedManyWithoutBusinessInput
+  salesPayments?: Prisma.SalesPaymentCreateNestedManyWithoutBusinessInput
   vendors?: Prisma.VendorCreateNestedManyWithoutBusinessInput
 }
 
@@ -1072,6 +1098,7 @@ export type BusinessUncheckedCreateWithoutUsersInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUncheckedCreateNestedManyWithoutBusinessInput
   returnFilings?: Prisma.ReturnFilingHistoryUncheckedCreateNestedManyWithoutBusinessInput
   salesInvoices?: Prisma.SalesInvoiceUncheckedCreateNestedManyWithoutBusinessInput
+  salesPayments?: Prisma.SalesPaymentUncheckedCreateNestedManyWithoutBusinessInput
   vendors?: Prisma.VendorUncheckedCreateNestedManyWithoutBusinessInput
 }
 
@@ -1120,6 +1147,7 @@ export type BusinessUpdateWithoutUsersInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUpdateManyWithoutBusinessNestedInput
   returnFilings?: Prisma.ReturnFilingHistoryUpdateManyWithoutBusinessNestedInput
   salesInvoices?: Prisma.SalesInvoiceUpdateManyWithoutBusinessNestedInput
+  salesPayments?: Prisma.SalesPaymentUpdateManyWithoutBusinessNestedInput
   vendors?: Prisma.VendorUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1152,6 +1180,7 @@ export type BusinessUncheckedUpdateWithoutUsersInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUncheckedUpdateManyWithoutBusinessNestedInput
   returnFilings?: Prisma.ReturnFilingHistoryUncheckedUpdateManyWithoutBusinessNestedInput
   salesInvoices?: Prisma.SalesInvoiceUncheckedUpdateManyWithoutBusinessNestedInput
+  salesPayments?: Prisma.SalesPaymentUncheckedUpdateManyWithoutBusinessNestedInput
   vendors?: Prisma.VendorUncheckedUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1184,6 +1213,7 @@ export type BusinessCreateWithoutCreditDebitNotesInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentCreateNestedManyWithoutBusinessInput
   returnFilings?: Prisma.ReturnFilingHistoryCreateNestedManyWithoutBusinessInput
   salesInvoices?: Prisma.SalesInvoiceCreateNestedManyWithoutBusinessInput
+  salesPayments?: Prisma.SalesPaymentCreateNestedManyWithoutBusinessInput
   vendors?: Prisma.VendorCreateNestedManyWithoutBusinessInput
 }
 
@@ -1216,6 +1246,7 @@ export type BusinessUncheckedCreateWithoutCreditDebitNotesInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUncheckedCreateNestedManyWithoutBusinessInput
   returnFilings?: Prisma.ReturnFilingHistoryUncheckedCreateNestedManyWithoutBusinessInput
   salesInvoices?: Prisma.SalesInvoiceUncheckedCreateNestedManyWithoutBusinessInput
+  salesPayments?: Prisma.SalesPaymentUncheckedCreateNestedManyWithoutBusinessInput
   vendors?: Prisma.VendorUncheckedCreateNestedManyWithoutBusinessInput
 }
 
@@ -1264,6 +1295,7 @@ export type BusinessUpdateWithoutCreditDebitNotesInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUpdateManyWithoutBusinessNestedInput
   returnFilings?: Prisma.ReturnFilingHistoryUpdateManyWithoutBusinessNestedInput
   salesInvoices?: Prisma.SalesInvoiceUpdateManyWithoutBusinessNestedInput
+  salesPayments?: Prisma.SalesPaymentUpdateManyWithoutBusinessNestedInput
   vendors?: Prisma.VendorUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1296,6 +1328,7 @@ export type BusinessUncheckedUpdateWithoutCreditDebitNotesInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUncheckedUpdateManyWithoutBusinessNestedInput
   returnFilings?: Prisma.ReturnFilingHistoryUncheckedUpdateManyWithoutBusinessNestedInput
   salesInvoices?: Prisma.SalesInvoiceUncheckedUpdateManyWithoutBusinessNestedInput
+  salesPayments?: Prisma.SalesPaymentUncheckedUpdateManyWithoutBusinessNestedInput
   vendors?: Prisma.VendorUncheckedUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1328,6 +1361,7 @@ export type BusinessCreateWithoutCustomersInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentCreateNestedManyWithoutBusinessInput
   returnFilings?: Prisma.ReturnFilingHistoryCreateNestedManyWithoutBusinessInput
   salesInvoices?: Prisma.SalesInvoiceCreateNestedManyWithoutBusinessInput
+  salesPayments?: Prisma.SalesPaymentCreateNestedManyWithoutBusinessInput
   vendors?: Prisma.VendorCreateNestedManyWithoutBusinessInput
 }
 
@@ -1360,6 +1394,7 @@ export type BusinessUncheckedCreateWithoutCustomersInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUncheckedCreateNestedManyWithoutBusinessInput
   returnFilings?: Prisma.ReturnFilingHistoryUncheckedCreateNestedManyWithoutBusinessInput
   salesInvoices?: Prisma.SalesInvoiceUncheckedCreateNestedManyWithoutBusinessInput
+  salesPayments?: Prisma.SalesPaymentUncheckedCreateNestedManyWithoutBusinessInput
   vendors?: Prisma.VendorUncheckedCreateNestedManyWithoutBusinessInput
 }
 
@@ -1408,6 +1443,7 @@ export type BusinessUpdateWithoutCustomersInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUpdateManyWithoutBusinessNestedInput
   returnFilings?: Prisma.ReturnFilingHistoryUpdateManyWithoutBusinessNestedInput
   salesInvoices?: Prisma.SalesInvoiceUpdateManyWithoutBusinessNestedInput
+  salesPayments?: Prisma.SalesPaymentUpdateManyWithoutBusinessNestedInput
   vendors?: Prisma.VendorUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1440,6 +1476,7 @@ export type BusinessUncheckedUpdateWithoutCustomersInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUncheckedUpdateManyWithoutBusinessNestedInput
   returnFilings?: Prisma.ReturnFilingHistoryUncheckedUpdateManyWithoutBusinessNestedInput
   salesInvoices?: Prisma.SalesInvoiceUncheckedUpdateManyWithoutBusinessNestedInput
+  salesPayments?: Prisma.SalesPaymentUncheckedUpdateManyWithoutBusinessNestedInput
   vendors?: Prisma.VendorUncheckedUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1472,6 +1509,7 @@ export type BusinessCreateWithoutItemsInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentCreateNestedManyWithoutBusinessInput
   returnFilings?: Prisma.ReturnFilingHistoryCreateNestedManyWithoutBusinessInput
   salesInvoices?: Prisma.SalesInvoiceCreateNestedManyWithoutBusinessInput
+  salesPayments?: Prisma.SalesPaymentCreateNestedManyWithoutBusinessInput
   vendors?: Prisma.VendorCreateNestedManyWithoutBusinessInput
 }
 
@@ -1504,6 +1542,7 @@ export type BusinessUncheckedCreateWithoutItemsInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUncheckedCreateNestedManyWithoutBusinessInput
   returnFilings?: Prisma.ReturnFilingHistoryUncheckedCreateNestedManyWithoutBusinessInput
   salesInvoices?: Prisma.SalesInvoiceUncheckedCreateNestedManyWithoutBusinessInput
+  salesPayments?: Prisma.SalesPaymentUncheckedCreateNestedManyWithoutBusinessInput
   vendors?: Prisma.VendorUncheckedCreateNestedManyWithoutBusinessInput
 }
 
@@ -1552,6 +1591,7 @@ export type BusinessUpdateWithoutItemsInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUpdateManyWithoutBusinessNestedInput
   returnFilings?: Prisma.ReturnFilingHistoryUpdateManyWithoutBusinessNestedInput
   salesInvoices?: Prisma.SalesInvoiceUpdateManyWithoutBusinessNestedInput
+  salesPayments?: Prisma.SalesPaymentUpdateManyWithoutBusinessNestedInput
   vendors?: Prisma.VendorUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1584,6 +1624,7 @@ export type BusinessUncheckedUpdateWithoutItemsInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUncheckedUpdateManyWithoutBusinessNestedInput
   returnFilings?: Prisma.ReturnFilingHistoryUncheckedUpdateManyWithoutBusinessNestedInput
   salesInvoices?: Prisma.SalesInvoiceUncheckedUpdateManyWithoutBusinessNestedInput
+  salesPayments?: Prisma.SalesPaymentUncheckedUpdateManyWithoutBusinessNestedInput
   vendors?: Prisma.VendorUncheckedUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1616,6 +1657,7 @@ export type BusinessCreateWithoutPurchaseBillsInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentCreateNestedManyWithoutBusinessInput
   returnFilings?: Prisma.ReturnFilingHistoryCreateNestedManyWithoutBusinessInput
   salesInvoices?: Prisma.SalesInvoiceCreateNestedManyWithoutBusinessInput
+  salesPayments?: Prisma.SalesPaymentCreateNestedManyWithoutBusinessInput
   vendors?: Prisma.VendorCreateNestedManyWithoutBusinessInput
 }
 
@@ -1648,6 +1690,7 @@ export type BusinessUncheckedCreateWithoutPurchaseBillsInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUncheckedCreateNestedManyWithoutBusinessInput
   returnFilings?: Prisma.ReturnFilingHistoryUncheckedCreateNestedManyWithoutBusinessInput
   salesInvoices?: Prisma.SalesInvoiceUncheckedCreateNestedManyWithoutBusinessInput
+  salesPayments?: Prisma.SalesPaymentUncheckedCreateNestedManyWithoutBusinessInput
   vendors?: Prisma.VendorUncheckedCreateNestedManyWithoutBusinessInput
 }
 
@@ -1696,6 +1739,7 @@ export type BusinessUpdateWithoutPurchaseBillsInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUpdateManyWithoutBusinessNestedInput
   returnFilings?: Prisma.ReturnFilingHistoryUpdateManyWithoutBusinessNestedInput
   salesInvoices?: Prisma.SalesInvoiceUpdateManyWithoutBusinessNestedInput
+  salesPayments?: Prisma.SalesPaymentUpdateManyWithoutBusinessNestedInput
   vendors?: Prisma.VendorUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1728,6 +1772,7 @@ export type BusinessUncheckedUpdateWithoutPurchaseBillsInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUncheckedUpdateManyWithoutBusinessNestedInput
   returnFilings?: Prisma.ReturnFilingHistoryUncheckedUpdateManyWithoutBusinessNestedInput
   salesInvoices?: Prisma.SalesInvoiceUncheckedUpdateManyWithoutBusinessNestedInput
+  salesPayments?: Prisma.SalesPaymentUncheckedUpdateManyWithoutBusinessNestedInput
   vendors?: Prisma.VendorUncheckedUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1760,6 +1805,7 @@ export type BusinessCreateWithoutReturnFilingsInput = {
   purchaseBills?: Prisma.PurchaseBillCreateNestedManyWithoutBusinessInput
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentCreateNestedManyWithoutBusinessInput
   salesInvoices?: Prisma.SalesInvoiceCreateNestedManyWithoutBusinessInput
+  salesPayments?: Prisma.SalesPaymentCreateNestedManyWithoutBusinessInput
   vendors?: Prisma.VendorCreateNestedManyWithoutBusinessInput
 }
 
@@ -1792,6 +1838,7 @@ export type BusinessUncheckedCreateWithoutReturnFilingsInput = {
   purchaseBills?: Prisma.PurchaseBillUncheckedCreateNestedManyWithoutBusinessInput
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUncheckedCreateNestedManyWithoutBusinessInput
   salesInvoices?: Prisma.SalesInvoiceUncheckedCreateNestedManyWithoutBusinessInput
+  salesPayments?: Prisma.SalesPaymentUncheckedCreateNestedManyWithoutBusinessInput
   vendors?: Prisma.VendorUncheckedCreateNestedManyWithoutBusinessInput
 }
 
@@ -1840,6 +1887,7 @@ export type BusinessUpdateWithoutReturnFilingsInput = {
   purchaseBills?: Prisma.PurchaseBillUpdateManyWithoutBusinessNestedInput
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUpdateManyWithoutBusinessNestedInput
   salesInvoices?: Prisma.SalesInvoiceUpdateManyWithoutBusinessNestedInput
+  salesPayments?: Prisma.SalesPaymentUpdateManyWithoutBusinessNestedInput
   vendors?: Prisma.VendorUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1872,6 +1920,7 @@ export type BusinessUncheckedUpdateWithoutReturnFilingsInput = {
   purchaseBills?: Prisma.PurchaseBillUncheckedUpdateManyWithoutBusinessNestedInput
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUncheckedUpdateManyWithoutBusinessNestedInput
   salesInvoices?: Prisma.SalesInvoiceUncheckedUpdateManyWithoutBusinessNestedInput
+  salesPayments?: Prisma.SalesPaymentUncheckedUpdateManyWithoutBusinessNestedInput
   vendors?: Prisma.VendorUncheckedUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1904,6 +1953,7 @@ export type BusinessCreateWithoutSalesInvoicesInput = {
   purchaseBills?: Prisma.PurchaseBillCreateNestedManyWithoutBusinessInput
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentCreateNestedManyWithoutBusinessInput
   returnFilings?: Prisma.ReturnFilingHistoryCreateNestedManyWithoutBusinessInput
+  salesPayments?: Prisma.SalesPaymentCreateNestedManyWithoutBusinessInput
   vendors?: Prisma.VendorCreateNestedManyWithoutBusinessInput
 }
 
@@ -1936,6 +1986,7 @@ export type BusinessUncheckedCreateWithoutSalesInvoicesInput = {
   purchaseBills?: Prisma.PurchaseBillUncheckedCreateNestedManyWithoutBusinessInput
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUncheckedCreateNestedManyWithoutBusinessInput
   returnFilings?: Prisma.ReturnFilingHistoryUncheckedCreateNestedManyWithoutBusinessInput
+  salesPayments?: Prisma.SalesPaymentUncheckedCreateNestedManyWithoutBusinessInput
   vendors?: Prisma.VendorUncheckedCreateNestedManyWithoutBusinessInput
 }
 
@@ -1984,6 +2035,7 @@ export type BusinessUpdateWithoutSalesInvoicesInput = {
   purchaseBills?: Prisma.PurchaseBillUpdateManyWithoutBusinessNestedInput
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUpdateManyWithoutBusinessNestedInput
   returnFilings?: Prisma.ReturnFilingHistoryUpdateManyWithoutBusinessNestedInput
+  salesPayments?: Prisma.SalesPaymentUpdateManyWithoutBusinessNestedInput
   vendors?: Prisma.VendorUpdateManyWithoutBusinessNestedInput
 }
 
@@ -2016,6 +2068,7 @@ export type BusinessUncheckedUpdateWithoutSalesInvoicesInput = {
   purchaseBills?: Prisma.PurchaseBillUncheckedUpdateManyWithoutBusinessNestedInput
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUncheckedUpdateManyWithoutBusinessNestedInput
   returnFilings?: Prisma.ReturnFilingHistoryUncheckedUpdateManyWithoutBusinessNestedInput
+  salesPayments?: Prisma.SalesPaymentUncheckedUpdateManyWithoutBusinessNestedInput
   vendors?: Prisma.VendorUncheckedUpdateManyWithoutBusinessNestedInput
 }
 
@@ -2049,6 +2102,7 @@ export type BusinessCreateWithoutVendorsInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentCreateNestedManyWithoutBusinessInput
   returnFilings?: Prisma.ReturnFilingHistoryCreateNestedManyWithoutBusinessInput
   salesInvoices?: Prisma.SalesInvoiceCreateNestedManyWithoutBusinessInput
+  salesPayments?: Prisma.SalesPaymentCreateNestedManyWithoutBusinessInput
 }
 
 export type BusinessUncheckedCreateWithoutVendorsInput = {
@@ -2081,6 +2135,7 @@ export type BusinessUncheckedCreateWithoutVendorsInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUncheckedCreateNestedManyWithoutBusinessInput
   returnFilings?: Prisma.ReturnFilingHistoryUncheckedCreateNestedManyWithoutBusinessInput
   salesInvoices?: Prisma.SalesInvoiceUncheckedCreateNestedManyWithoutBusinessInput
+  salesPayments?: Prisma.SalesPaymentUncheckedCreateNestedManyWithoutBusinessInput
 }
 
 export type BusinessCreateOrConnectWithoutVendorsInput = {
@@ -2129,6 +2184,7 @@ export type BusinessUpdateWithoutVendorsInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUpdateManyWithoutBusinessNestedInput
   returnFilings?: Prisma.ReturnFilingHistoryUpdateManyWithoutBusinessNestedInput
   salesInvoices?: Prisma.SalesInvoiceUpdateManyWithoutBusinessNestedInput
+  salesPayments?: Prisma.SalesPaymentUpdateManyWithoutBusinessNestedInput
 }
 
 export type BusinessUncheckedUpdateWithoutVendorsInput = {
@@ -2161,6 +2217,155 @@ export type BusinessUncheckedUpdateWithoutVendorsInput = {
   gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUncheckedUpdateManyWithoutBusinessNestedInput
   returnFilings?: Prisma.ReturnFilingHistoryUncheckedUpdateManyWithoutBusinessNestedInput
   salesInvoices?: Prisma.SalesInvoiceUncheckedUpdateManyWithoutBusinessNestedInput
+  salesPayments?: Prisma.SalesPaymentUncheckedUpdateManyWithoutBusinessNestedInput
+}
+
+export type BusinessCreateWithoutSalesPaymentsInput = {
+  id?: string
+  name: string
+  gstin?: string | null
+  stateCode?: string
+  createdAt?: Date | string
+  address?: string | null
+  bankAccount?: string | null
+  bankBranch?: string | null
+  bankIfsc?: string | null
+  bankName?: string | null
+  businessType?: string
+  email?: string | null
+  filingFrequency?: string
+  isOnboarded?: boolean
+  phone?: string | null
+  pincode?: string | null
+  registrationType?: string
+  stateName?: string
+  tradeName?: string | null
+  turnoverRange?: string
+  updatedAt?: Date | string
+  users?: Prisma.BusinessUserCreateNestedManyWithoutBusinessInput
+  creditDebitNotes?: Prisma.CreditDebitNoteCreateNestedManyWithoutBusinessInput
+  customers?: Prisma.CustomerCreateNestedManyWithoutBusinessInput
+  items?: Prisma.ItemCreateNestedManyWithoutBusinessInput
+  purchaseBills?: Prisma.PurchaseBillCreateNestedManyWithoutBusinessInput
+  gstr3bAdjustments?: Prisma.Gstr3bAdjustmentCreateNestedManyWithoutBusinessInput
+  returnFilings?: Prisma.ReturnFilingHistoryCreateNestedManyWithoutBusinessInput
+  salesInvoices?: Prisma.SalesInvoiceCreateNestedManyWithoutBusinessInput
+  vendors?: Prisma.VendorCreateNestedManyWithoutBusinessInput
+}
+
+export type BusinessUncheckedCreateWithoutSalesPaymentsInput = {
+  id?: string
+  name: string
+  gstin?: string | null
+  stateCode?: string
+  createdAt?: Date | string
+  address?: string | null
+  bankAccount?: string | null
+  bankBranch?: string | null
+  bankIfsc?: string | null
+  bankName?: string | null
+  businessType?: string
+  email?: string | null
+  filingFrequency?: string
+  isOnboarded?: boolean
+  phone?: string | null
+  pincode?: string | null
+  registrationType?: string
+  stateName?: string
+  tradeName?: string | null
+  turnoverRange?: string
+  updatedAt?: Date | string
+  users?: Prisma.BusinessUserUncheckedCreateNestedManyWithoutBusinessInput
+  creditDebitNotes?: Prisma.CreditDebitNoteUncheckedCreateNestedManyWithoutBusinessInput
+  customers?: Prisma.CustomerUncheckedCreateNestedManyWithoutBusinessInput
+  items?: Prisma.ItemUncheckedCreateNestedManyWithoutBusinessInput
+  purchaseBills?: Prisma.PurchaseBillUncheckedCreateNestedManyWithoutBusinessInput
+  gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUncheckedCreateNestedManyWithoutBusinessInput
+  returnFilings?: Prisma.ReturnFilingHistoryUncheckedCreateNestedManyWithoutBusinessInput
+  salesInvoices?: Prisma.SalesInvoiceUncheckedCreateNestedManyWithoutBusinessInput
+  vendors?: Prisma.VendorUncheckedCreateNestedManyWithoutBusinessInput
+}
+
+export type BusinessCreateOrConnectWithoutSalesPaymentsInput = {
+  where: Prisma.BusinessWhereUniqueInput
+  create: Prisma.XOR<Prisma.BusinessCreateWithoutSalesPaymentsInput, Prisma.BusinessUncheckedCreateWithoutSalesPaymentsInput>
+}
+
+export type BusinessUpsertWithoutSalesPaymentsInput = {
+  update: Prisma.XOR<Prisma.BusinessUpdateWithoutSalesPaymentsInput, Prisma.BusinessUncheckedUpdateWithoutSalesPaymentsInput>
+  create: Prisma.XOR<Prisma.BusinessCreateWithoutSalesPaymentsInput, Prisma.BusinessUncheckedCreateWithoutSalesPaymentsInput>
+  where?: Prisma.BusinessWhereInput
+}
+
+export type BusinessUpdateToOneWithWhereWithoutSalesPaymentsInput = {
+  where?: Prisma.BusinessWhereInput
+  data: Prisma.XOR<Prisma.BusinessUpdateWithoutSalesPaymentsInput, Prisma.BusinessUncheckedUpdateWithoutSalesPaymentsInput>
+}
+
+export type BusinessUpdateWithoutSalesPaymentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  gstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stateCode?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bankName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessType?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  filingFrequency?: Prisma.StringFieldUpdateOperationsInput | string
+  isOnboarded?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pincode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  registrationType?: Prisma.StringFieldUpdateOperationsInput | string
+  stateName?: Prisma.StringFieldUpdateOperationsInput | string
+  tradeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  turnoverRange?: Prisma.StringFieldUpdateOperationsInput | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  users?: Prisma.BusinessUserUpdateManyWithoutBusinessNestedInput
+  creditDebitNotes?: Prisma.CreditDebitNoteUpdateManyWithoutBusinessNestedInput
+  customers?: Prisma.CustomerUpdateManyWithoutBusinessNestedInput
+  items?: Prisma.ItemUpdateManyWithoutBusinessNestedInput
+  purchaseBills?: Prisma.PurchaseBillUpdateManyWithoutBusinessNestedInput
+  gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUpdateManyWithoutBusinessNestedInput
+  returnFilings?: Prisma.ReturnFilingHistoryUpdateManyWithoutBusinessNestedInput
+  salesInvoices?: Prisma.SalesInvoiceUpdateManyWithoutBusinessNestedInput
+  vendors?: Prisma.VendorUpdateManyWithoutBusinessNestedInput
+}
+
+export type BusinessUncheckedUpdateWithoutSalesPaymentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  gstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stateCode?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bankName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessType?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  filingFrequency?: Prisma.StringFieldUpdateOperationsInput | string
+  isOnboarded?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pincode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  registrationType?: Prisma.StringFieldUpdateOperationsInput | string
+  stateName?: Prisma.StringFieldUpdateOperationsInput | string
+  tradeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  turnoverRange?: Prisma.StringFieldUpdateOperationsInput | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  users?: Prisma.BusinessUserUncheckedUpdateManyWithoutBusinessNestedInput
+  creditDebitNotes?: Prisma.CreditDebitNoteUncheckedUpdateManyWithoutBusinessNestedInput
+  customers?: Prisma.CustomerUncheckedUpdateManyWithoutBusinessNestedInput
+  items?: Prisma.ItemUncheckedUpdateManyWithoutBusinessNestedInput
+  purchaseBills?: Prisma.PurchaseBillUncheckedUpdateManyWithoutBusinessNestedInput
+  gstr3bAdjustments?: Prisma.Gstr3bAdjustmentUncheckedUpdateManyWithoutBusinessNestedInput
+  returnFilings?: Prisma.ReturnFilingHistoryUncheckedUpdateManyWithoutBusinessNestedInput
+  salesInvoices?: Prisma.SalesInvoiceUncheckedUpdateManyWithoutBusinessNestedInput
+  vendors?: Prisma.VendorUncheckedUpdateManyWithoutBusinessNestedInput
 }
 
 
@@ -2177,6 +2382,7 @@ export type BusinessCountOutputType = {
   gstr3bAdjustments: number
   returnFilings: number
   salesInvoices: number
+  salesPayments: number
   vendors: number
 }
 
@@ -2189,6 +2395,7 @@ export type BusinessCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensio
   gstr3bAdjustments?: boolean | BusinessCountOutputTypeCountGstr3bAdjustmentsArgs
   returnFilings?: boolean | BusinessCountOutputTypeCountReturnFilingsArgs
   salesInvoices?: boolean | BusinessCountOutputTypeCountSalesInvoicesArgs
+  salesPayments?: boolean | BusinessCountOutputTypeCountSalesPaymentsArgs
   vendors?: boolean | BusinessCountOutputTypeCountVendorsArgs
 }
 
@@ -2261,6 +2468,13 @@ export type BusinessCountOutputTypeCountSalesInvoicesArgs<ExtArgs extends runtim
 /**
  * BusinessCountOutputType without action
  */
+export type BusinessCountOutputTypeCountSalesPaymentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SalesPaymentWhereInput
+}
+
+/**
+ * BusinessCountOutputType without action
+ */
 export type BusinessCountOutputTypeCountVendorsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.VendorWhereInput
 }
@@ -2296,6 +2510,7 @@ export type BusinessSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   gstr3bAdjustments?: boolean | Prisma.Business$gstr3bAdjustmentsArgs<ExtArgs>
   returnFilings?: boolean | Prisma.Business$returnFilingsArgs<ExtArgs>
   salesInvoices?: boolean | Prisma.Business$salesInvoicesArgs<ExtArgs>
+  salesPayments?: boolean | Prisma.Business$salesPaymentsArgs<ExtArgs>
   vendors?: boolean | Prisma.Business$vendorsArgs<ExtArgs>
   _count?: boolean | Prisma.BusinessCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["business"]>
@@ -2382,6 +2597,7 @@ export type BusinessInclude<ExtArgs extends runtime.Types.Extensions.InternalArg
   gstr3bAdjustments?: boolean | Prisma.Business$gstr3bAdjustmentsArgs<ExtArgs>
   returnFilings?: boolean | Prisma.Business$returnFilingsArgs<ExtArgs>
   salesInvoices?: boolean | Prisma.Business$salesInvoicesArgs<ExtArgs>
+  salesPayments?: boolean | Prisma.Business$salesPaymentsArgs<ExtArgs>
   vendors?: boolean | Prisma.Business$vendorsArgs<ExtArgs>
   _count?: boolean | Prisma.BusinessCountOutputTypeDefaultArgs<ExtArgs>
 }
@@ -2399,6 +2615,7 @@ export type $BusinessPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     gstr3bAdjustments: Prisma.$Gstr3bAdjustmentPayload<ExtArgs>[]
     returnFilings: Prisma.$ReturnFilingHistoryPayload<ExtArgs>[]
     salesInvoices: Prisma.$SalesInvoicePayload<ExtArgs>[]
+    salesPayments: Prisma.$SalesPaymentPayload<ExtArgs>[]
     vendors: Prisma.$VendorPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -2825,6 +3042,7 @@ export interface Prisma__BusinessClient<T, Null = never, ExtArgs extends runtime
   gstr3bAdjustments<T extends Prisma.Business$gstr3bAdjustmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Business$gstr3bAdjustmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$Gstr3bAdjustmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   returnFilings<T extends Prisma.Business$returnFilingsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Business$returnFilingsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ReturnFilingHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   salesInvoices<T extends Prisma.Business$salesInvoicesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Business$salesInvoicesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SalesInvoicePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  salesPayments<T extends Prisma.Business$salesPaymentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Business$salesPaymentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SalesPaymentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   vendors<T extends Prisma.Business$vendorsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Business$vendorsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$VendorPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -3458,6 +3676,30 @@ export type Business$salesInvoicesArgs<ExtArgs extends runtime.Types.Extensions.
   take?: number
   skip?: number
   distinct?: Prisma.SalesInvoiceScalarFieldEnum | Prisma.SalesInvoiceScalarFieldEnum[]
+}
+
+/**
+ * Business.salesPayments
+ */
+export type Business$salesPaymentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SalesPayment
+   */
+  select?: Prisma.SalesPaymentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SalesPayment
+   */
+  omit?: Prisma.SalesPaymentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SalesPaymentInclude<ExtArgs> | null
+  where?: Prisma.SalesPaymentWhereInput
+  orderBy?: Prisma.SalesPaymentOrderByWithRelationInput | Prisma.SalesPaymentOrderByWithRelationInput[]
+  cursor?: Prisma.SalesPaymentWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SalesPaymentScalarFieldEnum | Prisma.SalesPaymentScalarFieldEnum[]
 }
 
 /**

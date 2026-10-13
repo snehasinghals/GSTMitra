@@ -38,6 +38,7 @@ model Business {
   gstr3bAdjustments Gstr3bAdjustment[]
   returnFilings    ReturnFilingHistory[]
   salesInvoices    SalesInvoice[]
+  salesPayments    SalesPayment[]
   vendors          Vendor[]
 }
 
@@ -274,6 +275,7 @@ model SalesInvoice {
   business         Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
   customer         Customer           @relation(fields: [customerId], references: [id])
   items            SalesInvoiceItem[]
+  payments         SalesPayment[]
 
   @@unique([businessId, invoiceNumber])
   @@index([businessId, invoiceDate])
@@ -364,5 +366,21 @@ model Vendor {
   purchaseBills    PurchaseBill[]
   business         Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
+  @@index([businessId])
+}
+
+model SalesPayment {
+  id             String       @id @default(uuid())
+  salesInvoiceId String
+  businessId     String
+  amount         Float
+  mode           String       @default("CASH")
+  paidOn         DateTime     @default(now())
+  note           String?
+  createdAt      DateTime     @default(now())
+  salesInvoice   SalesInvoice @relation(fields: [salesInvoiceId], references: [id], onDelete: Cascade)
+  business       Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([salesInvoiceId])
   @@index([businessId])
 }

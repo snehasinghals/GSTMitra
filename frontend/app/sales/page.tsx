@@ -7,7 +7,8 @@ import { apiFetch, API_BASE_URL } from "../lib/api";
 import { useApi } from "../lib/useApi";
 import { INDIAN_STATES, stateNameFromCode, GSTIN_REGEX } from "../lib/states";
 import { TableSkeleton, TableError } from "../components/TableSkeleton";
-import { FileText, Plus, Download, Users, X, PlusCircle, Pencil } from "lucide-react";
+import { FileText, Plus, Download, Users, X, PlusCircle, Pencil, Clock, AlertCircle, IndianRupee } from "lucide-react";
+import AddPaymentModal from "./components/AddPaymentModal";
 
 const GST_RATES = [0, 5, 18, 40];
 
@@ -57,6 +58,7 @@ export default function SalesPage() {
   const { business } = useAuth();
 
   const [tab, setTab] = useState<"INVOICES" | "CUSTOMERS">("INVOICES");
+  const [invoiceFilter, setInvoiceFilter] = useState<"ALL" | "TO_COLLECT" | "PAID">("ALL");
 
   // Data (cached + refreshed in background by SWR)
   const invoicesQ = useApi<any[]>("/sales/invoices?view=list");
@@ -108,6 +110,9 @@ export default function SalesPage() {
 
   // PDF
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  // Add Payment modal
+  const [paymentInvoice, setPaymentInvoice] = useState<any | null>(null);
 
   const openInvoiceEditor = useCallback(async (invoiceId: string, loadedInvoice?: FocusedInvoice) => {
     const { data, error } = loadedInvoice
@@ -387,6 +392,77 @@ export default function SalesPage() {
       setDownloadingId(null);
     }
   };
+
+  // Today at midnight for overdue calculations
+  const todayMidnight = new Date();
+  todayMidnight.setHours(0, 0, 0, 0);
+
+  const getInvoicePaymentInfo = (inv: any) => {
+    const total = Number(inv.totalAmount) || 0;
+    const paid = Number(inv.paidAmount) || 0;
+    const pending = Math.max(0, r2(total - paid));
+    const status = inv.paymentStatus || (pending <= 0 ? "PAID" : "UNPAID");
+
+    let isOverdue = false;
+    let overdueDays = 0;
+    if (inv.dueDate && pending > 0 && inv.status !== "CANCELLED") {
+      const due = new Date(inv.dueDate);
+      due.setHours(0, 0, 0, 0);
+      if (!isNaN(due.getTime())) {
+        const diffMs = todayMidnight.getTime() - due.getTime();
+        overdueDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        isOverdue = overdueDays > 0;
+      }
+    }
+
+    return { total, paid, pending, status, isOverdue, overdueDays };
+  };
+
+  let moneyToCollect = 0;
+  let overdueAmount = 0;
+  const customersWhoOwe = new Set<string>();
+
+  invoices.forEach((inv) => {
+    if (inv.status === "CANCELLED") return;
+    const { pending, isOverdue } = getInvoicePaymentInfo(inv);
+    if (pending > 0) {
+      moneyToCollect += pending;
+      if (inv.customerId || inv.customer?.id) {
+        customersWhoOwe.add(inv.customerId || inv.customer?.id);
+      }
+    }
+    if (isOverdue && pending > 0) {
+      overdueAmount += pending;
+    }
+  });
+
+  moneyToCollect = r2(moneyToCollect);
+  overdueAmount = r2(overdueAmount);
+
+  const filteredInvoices = displayInvoices.filter((inv) => {
+    if (invoiceFilter === "ALL") return true;
+    const { status, pending } = getInvoicePaymentInfo(inv);
+    if (invoiceFilter === "TO_COLLECT") {
+      return inv.status !== "CANCELLED" && (status === "PARTIAL" || status === "UNPAID" || pending > 0);
+    }
+    if (invoiceFilter === "PAID") {
+      return inv.status !== "CANCELLED" && (status === "PAID" || pending <= 0);
+    }
+    return true;
+  });
+
+  const toCollectCount = displayInvoices.filter((inv) => {
+    if (inv.status === "CANCELLED") return false;
+    const { status, pending } = getInvoicePaymentInfo(inv);
+    return status === "PARTIAL" || status === "UNPAID" || pending > 0;
+  }).length;
+
+  const paidCount = displayInvoices.filter((inv) => {
+    if (inv.status === "CANCELLED") return false;
+    const { status, pending } = getInvoicePaymentInfo(inv);
+    return status === "PAID" || pending <= 0;
+  }).length;
+
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Header */}
@@ -460,82 +536,303 @@ export default function SalesPage() {
 
       {/* Invoices List */}
       {tab === "INVOICES" && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          {invoicesQ.loading ? (
-            <TableSkeleton />
-          ) : invoicesQ.error && invoices.length === 0 ? (
-            <TableError message={invoicesQ.error.message} onRetry={() => invoicesQ.mutate()} />
-          ) : displayInvoices.length === 0 ? (
-            <div className="p-12 text-center space-y-3">
-              <FileText className="w-12 h-12 text-slate-300 mx-auto" />
-              <p className="text-sm font-bold text-slate-700">No sales invoices generated yet</p>
-              <p className="text-xs text-slate-500">Click "Create Tax Invoice" to create your first invoice.</p>
+        <div className="space-y-4">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Money to collect
+                </p>
+                <p className="text-2xl font-extrabold text-slate-900">
+                  ₹{moneyToCollect.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+                <p className="text-xs text-slate-500">
+                  from {customersWhoOwe.size} {customersWhoOwe.size === 1 ? "customer" : "customers"}
+                </p>
+              </div>
+              <div className="w-11 h-11 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
+                <Clock className="w-5 h-5" />
+              </div>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-3xs font-bold text-slate-500 uppercase tracking-wider">
-                    <th className="py-3 px-4">Invoice #</th>
-                    <th className="py-3 px-4">Date</th>
-                    <th className="py-3 px-4">Customer</th>
-                    <th className="py-3 px-4">Supply Type</th>
-                    <th className="py-3 px-4">Taxable</th>
-                    <th className="py-3 px-4">Total Amount</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-xs text-slate-800">
-                  {displayInvoices.map((inv) => (
-                    <tr
-                      key={inv.id}
-                      id={`health-check-record-${inv.id}`}
-                      className={`transition-colors ${highlightedInvoice?.id === inv.id ? "bg-amber-50 outline outline-2 outline-amber-400" : "hover:bg-slate-50/80"}`}
-                    >
-                      <td className="py-3 px-4 font-mono font-bold text-blue-700">{inv.invoiceNumber}</td>
-                      <td className="py-3 px-4 text-slate-600">{new Date(inv.invoiceDate).toLocaleDateString("en-IN")}</td>
-                      <td className="py-3 px-4 font-semibold text-slate-900">
-                        {inv.customer?.name}
-                        {inv.customer?.gstin && (
-                          <p className="text-3xs text-slate-400 font-mono">{inv.customer.gstin}</p>
-                        )}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`text-3xs font-bold px-2 py-0.5 rounded-full ${
-                            inv.supplyType === "INTRA_STATE" ? "bg-emerald-50 text-emerald-700" : "bg-purple-50 text-purple-700"
-                          }`}
-                        >
-                          {inv.supplyType === "INTRA_STATE" ? "CGST + SGST (Intra)" : "IGST (Interstate)"}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 font-medium">₹{inv.subtotal.toFixed(2)}</td>
-                      <td className="py-3 px-4 font-extrabold text-slate-900">₹{inv.totalAmount.toFixed(2)}</td>
-                      <td className="py-3 px-4 text-right space-x-2">
-                        <button
-                          onClick={() => void openInvoiceEditor(inv.id)}
-                          className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                          <span>Edit</span>
-                        </button>
-                        <button
-                          onClick={() => handleDownloadPdf(inv.id, inv.invoiceNumber)}
-                          disabled={downloadingId === inv.id}
-                          title="Download invoice PDF"
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200 disabled:opacity-60"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                          <span>{downloadingId === inv.id ? "..." : "Invoice PDF"}</span>
-                        </button>
-                        
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Overdue
+                </p>
+                <p className="text-2xl font-extrabold text-red-600">
+                  ₹{overdueAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+                <p className="text-xs text-slate-500">
+                  past payment due date
+                </p>
+              </div>
+              <div className="w-11 h-11 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center text-red-600">
+                <AlertCircle className="w-5 h-5" />
+              </div>
             </div>
-          )}
+          </div>
+
+          {/* Sub-tabs for invoices */}
+          <div className="flex border-b border-slate-200 gap-2 text-xs font-bold pt-1">
+            <button
+              onClick={() => setInvoiceFilter("ALL")}
+              className={`pb-2.5 px-3 border-b-2 transition-all ${
+                invoiceFilter === "ALL"
+                  ? "border-blue-600 text-blue-700 font-extrabold"
+                  : "border-transparent text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              All ({displayInvoices.length})
+            </button>
+            <button
+              onClick={() => setInvoiceFilter("TO_COLLECT")}
+              className={`pb-2.5 px-3 border-b-2 transition-all ${
+                invoiceFilter === "TO_COLLECT"
+                  ? "border-blue-600 text-blue-700 font-extrabold"
+                  : "border-transparent text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              To collect ({toCollectCount})
+            </button>
+            <button
+              onClick={() => setInvoiceFilter("PAID")}
+              className={`pb-2.5 px-3 border-b-2 transition-all ${
+                invoiceFilter === "PAID"
+                  ? "border-blue-600 text-blue-700 font-extrabold"
+                  : "border-transparent text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              Paid ({paidCount})
+            </button>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            {invoicesQ.loading ? (
+              <TableSkeleton />
+            ) : invoicesQ.error && invoices.length === 0 ? (
+              <TableError message={invoicesQ.error.message} onRetry={() => invoicesQ.mutate()} />
+            ) : displayInvoices.length === 0 ? (
+              <div className="p-12 text-center space-y-3">
+                <FileText className="w-12 h-12 text-slate-300 mx-auto" />
+                <p className="text-sm font-bold text-slate-700">No sales invoices generated yet</p>
+                <p className="text-xs text-slate-500">Click &quot;Create Tax Invoice&quot; to create your first invoice.</p>
+              </div>
+            ) : filteredInvoices.length === 0 ? (
+              <div className="p-12 text-center space-y-2">
+                <FileText className="w-10 h-10 text-slate-300 mx-auto" />
+                <p className="text-sm font-bold text-slate-700">No invoices in this view</p>
+                <p className="text-xs text-slate-400">
+                  {invoiceFilter === "TO_COLLECT"
+                    ? "Great news! All invoices are fully paid."
+                    : "No paid invoices yet."}
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Desktop & Tablet Table */}
+                <div className="overflow-x-auto hidden md:block">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-3xs font-bold text-slate-500 uppercase tracking-wider">
+                        <th className="py-3 px-4">Invoice #</th>
+                        <th className="py-3 px-4">Date</th>
+                        <th className="py-3 px-4">Customer</th>
+                        <th className="py-3 px-4">Supply Type</th>
+                        <th className="py-3 px-4">Total Amount</th>
+                        <th className="py-3 px-4">Payment Status</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs text-slate-800">
+                      {filteredInvoices.map((inv) => {
+                        const { pending, status, isOverdue, overdueDays } = getInvoicePaymentInfo(inv);
+                        return (
+                          <tr
+                            key={inv.id}
+                            id={`health-check-record-${inv.id}`}
+                            className={`transition-colors ${
+                              highlightedInvoice?.id === inv.id
+                                ? "bg-amber-50 outline outline-2 outline-amber-400"
+                                : "hover:bg-slate-50/80"
+                            }`}
+                          >
+                            <td className="py-3 px-4 font-mono font-bold text-blue-700">{inv.invoiceNumber}</td>
+                            <td className="py-3 px-4 text-slate-600">
+                              {new Date(inv.invoiceDate).toLocaleDateString("en-IN")}
+                            </td>
+                            <td className="py-3 px-4 font-semibold text-slate-900">
+                              {inv.customer?.name || "Customer"}
+                              {inv.customer?.gstin && (
+                                <p className="text-3xs text-slate-400 font-mono">{inv.customer.gstin}</p>
+                              )}
+                            </td>
+                            <td className="py-3 px-4">
+                              <span
+                                className={`text-3xs font-bold px-2 py-0.5 rounded-full ${
+                                  inv.supplyType === "INTRA_STATE"
+                                    ? "bg-emerald-50 text-emerald-700"
+                                    : "bg-purple-50 text-purple-700"
+                                }`}
+                              >
+                                {inv.supplyType === "INTRA_STATE" ? "CGST + SGST (Intra)" : "IGST (Interstate)"}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 font-extrabold text-slate-900">₹{inv.totalAmount.toFixed(2)}</td>
+                            <td className="py-3 px-4">
+                              <div className="flex flex-col gap-1 items-start">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {status === "PAID" ? (
+                                    <span className="text-3xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                      Paid
+                                    </span>
+                                  ) : status === "PARTIAL" ? (
+                                    <span className="text-3xs font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                                      Part paid
+                                    </span>
+                                  ) : (
+                                    <span className="text-3xs font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">
+                                      Unpaid
+                                    </span>
+                                  )}
+                                  {isOverdue && pending > 0 && (
+                                    <span className="text-3xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-300">
+                                      Overdue {overdueDays} {overdueDays === 1 ? "day" : "days"}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-3xs text-slate-500 font-medium">
+                                  {pending > 0 ? (
+                                    <>
+                                      Pending: <strong className="text-slate-800 font-mono font-bold">₹{pending.toFixed(2)}</strong>
+                                    </>
+                                  ) : (
+                                    <span className="text-emerald-700 font-semibold">Fully settled</span>
+                                  )}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-right space-x-2">
+                              {inv.status !== "CANCELLED" && pending > 0 && (
+                                <button
+                                  onClick={() => setPaymentInvoice(inv)}
+                                  className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                                >
+                                  <IndianRupee className="w-3.5 h-3.5" />
+                                  <span>Add payment</span>
+                                </button>
+                              )}
+                              <button
+                                onClick={() => void openInvoiceEditor(inv.id)}
+                                className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                                <span>Edit</span>
+                              </button>
+                              <button
+                                onClick={() => handleDownloadPdf(inv.id, inv.invoiceNumber)}
+                                disabled={downloadingId === inv.id}
+                                title="Download invoice PDF"
+                                className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200 disabled:opacity-60"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                                <span>{downloadingId === inv.id ? "..." : "Invoice PDF"}</span>
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Card View (phone width) */}
+                <div className="divide-y divide-slate-100 block md:hidden">
+                  {filteredInvoices.map((inv) => {
+                    const { pending, status, isOverdue, overdueDays } = getInvoicePaymentInfo(inv);
+                    return (
+                      <div
+                        key={inv.id}
+                        id={`health-check-record-mobile-${inv.id}`}
+                        className={`p-4 space-y-3 ${
+                          highlightedInvoice?.id === inv.id ? "bg-amber-50" : ""
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="font-mono font-bold text-blue-700 text-xs">{inv.invoiceNumber}</p>
+                            <p className="text-xs font-bold text-slate-900 mt-0.5">{inv.customer?.name || "Customer"}</p>
+                            <p className="text-3xs text-slate-400 mt-0.5">
+                              {new Date(inv.invoiceDate).toLocaleDateString("en-IN")}
+                            </p>
+                          </div>
+                          <div className="flex flex-col items-end">
+                            <p className="font-extrabold text-sm text-slate-900">₹{inv.totalAmount.toFixed(2)}</p>
+                            {pending > 0 ? (
+                              <p className="text-3xs font-semibold text-amber-700">Pending: ₹{pending.toFixed(2)}</p>
+                            ) : (
+                              <p className="text-3xs font-semibold text-emerald-700">Paid in full</p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-100 gap-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {status === "PAID" ? (
+                              <span className="text-3xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                Paid
+                              </span>
+                            ) : status === "PARTIAL" ? (
+                              <span className="text-3xs font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                                Part paid
+                              </span>
+                            ) : (
+                              <span className="text-3xs font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">
+                                Unpaid
+                              </span>
+                            )}
+                            {isOverdue && pending > 0 && (
+                              <span className="text-3xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-300">
+                                Overdue {overdueDays}d
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {inv.status !== "CANCELLED" && pending > 0 && (
+                              <button
+                                onClick={() => setPaymentInvoice(inv)}
+                                className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700"
+                              >
+                                <IndianRupee className="w-3 h-3" />
+                                <span>Add payment</span>
+                              </button>
+                            )}
+                            <button
+                              onClick={() => void openInvoiceEditor(inv.id)}
+                              className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700"
+                            >
+                              <Pencil className="w-3 h-3" />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              onClick={() => handleDownloadPdf(inv.id, inv.invoiceNumber)}
+                              disabled={downloadingId === inv.id}
+                              className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-md border border-blue-200"
+                            >
+                              <Download className="w-3 h-3" />
+                              <span>PDF</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
 
@@ -1015,6 +1312,19 @@ export default function SalesPage() {
           </div>
         </div>
       )}
+
+      {/* Add Payment Modal */}
+      {paymentInvoice && (
+        <AddPaymentModal
+          invoice={paymentInvoice}
+          onClose={() => setPaymentInvoice(null)}
+          onSuccess={() => {
+            invoicesQ.mutate();
+            showToast("Payment recorded successfully");
+          }}
+        />
+      )}
+
 
       {toast && (
         <div className="fixed bottom-6 right-6 z-[60] bg-emerald-600 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-lg animate-fadeIn">

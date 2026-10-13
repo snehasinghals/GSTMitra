@@ -68,7 +68,8 @@ export const ModelName = {
   User: 'User',
   OtpCode: 'OtpCode',
   ResetToken: 'ResetToken',
-  Vendor: 'Vendor'
+  Vendor: 'Vendor',
+  SalesPayment: 'SalesPayment'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -432,6 +433,20 @@ export const VendorScalarFieldEnum = {
 } as const
 
 export type VendorScalarFieldEnum = (typeof VendorScalarFieldEnum)[keyof typeof VendorScalarFieldEnum]
+
+
+export const SalesPaymentScalarFieldEnum = {
+  id: 'id',
+  salesInvoiceId: 'salesInvoiceId',
+  businessId: 'businessId',
+  amount: 'amount',
+  mode: 'mode',
+  paidOn: 'paidOn',
+  note: 'note',
+  createdAt: 'createdAt'
+} as const
+
+export type SalesPaymentScalarFieldEnum = (typeof SalesPaymentScalarFieldEnum)[keyof typeof SalesPaymentScalarFieldEnum]
 
 
 export const SortOrder = {

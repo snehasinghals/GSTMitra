@@ -50,7 +50,7 @@ router.get("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: R
       where: whereClause,
       include: isListView
         ? { customer: { select: { id: true, name: true, gstin: true, stateCode: true, stateName: true } } }
-        : { customer: true, items: true },
+        : { customer: true, items: true, payments: { orderBy: { paidOn: "desc" } } },
       orderBy: [{ invoiceDate: "desc" }, { createdAt: "desc" }],
       ...(isListView ? { take } : {}),
     });
@@ -107,7 +107,7 @@ router.get("/invoices/:id", authMiddleware, async (req: AuthenticatedRequest, re
 
     const invoice = await prisma.salesInvoice.findFirst({
       where: { id: req.params.id as string, businessId },
-      include: { customer: true, items: true },
+      include: { customer: true, items: true, payments: { orderBy: { paidOn: "desc" } } },
     });
     if (!invoice) return res.status(404).json({ error: "Sales invoice not found." });
     res.json(invoice);
@@ -134,10 +134,17 @@ router.post("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: 
       notes,
       items,
       status,
+      paymentMode,
       isReverseCharge: rawIsReverseCharge,
       applicablePercent: rawApplicablePercent,
       ecomGstin: rawEcomGstin,
     } = req.body;
+
+    if (paymentMode !== undefined && paymentMode !== null && paymentMode !== "") {
+      if (!["CASH", "UPI", "PAY_LATER"].includes(paymentMode)) {
+        return res.status(400).json({ error: "Invalid paymentMode. Must be CASH, UPI, or PAY_LATER." });
+      }
+    }
 
     const isReverseCharge = rawIsReverseCharge === undefined ? false : rawIsReverseCharge;
     if (typeof isReverseCharge !== "boolean") {
@@ -283,6 +290,10 @@ router.post("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: 
       return res.status(400).json({ error: "Invoice total is too large. Please check the rates and quantities." });
     }
 
+    const isCash = paymentMode === "CASH";
+    const initialPaidAmount = isCash ? grandTotal : 0;
+    const initialPaymentStatus = isCash ? "PAID" : "UNPAID";
+
     const invoice = await prisma.salesInvoice.create({
       data: {
         businessId,
@@ -296,7 +307,7 @@ router.post("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: 
         applicablePercent,
         ecomGstin,
         status: status ? String(status) : "ISSUED",
-        paymentStatus: "UNPAID",
+        paymentStatus: initialPaymentStatus,
         notes: notes ? String(notes) : null,
         subtotal,
         totalCgst,
@@ -305,14 +316,30 @@ router.post("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: 
         totalCess,
         roundOff,
         totalAmount: grandTotal,
-        paidAmount: 0,
+        paidAmount: initialPaidAmount,
         items: {
           create: formattedItems,
         },
+        ...(isCash
+          ? {
+              payments: {
+                create: [
+                  {
+                    businessId,
+                    amount: grandTotal,
+                    mode: "CASH",
+                    paidOn: invDate,
+                    note: "Payment received in cash",
+                  },
+                ],
+              },
+            }
+          : {}),
       },
       include: {
         customer: true,
         items: true,
+        payments: { orderBy: { paidOn: "desc" } },
       },
     });
 
@@ -505,6 +532,116 @@ router.patch("/invoices/:id/payment", authMiddleware, async (req: AuthenticatedR
     res.json(updated);
   } catch (error: any) {
     res.status(500).json({ error: "Failed to update payment status." });
+  }
+});
+
+// Record a payment for a sales invoice
+router.post("/invoices/:id/payments", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) return res.status(400).json({ error: "No active business" });
+    const invoiceId = req.params.id as string;
+    const { amount, mode, paidOn, note } = req.body;
+
+    const paymentAmount = r2(Number(amount));
+    if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
+      return res.status(400).json({ error: "Payment amount must be greater than 0." });
+    }
+
+    const paymentMode = mode ? String(mode).toUpperCase() : "CASH";
+    if (!["CASH", "UPI", "BANK", "OTHER"].includes(paymentMode)) {
+      return res.status(400).json({ error: "Invalid payment mode. Must be CASH, UPI, BANK, or OTHER." });
+    }
+
+    const parsedPaidOn = paidOn ? new Date(paidOn) : new Date();
+    if (isNaN(parsedPaidOn.getTime())) {
+      return res.status(400).json({ error: "Invalid payment date." });
+    }
+
+    const updatedInvoice = await prisma.$transaction(async (tx) => {
+      const invoice = await tx.salesInvoice.findFirst({
+        where: { id: invoiceId, businessId },
+      });
+      if (!invoice) return null;
+
+      if (invoice.status === "CANCELLED") {
+        throw new Error("Cannot add payment to a cancelled invoice.");
+      }
+
+      const balanceDue = r2(invoice.totalAmount - invoice.paidAmount);
+      if (paymentAmount > balanceDue + 0.01) {
+        throw new Error(`Payment amount cannot exceed the pending balance (${balanceDue}).`);
+      }
+
+      const newPaidAmount = r2(invoice.paidAmount + paymentAmount);
+      const paymentStatus =
+        newPaidAmount <= 0
+          ? "UNPAID"
+          : newPaidAmount >= invoice.totalAmount - 0.01
+          ? "PAID"
+          : "PARTIAL";
+
+      await tx.salesPayment.create({
+        data: {
+          salesInvoiceId: invoiceId,
+          businessId,
+          amount: paymentAmount,
+          mode: paymentMode,
+          paidOn: parsedPaidOn,
+          note: note ? String(note).trim() : null,
+        },
+      });
+
+      return tx.salesInvoice.update({
+        where: { id: invoiceId },
+        data: {
+          paidAmount: newPaidAmount,
+          paymentStatus,
+        },
+        include: {
+          customer: true,
+          items: true,
+          payments: { orderBy: { paidOn: "desc" } },
+        },
+      });
+    });
+
+    if (!updatedInvoice) return res.status(404).json({ error: "Sales invoice not found." });
+    res.json(updatedInvoice);
+  } catch (error: any) {
+    if (
+      error instanceof Error &&
+      (error.message.includes("Cannot add payment") || error.message.includes("cannot exceed the pending balance"))
+    ) {
+      return res.status(400).json({ error: error.message });
+    }
+    console.error("Record sales invoice payment error:", error);
+    res.status(500).json({ error: "Failed to record payment." });
+  }
+});
+
+// List all payments for an invoice
+router.get("/invoices/:id/payments", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) return res.status(400).json({ error: "No active business" });
+    const invoiceId = req.params.id as string;
+
+    const invoice = await prisma.salesInvoice.findFirst({
+      where: { id: invoiceId, businessId },
+      select: { id: true },
+    });
+    if (!invoice) return res.status(404).json({ error: "Sales invoice not found." });
+
+    const payments = await prisma.salesPayment.findMany({
+      where: { salesInvoiceId: invoiceId, businessId },
+      orderBy: { paidOn: "desc" },
+    });
+
+    res.json(payments);
+  } catch (error: any) {
+    console.error("Fetch invoice payments error:", error);
+    res.status(500).json({ error: "Failed to fetch payments." });
   }
 });
 

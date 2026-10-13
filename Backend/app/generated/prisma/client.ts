@@ -131,3 +131,8 @@ export type ResetToken = Prisma.ResetTokenModel
  * 
  */
 export type Vendor = Prisma.VendorModel
+/**
+ * Model SalesPayment
+ * 
+ */
+export type SalesPayment = Prisma.SalesPaymentModel
