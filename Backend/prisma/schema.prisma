@@ -15,6 +15,7 @@ model Business {
   stateCode        String                @default("27")
   createdAt        DateTime              @default(now())
   address          String?
+  upiId            String?
   bankAccount      String?
   bankBranch       String?
   bankIfsc         String?
@@ -96,6 +97,7 @@ model Customer {
   id               String            @id @default(uuid())
   businessId       String
   name             String
+  mitraId          String?
   tradeName        String?
   gstin            String?
   stateCode        String            @default("27")
@@ -111,6 +113,7 @@ model Customer {
   salesInvoices    SalesInvoice[]
 
   @@index([businessId])
+  @@unique([businessId, mitraId])
 }
 
 model GstRule {
@@ -167,6 +170,7 @@ model PurchaseBill {
   id                     String             @id @default(uuid())
   businessId             String
   vendorId               String
+  sourceSalesInvoiceId   String?            @unique
   billNumber             String
   billDate               DateTime
   receivedDate           DateTime?
@@ -178,6 +182,7 @@ model PurchaseBill {
   isItcEligible          Boolean            @default(true)
   itcIneligibilityReason String?
   status                 String             @default("UNPAID")
+  receiptStatus          String             @default("ACCEPTED")
   subtotal               Float
   totalCgst              Float              @default(0)
   totalSgst              Float              @default(0)
@@ -185,10 +190,13 @@ model PurchaseBill {
   totalCess              Float              @default(0)
   totalAmount            Float
   paidAmount             Float              @default(0)
+  lastReminderSentAt     DateTime?
+  reminderCount          Int                @default(0)
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
   business               Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
   vendor                 Vendor             @relation(fields: [vendorId], references: [id])
+  sourceSalesInvoice     SalesInvoice?      @relation(fields: [sourceSalesInvoiceId], references: [id], onDelete: SetNull)
   items                  PurchaseBillItem[]
   payments               PurchasePayment[]
 
@@ -250,6 +258,7 @@ model SalesInvoice {
   id               String             @id @default(uuid())
   businessId       String
   customerId       String
+  buyerGstin       String?
   invoiceNumber    String
   invoiceDate      DateTime
   dueDate          DateTime?
@@ -269,11 +278,14 @@ model SalesInvoice {
   ecomGstin         String?                             // NEW
   totalAmount      Float
   paidAmount       Float              @default(0)
+  lastReminderSentAt DateTime?
+  reminderCount    Int                @default(0)
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   creditDebitNotes CreditDebitNote[]
   business         Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
   customer         Customer           @relation(fields: [customerId], references: [id])
+  receivedPurchaseBill PurchaseBill?
   items            SalesInvoiceItem[]
   payments         SalesPayment[]
 
@@ -383,4 +395,16 @@ model SalesPayment {
 
   @@index([salesInvoiceId])
   @@index([businessId])
+}
+
+model HsnCode {
+  id          String @id @default(uuid())
+  code        String
+  description String
+  keywords    String @default("")
+  digits      Int
+  type        String @default("GOODS")   // GOODS or SERVICE
+
+  @@unique([type, code])
+  @@index([code])
 }

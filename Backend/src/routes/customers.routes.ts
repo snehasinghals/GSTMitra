@@ -6,9 +6,19 @@ import { r2 } from "../lib/money.js";
 
 const router = Router();
 
+type CustomerBase = {
+  id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  gstin: string | null;
+  stateCode: string;
+  address: string | null;
+  mitraId: string | null;
+};
 async function attachCustomerStats(
   businessId: string,
-  customers: Array<{ id: string; name: string; phone: string | null; gstin: string | null; stateCode: string }>
+  customers: CustomerBase[]
 ) {
   if (customers.length === 0) return [];
 
@@ -45,13 +55,188 @@ async function attachCustomerStats(
       id: c.id,
       name: c.name,
       phone: c.phone,
+      email: c.email,
       gstin: c.gstin,
       stateCode: c.stateCode,
+      address: c.address,
+      mitraId: c.mitraId,
       lastBilledAt: st?.lastBilledAt ?? null,
       pendingAmount: st?.pendingAmount ?? 0,
     };
   });
 }
+
+// Live suggestions while typing a Mitra ID
+router.get("/mitra-suggest", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const q = String(req.query.q || "").trim().toLowerCase();
+    if (q.length < 3) return res.json([]);
+
+    const users = await prisma.user.findMany({
+      where: { mitraId: { startsWith: q, mode: "insensitive" } },
+      select: { name: true, mitraId: true },
+      orderBy: { mitraId: "asc" },
+      take: 5,
+    });
+
+    res.json(users.filter((u) => u.mitraId));
+  } catch (error) {
+    console.error("Mitra suggest error:", error);
+    res.status(500).json({ error: "Failed to fetch suggestions." });
+  }
+});
+
+// Lookup User or Customer by Mitra ID (or phone/email)
+router.get("/lookup-mitra", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const rawId = String(req.query.id || req.query.mitraId || "").trim();
+    if (!rawId) {
+      return res.status(400).json({ error: "Mitra ID is required" });
+    }
+
+    const cleanId = rawId.toLowerCase();
+
+    // 1. First look up in User table by mitraId, phone or email
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { mitraId: cleanId },
+          { phone: rawId },
+          { email: cleanId },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        mitraId: true,
+        email: true,
+        address: true,
+        pan: true,
+      },
+    });
+
+    if (user) {
+      let linkedCustomer = user.mitraId && req.user?.businessId
+        ? await prisma.customer.findFirst({
+            where: { businessId: req.user.businessId, mitraId: user.mitraId },
+            select: { id: true },
+          })
+        : null;
+      if (!linkedCustomer && user.mitraId && user.phone && req.user?.businessId) {
+        const existingCustomer = await prisma.customer.findFirst({
+          where: { businessId: req.user.businessId, phone: user.phone, mitraId: null },
+          select: { id: true },
+        });
+        if (existingCustomer) {
+          linkedCustomer = await prisma.customer.update({
+            where: { id: existingCustomer.id },
+            data: { mitraId: user.mitraId },
+            select: { id: true },
+          });
+        }
+      }
+      // Collect gstins from user's businesses where gstin is not null
+      const userBusinesses = await prisma.businessUser.findMany({
+        where: { userId: user.id },
+        include: {
+          business: {
+            select: { name: true, tradeName: true, gstin: true },
+          },
+        },
+      });
+
+      const gstinsList: Array<{ shopName: string; gstin: string }> = [];
+      const seenGstins = new Set<string>();
+
+      for (const ub of userBusinesses) {
+        const b = ub.business;
+        if (b.gstin && b.gstin.trim()) {
+          const clean = b.gstin.trim().toUpperCase();
+          if (!seenGstins.has(clean)) {
+            seenGstins.add(clean);
+            gstinsList.push({
+              shopName: b.tradeName || b.name || "Business",
+              gstin: clean,
+            });
+          }
+        }
+      }
+
+      // Also include existing Customer.gstin if present and not already added
+      if (linkedCustomer && req.user?.businessId) {
+        const fullCustomer = await prisma.customer.findUnique({
+          where: { id: linkedCustomer.id },
+          select: { gstin: true, name: true },
+        });
+        if (fullCustomer?.gstin && fullCustomer.gstin.trim()) {
+          const clean = fullCustomer.gstin.trim().toUpperCase();
+          if (!seenGstins.has(clean)) {
+            seenGstins.add(clean);
+            gstinsList.push({
+              shopName: fullCustomer.name,
+              gstin: clean,
+            });
+          }
+        }
+      }
+
+      return res.json({
+        found: true,
+        source: "USER",
+        name: user.name,
+        phone: user.phone || "",
+        email: user.email || "",
+        mitraId: user.mitraId,
+        address: user.address || "",
+        pan: user.pan || "",
+        gstin: "",
+        gstins: gstinsList,
+        customerId: linkedCustomer?.id || null,
+      });
+    }
+
+    // 2. Also check if business has existing customer with matching phone
+    const businessId = req.user?.businessId;
+    if (businessId) {
+      const existingCustomer = await prisma.customer.findFirst({
+        where: {
+          businessId,
+          phone: rawId,
+        },
+      });
+
+      if (existingCustomer) {
+        const gstinsList: Array<{ shopName: string; gstin: string }> = [];
+        if (existingCustomer.gstin && existingCustomer.gstin.trim()) {
+          gstinsList.push({
+            shopName: existingCustomer.tradeName || existingCustomer.name,
+            gstin: existingCustomer.gstin.trim().toUpperCase(),
+          });
+        }
+
+        return res.json({
+          found: true,
+          source: "CUSTOMER",
+          name: existingCustomer.name,
+          phone: existingCustomer.phone || "",
+          email: existingCustomer.email || "",
+          mitraId: null,
+          address: existingCustomer.address || "",
+          pan: "",
+          gstin: existingCustomer.gstin || "",
+          gstins: gstinsList,
+          customerId: existingCustomer.id,
+        });
+      }
+    }
+
+    return res.status(404).json({ found: false, message: "No account found with this Mitra ID" });
+  } catch (error: any) {
+    console.error("Mitra lookup error:", error);
+    res.status(500).json({ error: "Failed to look up Mitra ID" });
+  }
+});
 
 // List customers
 router.get("/", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
@@ -94,8 +279,11 @@ router.get("/search", authMiddleware, async (req: AuthenticatedRequest, res: Res
         id: true,
         name: true,
         phone: true,
+        email: true,
         gstin: true,
         stateCode: true,
+        address: true,
+        mitraId: true,
       },
       take: 50,
     });
@@ -157,8 +345,11 @@ router.get("/recent", authMiddleware, async (req: AuthenticatedRequest, res: Res
         id: true,
         name: true,
         phone: true,
+        email: true,
         gstin: true,
         stateCode: true,
+        address: true,
+        mitraId: true,
       },
     });
 
@@ -180,13 +371,48 @@ router.post("/quick", authMiddleware, async (req: AuthenticatedRequest, res: Res
     const businessId = req.user?.businessId;
     if (!businessId) return res.status(400).json({ error: "No active business" });
 
-    const { name, phone, gstin } = req.body;
+    const { name, phone, gstin, address, mitraId, email } = req.body;
 
     if (!name || !String(name).trim()) {
       return res.status(400).json({ error: "Customer name is required." });
     }
 
     const cleanGstin = gstin && String(gstin).trim() ? String(gstin).trim().toUpperCase() : null;
+    const cleanMitraId = mitraId && String(mitraId).trim() ? String(mitraId).trim().toLowerCase() : null;
+    const cleanEmail = email && String(email).trim() ? String(email).trim() : null;
+    if (cleanEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      return res.status(400).json({ error: "Enter a valid customer email address." });
+    }
+
+    if (cleanMitraId && !/^[a-z0-9._-]+@[a-z0-9._-]+$/i.test(cleanMitraId)) {
+      return res.status(400).json({ error: "Invalid Mitra ID." });
+    }
+
+    if (cleanMitraId) {
+      const linkedUser = await prisma.user.findUnique({
+        where: { mitraId: cleanMitraId },
+        select: { id: true },
+      });
+      if (!linkedUser) {
+        return res.status(404).json({ error: "No GSTMitra account found for this Mitra ID." });
+      }
+
+      const linkedCustomer = await prisma.customer.findFirst({
+        where: { businessId, mitraId: cleanMitraId },
+        select: { id: true, name: true, phone: true, email: true, gstin: true, stateCode: true, address: true, mitraId: true },
+      });
+      if (linkedCustomer) {
+        const customer = cleanEmail
+          ? await prisma.customer.update({
+              where: { id: linkedCustomer.id },
+              data: { email: cleanEmail },
+              select: { id: true, name: true, phone: true, email: true, gstin: true, stateCode: true, address: true, mitraId: true },
+            })
+          : linkedCustomer;
+        const withStats = await attachCustomerStats(businessId, [customer]);
+        return res.json(withStats[0]);
+      }
+    }
 
     if (cleanGstin) {
       const existing = await prisma.customer.findFirst({
@@ -195,13 +421,29 @@ router.post("/quick", authMiddleware, async (req: AuthenticatedRequest, res: Res
           id: true,
           name: true,
           phone: true,
+          email: true,
           gstin: true,
           stateCode: true,
+          address: true,
+          mitraId: true,
         },
       });
 
       if (existing) {
-        const withStats = await attachCustomerStats(businessId, [existing]);
+        if (cleanMitraId && existing.mitraId && existing.mitraId !== cleanMitraId) {
+          return res.status(409).json({ error: "This customer is already linked to a different Mitra account." });
+        }
+        const updated = (cleanMitraId && !existing.mitraId) || cleanEmail
+          ? await prisma.customer.update({
+              where: { id: existing.id },
+              data: {
+                mitraId: cleanMitraId && !existing.mitraId ? cleanMitraId : undefined,
+                email: cleanEmail || undefined,
+              },
+              select: { id: true, name: true, phone: true, email: true, gstin: true, stateCode: true, address: true, mitraId: true },
+            })
+          : existing;
+        const withStats = await attachCustomerStats(businessId, [updated]);
         return res.json(withStats[0]);
       }
     }
@@ -232,21 +474,25 @@ router.post("/quick", authMiddleware, async (req: AuthenticatedRequest, res: Res
       data: {
         businessId,
         name: String(name).trim(),
+        mitraId: cleanMitraId,
         tradeName: null,
         gstin: cleanGstin,
         stateCode: finalStateCode,
         stateName,
         registrationType: finalRegType,
-        email: null,
+        email: cleanEmail,
         phone: phone && String(phone).trim() ? String(phone).trim() : null,
-        address: null,
+        address: address && String(address).trim() ? String(address).trim() : null,
       },
       select: {
         id: true,
         name: true,
         phone: true,
+        email: true,
         gstin: true,
         stateCode: true,
+        address: true,
+        mitraId: true,
       },
     });
 
@@ -254,8 +500,11 @@ router.post("/quick", authMiddleware, async (req: AuthenticatedRequest, res: Res
       id: customer.id,
       name: customer.name,
       phone: customer.phone,
+      email: customer.email,
       gstin: customer.gstin,
       stateCode: customer.stateCode,
+      address: customer.address,
+      mitraId: customer.mitraId,
       lastBilledAt: null,
       pendingAmount: 0,
     });
@@ -275,6 +524,10 @@ router.post("/", authMiddleware, async (req: AuthenticatedRequest, res: Response
 
     if (!name) {
       return res.status(400).json({ error: "Customer name is required." });
+    }
+
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())) {
+      return res.status(400).json({ error: "Enter a valid customer email address." });
     }
 
     let finalStateCode = stateCode || "27";
@@ -324,6 +577,9 @@ router.put("/:id", authMiddleware, async (req: AuthenticatedRequest, res: Respon
     if (!existing) return res.status(404).json({ error: "Customer not found." });
 
     const { name, tradeName, gstin, stateCode, registrationType, email, phone, address } = req.body;
+    if (email !== undefined && email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())) {
+      return res.status(400).json({ error: "Enter a valid customer email address." });
+    }
 
     let finalStateCode = stateCode ? String(stateCode) : existing.stateCode;
     let finalRegType = registrationType ? String(registrationType) : existing.registrationType;

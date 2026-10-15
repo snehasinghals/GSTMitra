@@ -8,6 +8,7 @@
     "build": "prisma generate",
     "start": "tsx src/index.ts",
     "db:seed": "tsx prisma/seed.ts",
+    "seed:hsn": "tsx scripts/seed-hsn.ts",
     "backfill:mitra-id": "tsx scripts/backfillMitraIds.ts",
     "backfill:mitra-id:dry": "tsx scripts/backfillMitraIds.ts --dry-run",
     "postinstall": "prisma generate",

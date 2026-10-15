@@ -16,6 +16,7 @@ import {
   Package,
   Users,
   FileSpreadsheet,
+  Settings,
   ChevronDown,
   ArrowRight,
   Store,
@@ -113,9 +114,9 @@ export function Sidebar() {
                 <span>Shop Dashboard</span>
               </Link>
 
-              <Link href="/sales?addInvoice=1" className={itemClass(false)}>
-                <PlusCircle className="w-4 h-4 text-emerald-400" />
-                <span className="text-emerald-300 font-semibold">New Bill</span>
+              <Link href="/new-bill" className={itemClass(isUnder("/new-bill"))}>
+                <PlusCircle className={`w-4 h-4 ${isUnder("/new-bill") ? "text-white" : "text-emerald-400"}`} />
+                <span className={isUnder("/new-bill") ? "text-white font-semibold" : "text-emerald-300 font-semibold"}>New Invoice</span>
               </Link>
 
               <Link href="/sales" className={itemClass(isExact("/sales"))}>
@@ -131,6 +132,11 @@ export function Sidebar() {
               <Link href="/items" className={itemClass(isUnder("/items"))}>
                 <Package className={`w-4 h-4 ${isUnder("/items") ? "text-white" : "text-slate-400"}`} />
                 <span>Items</span>
+              </Link>
+
+              <Link href="/settings" className={itemClass(isExact("/settings"))}>
+                <Settings className={`w-4 h-4 ${isExact("/settings") ? "text-white" : "text-slate-400"}`} />
+                <span>Settings</span>
               </Link>
 
               {/* GST Filing (collapsible) */}

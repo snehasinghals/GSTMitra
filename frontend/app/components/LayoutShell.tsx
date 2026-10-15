@@ -85,10 +85,23 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       if (params.get("shopRequired")) {
-        setShopRequiredMessage(true);
+        if (!business?.isOnboarded) {
+          setShopRequiredMessage(true);
+        } else {
+          // If already onboarded, clean up the stale URL param
+          window.history.replaceState({}, "", window.location.pathname);
+          setShopRequiredMessage(false);
+        }
       }
     }
-  }, [pathname]);
+  }, [pathname, business?.isOnboarded]);
+
+  // If business is onboarded, always clear any lingering shopRequired banner
+  useEffect(() => {
+    if (business?.isOnboarded) {
+      setShopRequiredMessage(false);
+    }
+  }, [business?.isOnboarded]);
 
   // Redirect non-onboarded users away from shop pages.
   // Wait for loading=false to avoid false redirects during hydration.
@@ -137,7 +150,7 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
           </div>
         ) : (
           <>
-            {shopRequiredMessage && (
+            {shopRequiredMessage && !business?.isOnboarded && (
               <div className="mb-5 p-4 rounded-xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-900 shadow-xs animate-fadeIn">
                 <span className="font-semibold text-sm">
                   Start your shop to use this page.

@@ -23,6 +23,7 @@ import {
   Paperclip,
   Eye,
   Sparkles,
+  ChevronDown,
 } from "lucide-react";
 import { SmartBillModal } from "../components/SmartBillModal";
 import { BillCameraScanner } from "../components/BillCameraScanner";
@@ -53,6 +54,7 @@ type PaymentBill = {
   billNumber: string;
   totalAmount: number;
   paidAmount: number;
+  sourceSalesInvoiceId?: string | null;
 };
 
 type ItcPaymentRisk = {
@@ -104,6 +106,20 @@ const todayStr = () => {
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().substring(0, 10);
 };
 
+// Small "More options" toggle used inside the bill form sections.
+function MoreToggle({ open, onClick }: { open: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-800"
+    >
+      <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+      {open ? "Hide options" : "More options"}
+    </button>
+  );
+}
+
 export default function PurchasesPage() {
   const [tab, setTab] = useState<"BILLS" | "VENDORS">("BILLS");
 
@@ -137,6 +153,7 @@ export default function PurchasesPage() {
   const [savingBill, setSavingBill] = useState(false);
   const [savingPayment, setSavingPayment] = useState(false);
   const [downloadingBillId, setDownloadingBillId] = useState<string | null>(null);
+  const [reviewingBillId, setReviewingBillId] = useState<string | null>(null);
   const vendorLock = useRef(false);
   const billLock = useRef(false);
   const paymentLock = useRef(false);
@@ -170,10 +187,45 @@ export default function PurchasesPage() {
   const [paymentReference, setPaymentReference] = useState("");
   const [paymentError, setPaymentError] = useState("");
 
+  // "More options" toggles for the 3 bill-form sections
+  const [showVendorMore, setShowVendorMore] = useState(false);
+  const [showItemMore, setShowItemMore] = useState(false);
+  const [showPayMore, setShowPayMore] = useState(false);
+
+  // Vendor search / inline new vendor (inside the bill form)
+  const [vendorSearch, setVendorSearch] = useState("");
+  const [vendorFocused, setVendorFocused] = useState(false);
+  const [newVendorGstin, setNewVendorGstin] = useState("");
+  const [newVendorState, setNewVendorState] = useState("27");
+
   // ITC can only be claimed on bills from GST-registered vendors.
+  const typedVendor = vendorSearch.trim();
   const selectedVendor = vendors.find((v) => v.id === selectedVendorId);
-  const vendorRegistered = !!selectedVendor?.gstin;
+  // if the typed name exactly matches a saved vendor, reuse it (no duplicates)
+  const exactMatch = vendors.find((v) => v.name.trim().toLowerCase() === typedVendor.toLowerCase());
+  const activeVendor = selectedVendor ?? exactMatch;
+  const isNewVendor = !activeVendor && typedVendor.length > 0;
+
+  const vendorRegistered = activeVendor ? !!activeVendor.gstin : !!newVendorGstin.trim();
   const itcClaimable = vendorRegistered && isItcEligible;
+
+  const vendorSuggestions = !vendorFocused || selectedVendorId
+    ? []
+    : (typedVendor
+        ? vendors.filter((v) => v.name.toLowerCase().includes(typedVendor.toLowerCase()))
+        : vendors
+      ).slice(0, 5);
+
+  // ITC reason box must never stay hidden when ITC is blocked
+  const payMoreOpen = showPayMore || (vendorRegistered && !isItcEligible);
+  const pendingReceivedCount = bills.filter((bill) => bill.receiptStatus === "PENDING_REVIEW").length;
+
+  // Live total preview (taxable + GST + cess)
+  const billTotal = billItems.reduce((sum, it) => {
+    const taxable = (Number(it.quantity) || 0) * (Number(it.rate) || 0);
+    const gst = (taxable * (Number(it.gstRate) || 0)) / 100;
+    return sum + taxable + gst + (Number(it.cessAmount) || 0);
+  }, 0);
 
   const updateBillItem = (index: number, patch: Record<string, unknown>) => {
     setBillItems((previous) => previous.map((item, itemIndex) =>
@@ -205,6 +257,35 @@ export default function PurchasesPage() {
     } finally {
       setDownloadingBillId(null);
     }
+  };
+
+  const handleReviewReceivedBill = async (billId: string, decision: "ACCEPT" | "REJECT") => {
+    if (reviewingBillId) return;
+    setReviewingBillId(billId);
+    const { data, error } = await apiFetch<any>(`/purchases/bills/${billId}/review`, {
+      method: "PATCH",
+      body: JSON.stringify({ decision }),
+    });
+    setReviewingBillId(null);
+
+    if (error) {
+      alert(error);
+      billsQ.mutate();
+      return;
+    }
+    if (!data?.id) {
+      alert("Could not update the received bill. Please try again.");
+      billsQ.mutate();
+      return;
+    }
+
+    billsQ.mutate(
+      (previous) => previous?.map((bill) => (bill.id === data.id ? { ...bill, ...data } : bill)),
+      { revalidate: true }
+    );
+    summaryQ.mutate();
+    riskQ.mutate();
+    showToast(decision === "ACCEPT" ? "Received invoice accepted." : "Received invoice rejected.");
   };
 
   // ---------- Vendor ----------
@@ -260,7 +341,13 @@ export default function PurchasesPage() {
   const handleSaveBill = async (e: React.FormEvent) => {
     e.preventDefault();
     if (billLock.current) return;
-    if (!selectedVendorId || !billNum.trim()) return alert("Vendor and Bill Number are required.");
+    if (!activeVendor && !typedVendor) return alert("Please select or type the vendor name.");
+    if (!billNum.trim()) return alert("Bill Number is required.");
+    const newGstin = newVendorGstin.trim().toUpperCase();
+    if (isNewVendor && newGstin && !GSTIN_REGEX.test(newGstin)) {
+      setShowVendorMore(true);
+      return alert("GSTIN format looks invalid. It must be 15 characters, e.g. 27AAAAA0000A1Z5.");
+    }
     if (!billItems.every((item) =>
       String(item.description || "").trim() && Number(item.rate) > 0 && Number(item.quantity) > 0
     )) return alert("Each bill line needs a description, quantity, and taxable amount greater than 0.");
@@ -270,12 +357,36 @@ export default function PurchasesPage() {
     setSavingBill(true);
 
     try {
+      // If the vendor is new, create it first (inline, no separate step for the user)
+      let vendorId = activeVendor?.id || "";
+      let vendorForRow: any = activeVendor;
+
+      if (!vendorId) {
+        const { data: vData, error: vErr } = await apiFetch<any>("/vendors", {
+          method: "POST",
+          body: JSON.stringify({
+            name: typedVendor,
+            gstin: newGstin,
+            stateCode: newVendorState,
+            stateName: stateNameFromCode(newVendorState),
+          }),
+        });
+        const createdVendor: any = (vData as any)?.vendor ?? vData;
+        if (vErr || !createdVendor?.id) {
+          alert(vErr || "Could not add the vendor. Please try again.");
+          return;
+        }
+        vendorId = createdVendor.id;
+        vendorForRow = createdVendor;
+        vendorsQ.mutate();
+      }
+
       const { data, error } = await apiFetch<any>(
         editingBillId ? `/purchases/bills/${editingBillId}` : "/purchases/bills",
         {
         method: editingBillId ? "PUT" : "POST",
         body: JSON.stringify({
-          vendorId: selectedVendorId,
+          vendorId,
           billNumber: billNum.trim(),
           billDate,
           ...(billDueDate ? { dueDate: billDueDate } : {}),
@@ -298,7 +409,7 @@ export default function PurchasesPage() {
       if (created?.id) {
         billsQ.mutate(
           (prev) => {
-            const updated = { ...created, vendor: created.vendor ?? selectedVendor };
+            const updated = { ...created, vendor: created.vendor ?? vendorForRow };
             return prev?.some((bill) => bill.id === updated.id)
               ? prev.map((bill) => bill.id === updated.id ? updated : bill)
               : [updated, ...(prev ?? [])];
@@ -320,6 +431,10 @@ export default function PurchasesPage() {
       setIsReverseCharge(false);
       setIsItcEligible(true);
       setBillItems([{ ...EMPTY_ITEM }]);
+      setSelectedVendorId("");
+      setVendorSearch("");
+      setNewVendorGstin("");
+      setNewVendorState("27");
       showToast(editingBillId ? "Purchase bill details updated" : "Purchase bill added successfully");
     } finally {
       billLock.current = false;
@@ -361,7 +476,11 @@ export default function PurchasesPage() {
       setPaymentDate(todayStr());
       setPaymentMode("UPI");
       setPaymentReference("");
-      showToast("Payment recorded");
+      showToast(
+        paymentBill.sourceSalesInvoiceId
+          ? "Payment recorded; the seller's invoice is now updated"
+          : "Payment recorded"
+      );
     } finally {
       paymentLock.current = false;
       setSavingPayment(false);
@@ -378,6 +497,8 @@ export default function PurchasesPage() {
     }
     setEditingBillId(data.id);
     setSelectedVendorId(data.vendorId);
+    setVendorSearch(data.vendor?.name || "");
+    setNewVendorGstin("");
     setBillNum(data.billNumber);
     setBillDate(String(data.billDate).slice(0, 10));
     setBillDueDate(data.dueDate ? String(data.dueDate).slice(0, 10) : "");
@@ -436,17 +557,13 @@ export default function PurchasesPage() {
       if (quickActionHandled.current) return;
       quickActionHandled.current = true;
       window.history.replaceState(null, "", window.location.pathname);
-      const loadedVendors = vendorsQ.data ?? [];
-      if (loadedVendors.length === 0) {
-        setShowVendorModal(true);
-        return;
-      }
-      setSelectedVendorId(loadedVendors[0].id);
+      setSelectedVendorId("");
+      setVendorSearch("");
       setIsItcEligible(true);
       setShowBillModal(true);
     }, 0);
     return () => window.clearTimeout(timeout);
-  }, [vendorsQ.data, vendorsQ.loading]);
+  }, [vendorsQ.loading]);
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -472,14 +589,8 @@ export default function PurchasesPage() {
             <span>Add Vendor</span>
           </button>
           <button
-            // Disabled until vendors have loaded, otherwise users get a false "add a vendor first" message.
-            disabled={vendorsQ.loading || !!vendorsQ.error}
+            disabled={vendorsQ.loading}
             onClick={() => {
-              if (vendors.length === 0) {
-                alert("Please add at least one vendor first.");
-                setShowVendorModal(true);
-                return;
-              }
               setEditingBillId(null);
               setBillNum("");
               setBillDate(todayStr());
@@ -489,8 +600,13 @@ export default function PurchasesPage() {
               setIsItcEligible(true);
               setItcReason("");
               setBillItems([{ ...EMPTY_ITEM }]);
-              setSelectedVendorId(vendors[0]?.id || "");
-              setIsItcEligible(true);
+              setSelectedVendorId("");
+              setVendorSearch("");
+              setNewVendorGstin("");
+              setNewVendorState("27");
+              setShowVendorMore(false);
+              setShowItemMore(false);
+              setShowPayMore(false);
               setShowBillModal(true);
             }}
             className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -620,6 +736,16 @@ export default function PurchasesPage() {
       {/* Bills Table */}
       {tab === "BILLS" && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          {pendingReceivedCount > 0 && (
+            <div className="m-4 rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+              <p className="font-semibold">
+                {pendingReceivedCount} invoice{pendingReceivedCount === 1 ? "" : "s"} received from GSTMitra sellers need your review.
+              </p>
+              <p className="mt-1 text-xs text-blue-800">
+                Pending invoices are excluded from purchase totals and GST/ITC reports until you accept them. Acceptance does not automatically make ITC claimable.
+              </p>
+            </div>
+          )}
           {billsQ.loading ? (
             <TableSkeleton />
           ) : billsQ.error && bills.length === 0 ? (
@@ -658,6 +784,16 @@ export default function PurchasesPage() {
                         <td className="py-3 px-4 font-mono font-bold text-slate-900">
                           <div className="flex items-center gap-1.5">
                             <span>{bill.billNumber}</span>
+                            {bill.receiptStatus === "PENDING_REVIEW" && (
+                              <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 font-sans text-[10px] font-bold text-blue-700">
+                                Review
+                              </span>
+                            )}
+                            {bill.receiptStatus === "REJECTED" && (
+                              <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 font-sans text-[10px] font-bold text-red-700">
+                                Rejected
+                              </span>
+                            )}
                             {bill.attachment && (
                               <button
                                 onClick={() => setViewingAttachment(bill.attachment)}
@@ -695,12 +831,12 @@ export default function PurchasesPage() {
                             <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-3xs font-bold ${PAY_STYLE[bill.status]?.className ?? PAY_STYLE.UNPAID.className}`}>
                               {PAY_STYLE[bill.status]?.label ?? PAY_STYLE.UNPAID.label}
                             </span>
-                            {bill.status !== "PAID" && (
+                            {bill.receiptStatus !== "PENDING_REVIEW" && bill.receiptStatus !== "REJECTED" && bill.status !== "PAID" && (
                               <p className="text-3xs font-semibold text-slate-600">
                                 Due ₹{(bill.totalAmount - bill.paidAmount).toFixed(2)}
                               </p>
                             )}
-                            {bill.dueDate && (
+                            {bill.dueDate && bill.receiptStatus !== "PENDING_REVIEW" && bill.receiptStatus !== "REJECTED" && (
                               <p className="text-3xs text-slate-500">
                                 Due by {new Date(bill.dueDate).toLocaleDateString("en-IN")}
                                 {bill.status !== "PAID" && bill.dueDate.slice(0, 10) < todayStr() && (
@@ -712,28 +848,55 @@ export default function PurchasesPage() {
                         </td>
                         <td className="py-3 px-4 text-right">
                           <div className="inline-flex gap-2">
-                            <button
-                              onClick={() => void openBillEditor(bill.id)}
-                              className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                              <span>Edit details</span>
-                            </button>
-                            {bill.status !== "PAID" && (
-                              <button
-                                onClick={() => {
-                                  setPaymentBill(bill);
-                                  setPaymentAmount((bill.totalAmount - bill.paidAmount).toFixed(2));
-                                  setPaymentDate(todayStr());
-                                  setPaymentMode("UPI");
-                                  setPaymentReference("");
-                                  setPaymentError("");
-                                }}
-                                className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
-                              >
-                                <Wallet className="h-3.5 w-3.5" />
-                                <span>Record Payment</span>
-                              </button>
+                            {bill.receiptStatus === "PENDING_REVIEW" ? (
+                              <>
+                                <button
+                                  onClick={() => void handleReviewReceivedBill(bill.id, "ACCEPT")}
+                                  disabled={reviewingBillId === bill.id}
+                                  className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                                >
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                  <span>{reviewingBillId === bill.id ? "Saving…" : "Accept"}</span>
+                                </button>
+                                <button
+                                  onClick={() => void handleReviewReceivedBill(bill.id, "REJECT")}
+                                  disabled={reviewingBillId === bill.id}
+                                  className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                  <span>Reject</span>
+                                </button>
+                              </>
+                            ) : bill.receiptStatus !== "REJECTED" ? (
+                              <>
+                                <button
+                                  onClick={() => void openBillEditor(bill.id)}
+                                  className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                  <span>Edit details</span>
+                                </button>
+                                {bill.status !== "PAID" && (
+                                  <button
+                                    onClick={() => {
+                                      setPaymentBill(bill);
+                                      setPaymentAmount((bill.totalAmount - bill.paidAmount).toFixed(2));
+                                      setPaymentDate(todayStr());
+                                      setPaymentMode("UPI");
+                                      setPaymentReference("");
+                                      setPaymentError("");
+                                    }}
+                                    className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                                  >
+                                    <Wallet className="h-3.5 w-3.5" />
+                                    <span>Record Payment</span>
+                                  </button>
+                                )}
+                              </>
+                            ) : (
+                              <span className="px-2.5 py-1 text-xs font-medium text-slate-400">
+                                Not added to your records
+                              </span>
                             )}
                             {bill.attachment && (
                               <button
@@ -918,138 +1081,154 @@ export default function PurchasesPage() {
             </div>
 
             <form onSubmit={handleSaveBill} className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Vendor *</label>
-                  <select
-                    value={selectedVendorId}
-                    onChange={(e) => setSelectedVendorId(e.target.value)}
-                    disabled={savingBill}
-                    className="w-full px-3 py-2 border rounded-xl bg-white"
-                  >
-                    {vendors.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.name} ({v.gstin ? "Registered" : "Unregistered"})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {/* ============ 1. VENDOR DETAILS ============ */}
+              <section className="space-y-3 rounded-2xl border border-slate-200 p-4">
+                <h4 className="text-sm font-semibold text-slate-900">Vendor details</h4>
 
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Bill Number *</label>
-                  <input
-                    type="text"
-                    value={billNum}
-                    onChange={(e) => setBillNum(e.target.value)}
-                    placeholder="e.g. VEND-9981"
-                    required
-                    disabled={savingBill}
-                    className="w-full px-3 py-2 border rounded-xl"
-                  />
-                </div>
-              </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="relative">
+                    <label className="block font-semibold text-slate-700 mb-1">Vendor *</label>
+                    <input
+                      type="text"
+                      value={vendorSearch}
+                      onChange={(e) => {
+                        setVendorSearch(e.target.value);
+                        setSelectedVendorId("");
+                      }}
+                      onFocus={() => setVendorFocused(true)}
+                      onBlur={() => setTimeout(() => setVendorFocused(false), 150)}
+                      placeholder="Search or type a new vendor"
+                      disabled={savingBill}
+                      className="w-full px-3 py-2 border rounded-xl"
+                    />
+                    {vendorSuggestions.length > 0 && (
+                      <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+                        {vendorSuggestions.map((v) => (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onMouseDown={() => {
+                              setSelectedVendorId(v.id);
+                              setVendorSearch(v.name);
+                              setVendorFocused(false);
+                            }}
+                            className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-slate-50"
+                          >
+                            <span>{v.name}</span>
+                            <span className="text-3xs text-slate-500">{v.gstin ? "Registered" : "Unregistered"}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Expense Category</label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    disabled={savingBill}
-                    className="w-full px-3 py-2 border rounded-xl bg-white"
-                  >
-                    {CATEGORIES.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Bill Date</label>
-                  <input
-                    type="date"
-                    value={billDate}
-                    onChange={(e) => setBillDate(e.target.value)}
-                    disabled={savingBill}
-                    className="w-full px-3 py-2 border rounded-xl bg-white"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Due Date (optional)</label>
-                  <input
-                    type="date"
-                    value={billDueDate}
-                    min={billDate}
-                    onChange={(e) => setBillDueDate(e.target.value)}
-                    disabled={savingBill}
-                    className="w-full px-3 py-2 border rounded-xl bg-white"
-                  />
-                </div>
-              </div>
-
-              {/* ITC Eligibility Toggle & Plain Words Explanation */}
-              <div className="p-4 bg-slate-50 border rounded-xl space-y-2">
-                <label className="flex items-center gap-2 text-xs font-semibold text-slate-800">
-                  <input
-                    type="checkbox"
-                    checked={isReverseCharge}
-                    onChange={(e) => setIsReverseCharge(e.target.checked)}
-                    disabled={savingBill}
-                    className="h-4 w-4 rounded text-blue-600"
-                  />
-                  This purchase is liable to reverse charge (confirm from the supplier invoice / tax advice)
-                </label>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-900">Input Tax Credit (ITC) Eligibility</span>
-                    <Tooltip
-                      term="Blocked Credit Sec 17(5)"
-                      text="Certain expenses like motor cars for personal use, food/catering, and club memberships are blocked by GST law. Tax paid on them cannot be claimed as ITC."
-                      example="Motor vehicle purchase -> Blocked ITC"
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Bill Number *</label>
+                    <input
+                      type="text"
+                      value={billNum}
+                      onChange={(e) => setBillNum(e.target.value)}
+                      placeholder="e.g. VEND-9981"
+                      required
+                      disabled={savingBill}
+                      className="w-full px-3 py-2 border rounded-xl"
                     />
                   </div>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={itcClaimable}
-                      onChange={(e) => setIsItcEligible(e.target.checked)}
-                      disabled={savingBill || !vendorRegistered}
-                      className="w-4 h-4 text-blue-600 rounded"
-                    />
-                    <span className="font-bold text-blue-700">Eligible to Claim ITC</span>
-                  </label>
                 </div>
 
-                {!vendorRegistered && (
+                {isNewVendor && (
+                  <p className="text-3xs font-semibold text-blue-700">
+                    New vendor "{typedVendor}" will be added when you save this bill.
+                  </p>
+                )}
+                {(activeVendor || isNewVendor) && !vendorRegistered && (
                   <p className="text-3xs font-semibold text-red-700">
-                    This vendor has no GSTIN (unregistered), so ITC cannot be claimed on this bill.
+                    {isNewVendor
+                      ? "No GSTIN entered, so ITC cannot be claimed. If this vendor is registered, add the GSTIN under More options."
+                      : "This vendor has no GSTIN (unregistered), so ITC cannot be claimed on this bill."}
                   </p>
                 )}
 
-                {vendorRegistered && !isItcEligible && (
-                  <div>
-                    <label className="block text-3xs font-semibold text-red-700 mb-1">
-                      Reason why ITC is ineligible / blocked:
+                <MoreToggle open={showVendorMore} onClick={() => setShowVendorMore((v) => !v)} />
+                {showVendorMore && (
+                  <div className="space-y-3 border-t border-slate-100 pt-3">
+                    {isNewVendor && (
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div>
+                          <label className="block font-semibold text-slate-700 mb-1">Vendor GSTIN (if registered)</label>
+                          <input
+                            type="text"
+                            value={newVendorGstin}
+                            onChange={(e) => {
+                              const val = e.target.value.toUpperCase();
+                              setNewVendorGstin(val);
+                              if (val.length >= 2 && INDIAN_STATES.some((s) => s.code === val.substring(0, 2))) {
+                                setNewVendorState(val.substring(0, 2));
+                              }
+                            }}
+                            maxLength={15}
+                            placeholder="27AAAAA0000A1Z5"
+                            disabled={savingBill}
+                            className="w-full px-3 py-2 border rounded-xl font-mono uppercase"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-slate-700 mb-1">Vendor State</label>
+                          <select
+                            value={newVendorState}
+                            onChange={(e) => setNewVendorState(e.target.value)}
+                            disabled={savingBill}
+                            className="w-full px-3 py-2 border rounded-xl bg-white"
+                          >
+                            {INDIAN_STATES.map((s) => (
+                              <option key={s.code} value={s.code}>
+                                {s.name} ({s.code})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Expense Category</label>
+                      <select
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        disabled={savingBill}
+                        className="w-full px-3 py-2 border rounded-xl bg-white"
+                      >
+                        {CATEGORIES.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <label className="flex items-center gap-2 font-semibold text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={isReverseCharge}
+                        onChange={(e) => setIsReverseCharge(e.target.checked)}
+                        disabled={savingBill}
+                        className="h-4 w-4 rounded text-blue-600"
+                      />
+                      This purchase is liable to reverse charge (confirm from the supplier invoice / tax advice)
                     </label>
-                    <input
-                      type="text"
-                      value={itcReason}
-                      onChange={(e) => setItcReason(e.target.value)}
-                      placeholder="e.g. Sec 17(5) Motor vehicle"
-                      disabled={savingBill}
-                      className="w-full px-3 py-1.5 border border-red-200 rounded-lg text-xs bg-red-50/50"
-                    />
                   </div>
                 )}
-              </div>
+              </section>
 
-              <div className="space-y-3">
-                <p className="font-bold text-slate-800">Bill line items and tax details</p>
+              {/* ============ 2. ITEM DETAILS ============ */}
+              <section className="space-y-3 rounded-2xl border border-slate-200 p-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-slate-900">Item details</h4>
+                  <MoreToggle open={showItemMore} onClick={() => setShowItemMore((v) => !v)} />
+                </div>
+
                 {billItems.map((item, index) => (
-                  <div key={item.id || index} className="grid grid-cols-2 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-4">
-                    <label className="col-span-2 text-xs font-semibold text-slate-700 sm:col-span-2">
+                  <div key={item.id || index} className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <label className="block text-xs font-semibold text-slate-700">
                       Description
                       <input
                         value={item.description}
@@ -1059,94 +1238,108 @@ export default function PurchasesPage() {
                         className="mt-1 w-full rounded-lg border px-3 py-2"
                       />
                     </label>
-                    <label className="text-xs font-semibold text-slate-700">
-                      HSN/SAC
-                      <input
-                        value={item.hsnSacCode}
-                        onChange={(event) => updateBillItem(index, { hsnSacCode: event.target.value })}
-                        disabled={savingBill}
-                        className="mt-1 w-full rounded-lg border px-3 py-2"
-                      />
-                    </label>
-                    <label className="text-xs font-semibold text-slate-700">
-                      Unit
-                      <input
-                        value={item.unit || "PCS"}
-                        onChange={(event) => updateBillItem(index, { unit: event.target.value })}
-                        disabled={savingBill}
-                        className="mt-1 w-full rounded-lg border px-3 py-2"
-                      />
-                    </label>
-                    <label className="text-xs font-semibold text-slate-700">
-                      Quantity
-                      <input
-                        type="number"
-                        min="0.01"
-                        step="0.01"
-                        value={item.quantity}
-                        onChange={(event) => updateBillItem(index, { quantity: Number(event.target.value) || 0 })}
-                        required
-                        disabled={savingBill}
-                        className="mt-1 w-full rounded-lg border px-3 py-2"
-                      />
-                    </label>
-                    <label className="text-xs font-semibold text-slate-700">
-                      Rate / taxable amount (₹)
-                      <input
-                        type="number"
-                        min="0.01"
-                        step="0.01"
-                        value={item.rate}
-                        onChange={(event) => updateBillItem(index, { rate: Number(event.target.value) || 0 })}
-                        required
-                        disabled={savingBill}
-                        className="mt-1 w-full rounded-lg border px-3 py-2 font-bold"
-                      />
-                    </label>
-                    <label className="text-xs font-semibold text-slate-700">
-                      GST rate
-                      <select
-                        value={item.gstRate}
-                        onChange={(event) => updateBillItem(index, { gstRate: Number(event.target.value) })}
-                        disabled={savingBill}
-                        className="mt-1 w-full rounded-lg border bg-white px-3 py-2 font-bold text-blue-700"
-                      >
-                        {[0, 5, 18, 40].map((rate) => <option key={rate} value={rate}>{rate}%</option>)}
-                      </select>
-                    </label>
-                    <label className="text-xs font-semibold text-slate-700">
-                      Cess amount (₹)
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={item.cessAmount ?? 0}
-                        onChange={(event) => updateBillItem(index, { cessAmount: Number(event.target.value) || 0 })}
-                        disabled={savingBill}
-                        className="mt-1 w-full rounded-lg border px-3 py-2"
-                      />
-                    </label>
-                    <label className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-                      <input
-                        type="checkbox"
-                        checked={item.isItcEligible ?? isItcEligible}
-                        onChange={(event) => updateBillItem(index, { isItcEligible: event.target.checked })}
-                        disabled={savingBill || !itcClaimable}
-                      />
-                      ITC eligible for this line
-                    </label>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <label className="text-xs font-semibold text-slate-700">
+                        Quantity
+                        <input
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          value={item.quantity}
+                          onChange={(event) => updateBillItem(index, { quantity: Number(event.target.value) || 0 })}
+                          required
+                          disabled={savingBill}
+                          className="mt-1 w-full rounded-lg border px-3 py-2"
+                        />
+                      </label>
+                      <label className="text-xs font-semibold text-slate-700">
+                        Rate / taxable amount (₹)
+                        <input
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          value={item.rate}
+                          onChange={(event) => updateBillItem(index, { rate: Number(event.target.value) || 0 })}
+                          required
+                          disabled={savingBill}
+                          className="mt-1 w-full rounded-lg border px-3 py-2 font-bold"
+                        />
+                      </label>
+                      <label className="text-xs font-semibold text-slate-700">
+                        GST rate
+                        <select
+                          value={item.gstRate}
+                          onChange={(event) => updateBillItem(index, { gstRate: Number(event.target.value) })}
+                          disabled={savingBill}
+                          className="mt-1 w-full rounded-lg border bg-white px-3 py-2 font-bold text-blue-700"
+                        >
+                          {[0, 5, 18, 40].map((rate) => (
+                            <option key={rate} value={rate}>
+                              {rate}%
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+
+                    {showItemMore && (
+                      <div className="grid grid-cols-2 gap-3 border-t border-slate-200 pt-3 sm:grid-cols-3">
+                        <label className="text-xs font-semibold text-slate-700">
+                          HSN/SAC
+                          <input
+                            value={item.hsnSacCode}
+                            onChange={(event) => updateBillItem(index, { hsnSacCode: event.target.value })}
+                            disabled={savingBill}
+                            className="mt-1 w-full rounded-lg border px-3 py-2"
+                          />
+                        </label>
+                        <label className="text-xs font-semibold text-slate-700">
+                          Unit
+                          <input
+                            value={item.unit || "PCS"}
+                            onChange={(event) => updateBillItem(index, { unit: event.target.value })}
+                            disabled={savingBill}
+                            className="mt-1 w-full rounded-lg border px-3 py-2"
+                          />
+                        </label>
+                        <label className="text-xs font-semibold text-slate-700">
+                          Cess amount (₹)
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={item.cessAmount ?? 0}
+                            onChange={(event) => updateBillItem(index, { cessAmount: Number(event.target.value) || 0 })}
+                            disabled={savingBill}
+                            className="mt-1 w-full rounded-lg border px-3 py-2"
+                          />
+                        </label>
+                        <label className="col-span-2 flex items-center gap-2 text-xs font-semibold text-slate-700 sm:col-span-3">
+                          <input
+                            type="checkbox"
+                            checked={item.isItcEligible ?? isItcEligible}
+                            onChange={(event) => updateBillItem(index, { isItcEligible: event.target.checked })}
+                            disabled={savingBill || !itcClaimable}
+                          />
+                          ITC eligible for this line
+                        </label>
+                      </div>
+                    )}
+
                     {billItems.length > 1 && (
                       <button
                         type="button"
                         onClick={() => setBillItems((previous) => previous.filter((_, itemIndex) => itemIndex !== index))}
                         disabled={savingBill}
-                        className="self-end justify-self-start text-xs font-bold text-red-600"
+                        className="text-xs font-bold text-red-600"
                       >
                         Remove line
                       </button>
                     )}
                   </div>
                 ))}
+
                 <button
                   type="button"
                   onClick={() => setBillItems((previous) => [...previous, { ...EMPTY_ITEM }])}
@@ -1155,7 +1348,83 @@ export default function PurchasesPage() {
                 >
                   + Add bill line
                 </button>
-              </div>
+              </section>
+
+              {/* ============ 3. PAYMENT DETAILS ============ */}
+              <section className="space-y-3 rounded-2xl border border-slate-200 p-4">
+                <h4 className="text-sm font-semibold text-slate-900">Payment details</h4>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Bill Date</label>
+                    <input
+                      type="date"
+                      value={billDate}
+                      onChange={(e) => setBillDate(e.target.value)}
+                      disabled={savingBill}
+                      className="w-full px-3 py-2 border rounded-xl bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Due Date (optional)</label>
+                    <input
+                      type="date"
+                      value={billDueDate}
+                      min={billDate}
+                      onChange={(e) => setBillDueDate(e.target.value)}
+                      disabled={savingBill}
+                      className="w-full px-3 py-2 border rounded-xl bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-between rounded-xl bg-slate-50 px-3 py-2 text-sm">
+                  <span className="text-slate-500">Total (incl. GST)</span>
+                  <span className="font-bold text-slate-900">₹{billTotal.toFixed(2)}</span>
+                </div>
+
+                <MoreToggle open={payMoreOpen} onClick={() => setShowPayMore((v) => !v)} />
+                {payMoreOpen && (
+                  <div className="space-y-2 border-t border-slate-100 pt-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-slate-900">Input Tax Credit (ITC) Eligibility</span>
+                        <Tooltip
+                          term="Blocked Credit Sec 17(5)"
+                          text="Certain expenses like motor cars for personal use, food/catering, and club memberships are blocked by GST law. Tax paid on them cannot be claimed as ITC."
+                          example="Motor vehicle purchase -> Blocked ITC"
+                        />
+                      </div>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={itcClaimable}
+                          onChange={(e) => setIsItcEligible(e.target.checked)}
+                          disabled={savingBill || !vendorRegistered}
+                          className="w-4 h-4 text-blue-600 rounded"
+                        />
+                        <span className="font-bold text-blue-700">Eligible to Claim ITC</span>
+                      </label>
+                    </div>
+
+                    {vendorRegistered && !isItcEligible && (
+                      <div>
+                        <label className="block text-3xs font-semibold text-red-700 mb-1">
+                          Reason why ITC is ineligible / blocked:
+                        </label>
+                        <input
+                          type="text"
+                          value={itcReason}
+                          onChange={(e) => setItcReason(e.target.value)}
+                          placeholder="e.g. Sec 17(5) Motor vehicle"
+                          disabled={savingBill}
+                          className="w-full px-3 py-1.5 border border-red-200 rounded-lg text-xs bg-red-50/50"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </section>
 
               <div className="pt-2 flex justify-end gap-2 border-t">
                 <button
@@ -1201,6 +1470,11 @@ export default function PurchasesPage() {
               <div><p className="text-slate-500">Paid</p><p className="font-bold">₹{paymentBill.paidAmount.toFixed(2)}</p></div>
               <div><p className="text-slate-500">Balance</p><p className="font-bold">₹{(paymentBill.totalAmount - paymentBill.paidAmount).toFixed(2)}</p></div>
             </div>
+            {paymentBill.sourceSalesInvoiceId && (
+              <p className="rounded-lg border border-blue-100 bg-blue-50 p-2.5 text-xs text-blue-800">
+                Recording a confirmed payment here updates the seller&apos;s linked invoice too. A UPI transfer by itself does not mark the bill paid.
+              </p>
+            )}
             {paymentError && <div className="rounded-lg bg-red-50 p-2.5 text-xs text-red-700">{paymentError}</div>}
             <form onSubmit={handleRecordPayment} className="space-y-3 text-xs">
               <div>

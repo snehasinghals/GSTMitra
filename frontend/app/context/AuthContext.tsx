@@ -31,6 +31,7 @@ export interface Business {
   bankName?: string;
   bankAccount?: string;
   bankIfsc?: string;
+  upiId?: string;
   isOnboarded: boolean;
 }
 
@@ -92,15 +93,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setToken(savedToken);
 
-    const { data, error } = await apiFetch<{ user: User; business: Business }>("/auth/me");
+    const { data, error, status } = await apiFetch<{ user: User; business: Business }>("/auth/me");
     if (data) {
       setUser(data.user);
       setBusiness(data.business);
       setAuthError(null);
-    } else if (error) {
-      setAuthError(error);
+    } else if (status === 401) {
+      // Token is really invalid: log out
       localStorage.removeItem("gstmitra_token");
       setToken(null);
+      setUser(null);
+      setBusiness(null);
+    } else if (error) {
+      // Server or network problem: keep the token, just show the error
+      setAuthError(error);
     }
     setLoading(false);
   };
@@ -155,7 +161,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(data.token);
       setUser(data.user);
       setBusiness(data.business || null);
-      await fetchCurrentContext();
       return data;
     }
 
@@ -232,7 +237,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(data.token);
       setUser(data.user);
       setBusiness(data.business || null);
-      await fetchCurrentContext();
     }
 
     return data || { error: "Failed to complete signup." };
@@ -251,7 +255,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(data.token);
       setUser(data.user);
       setBusiness(data.business || null);
-      await fetchCurrentContext();
       return data;
     }
 
@@ -271,7 +274,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(data.token);
       setUser(data.user);
       setBusiness(data.business || null);
-      await fetchCurrentContext();
       return data;
     }
 

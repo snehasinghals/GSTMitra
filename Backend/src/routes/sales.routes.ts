@@ -6,8 +6,15 @@ import { authMiddleware, AuthenticatedRequest } from "../middleware/auth.js";
 import PDFDocument from "pdfkit";
 import { allocateUniqueInvoiceNumber } from "../lib/invoiceNumbers.js";  
 import { r2 } from "../lib/money.js";
+import { normalizeGstin, isValidGstin } from "../lib/gstin.js";
+import { sendPaymentReminderEmail } from "../lib/email.js";
 
 const router = Router();
+
+function getPaymentStatus(totalAmount: number, paidAmount: number) {
+  if (paidAmount <= 0) return "UNPAID";
+  return paidAmount >= totalAmount - 0.01 ? "PAID" : "PARTIAL";
+}
 
 // Safety limits so one typo can't break GST returns or the PDF layout.
 const MAX_RATE = 10_000_000; // 1 crore per unit
@@ -100,6 +107,169 @@ router.get("/summary", authMiddleware, async (req: AuthenticatedRequest, res: Re
   }
 });
 
+// -----------------------------------------------------------------------
+// GET /invoices/missing-hsn
+// Returns all SalesInvoiceItem rows that have no hsnSacCode, with top HSN
+// suggestion (from HsnCode table) and invoice/customer context.
+// Must be declared BEFORE /:id to avoid "missing-hsn" being treated as id.
+// -----------------------------------------------------------------------
+router.get("/invoices/missing-hsn", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) return res.status(400).json({ error: "No active business" });
+
+    const { from, to, period } = req.query;
+    const whereInvoice: any = { businessId, status: { not: "CANCELLED" } };
+
+    if (period && typeof period === "string" && /^\d{6}$/.test(period)) {
+      const month = parseInt(period.substring(0, 2), 10);
+      const year = parseInt(period.substring(2, 6), 10);
+      whereInvoice.invoiceDate = {
+        gte: new Date(year, month - 1, 1),
+        lte: new Date(year, month, 0, 23, 59, 59),
+      };
+    } else if (from || to) {
+      whereInvoice.invoiceDate = {};
+      if (from) whereInvoice.invoiceDate.gte = new Date(String(from));
+      if (to) whereInvoice.invoiceDate.lte = new Date(String(to));
+    }
+
+    const items = await prisma.salesInvoiceItem.findMany({
+      where: {
+        salesInvoice: whereInvoice,
+        hsnSacCode: "",   // schema has String (non-optional) — empty string means unset
+      },
+      include: {
+        salesInvoice: {
+          select: {
+            id: true,
+            invoiceNumber: true,
+            invoiceDate: true,
+            customer: { select: { id: true, name: true } },
+          },
+        },
+      },
+      orderBy: { salesInvoice: { invoiceDate: "desc" } },
+      take: 200,
+    });
+
+    // For each item get top HSN suggestions (best effort, up to 3)
+    const withSuggestions = await Promise.all(
+      items.map(async (item) => {
+        const words = item.description
+          .toLowerCase()
+          .split(/\s+/)
+          .map((w) => w.replace(/[^a-z0-9]/g, ""))
+          .filter((w) => w.length >= 2)
+          .slice(0, 3);
+
+        let suggestions: { code: string; description: string }[] = [];
+        if (words.length > 0) {
+          const whereConditions = words.map((word) => ({
+            OR: [
+              { description: { contains: word, mode: "insensitive" as const } },
+              { keywords: { contains: word, mode: "insensitive" as const } },
+            ],
+          }));
+          const hits = await prisma.hsnCode.findMany({
+            where: { type: "GOODS", AND: whereConditions },
+            select: { code: true, description: true },
+            take: 3,
+          });
+          suggestions = hits;
+        }
+
+        return {
+          itemId: item.id,
+          description: item.description,
+          gstRate: item.gstRate,
+          unit: item.unit,
+          invoice: item.salesInvoice,
+          suggestions,
+        };
+      })
+    );
+
+    res.json({ count: withSuggestions.length, items: withSuggestions });
+  } catch (error: any) {
+    console.error("Missing HSN error:", error);
+    res.status(500).json({ error: "Failed to fetch items with missing HSN." });
+  }
+});
+
+// -----------------------------------------------------------------------
+// POST /invoices/fix-hsn and PATCH /invoices/fix-hsn
+// Accepts either:
+// 1. Array of fixes: [{ invoiceItemId, hsnSacCode }] or { fixes: [{ invoiceItemId, hsnSacCode }] }
+// 2. Single item fix: { itemId, hsnSacCode } or { invoiceItemId, hsnSacCode }
+// Updates them in a transaction.
+// -----------------------------------------------------------------------
+const handleFixHsn = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) return res.status(400).json({ error: "No active business" });
+
+    let rawList: any[] = [];
+    if (Array.isArray(req.body)) {
+      rawList = req.body;
+    } else if (Array.isArray(req.body?.fixes)) {
+      rawList = req.body.fixes;
+    } else if (req.body && typeof req.body === "object") {
+      rawList = [req.body];
+    }
+
+    if (rawList.length === 0) {
+      return res.status(400).json({ error: "At least one item fix is required." });
+    }
+
+    const fixes: { invoiceItemId: string; hsnSacCode: string }[] = [];
+    for (const entry of rawList) {
+      const id = String(entry.invoiceItemId || entry.itemId || "").trim();
+      const code = String(entry.hsnSacCode || "").trim();
+      if (!id) return res.status(400).json({ error: "invoiceItemId is required." });
+      if (!/^\d{4,8}$/.test(code)) {
+        return res.status(400).json({ error: `Invalid HSN code "${code}". Must be 4–8 digits.` });
+      }
+      fixes.push({ invoiceItemId: id, hsnSacCode: code });
+    }
+
+    // Verify all items belong to this business
+    const ids = fixes.map((f) => f.invoiceItemId);
+    const existing = await prisma.salesInvoiceItem.findMany({
+      where: { id: { in: ids }, salesInvoice: { businessId } },
+      select: { id: true },
+    });
+    const foundSet = new Set(existing.map((e) => e.id));
+    for (const f of fixes) {
+      if (!foundSet.has(f.invoiceItemId)) {
+        return res.status(404).json({ error: `Item ${f.invoiceItemId} not found or does not belong to your business.` });
+      }
+    }
+
+    // Update in transaction
+    await prisma.$transaction(
+      fixes.map((f) =>
+        prisma.salesInvoiceItem.update({
+          where: { id: f.invoiceItemId },
+          data: { hsnSacCode: f.hsnSacCode },
+        })
+      )
+    );
+
+    res.json({ success: true, updatedCount: fixes.length });
+  } catch (error: any) {
+    console.error("Fix HSN error:", error);
+    res.status(500).json({ error: "Failed to update HSN." });
+  }
+};
+
+router.post("/invoices/fix-hsn", authMiddleware, handleFixHsn);
+router.patch("/invoices/fix-hsn", authMiddleware, handleFixHsn);
+
+
+
+
+
 router.get("/invoices/:id", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const businessId = req.user?.businessId;
@@ -135,6 +305,7 @@ router.post("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: 
       items,
       status,
       paymentMode,
+      buyerGstin: rawBuyerGstin,
       isReverseCharge: rawIsReverseCharge,
       applicablePercent: rawApplicablePercent,
       ecomGstin: rawEcomGstin,
@@ -216,9 +387,73 @@ router.post("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: 
     const customer = await prisma.customer.findFirst({ where: { id: String(customerId), businessId } });
     if (!customer) return res.status(404).json({ error: "Customer not found." });
 
+    let buyerGstin: string | null = null;
+    if (rawBuyerGstin !== undefined && rawBuyerGstin !== null && String(rawBuyerGstin).trim() !== "") {
+      const normalized = normalizeGstin(String(rawBuyerGstin));
+      if (!isValidGstin(normalized)) {
+        return res.status(400).json({ error: "GSTIN looks wrong, please check" });
+      }
+      if (business.gstin && normalizeGstin(business.gstin) === normalized) {
+        return res.status(400).json({ error: "Buyer GSTIN cannot be your own shop GSTIN." });
+      }
+      buyerGstin = normalized;
+    }
+
+    let recipientBusiness: { id: string } | null = null;
+    let recipientDelivery: { status: string; message?: string } | null = null;
+
+    if (buyerGstin) {
+      // For PurchaseBill creation: create it only when buyerGstin matches an existing Business.gstin
+      const matchedShop = await prisma.business.findFirst({
+        where: {
+          gstin: buyerGstin,
+          isOnboarded: true,
+        },
+        select: { id: true, users: { select: { userId: true } } },
+      });
+
+      if (matchedShop) {
+        const isSelf = matchedShop.users.some((u) => u.userId === req.user?.userId);
+        if (isSelf) {
+          recipientDelivery = {
+            status: "SELF",
+            message: "The customer account belongs to this seller, so the invoice was not delivered to Purchases.",
+          };
+        } else {
+          recipientBusiness = { id: matchedShop.id };
+        }
+      }
+    } else {
+      // B2C sale: No buyer GSTIN provided.
+      // B2C sales cannot claim ITC and must NEVER enter the buyer's business Purchases table.
+      // Instead, they are delivered to the customer's personal "My Bills" section.
+      const recipientMitraId = customer.mitraId?.trim().toLowerCase();
+      if (recipientMitraId) {
+        const recipient = await prisma.user.findUnique({
+          where: { mitraId: recipientMitraId },
+          select: { id: true },
+        });
+        if (recipient) {
+          if (recipient.id === req.user?.userId) {
+            recipientDelivery = {
+              status: "SELF",
+              message: "The customer account belongs to this seller, so the invoice was not delivered to My Bills.",
+            };
+          } else {
+            recipientDelivery = {
+              status: "MY_BILLS",
+              message: "Invoice delivered to customer's My Bills section.",
+            };
+          }
+        }
+      }
+    }
+
+
     // Invoice numbers are always assigned by GSTMitra so GST returns never get colliding sequences.
     const invNum = await allocateUniqueInvoiceNumber(businessId);
-    const pos = placeOfSupply || customer.stateCode || business.stateCode;
+    const buyerStateFromGstin = buyerGstin ? buyerGstin.substring(0, 2) : null;
+    const pos = placeOfSupply || buyerStateFromGstin || customer.stateCode || business.stateCode;
 
     const isIntraState = business.stateCode === pos;
     const supplyType = isIntraState ? "INTRA_STATE" : "INTER_STATE";
@@ -294,56 +529,158 @@ router.post("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: 
     const initialPaidAmount = isCash ? grandTotal : 0;
     const initialPaymentStatus = isCash ? "PAID" : "UNPAID";
 
-    const invoice = await prisma.salesInvoice.create({
-      data: {
-        businessId,
-        customerId: String(customerId),
-        invoiceNumber: String(invNum),
-        invoiceDate: invDate,
-        dueDate: dueDate ? new Date(dueDate) : null,
-        supplyType,
-        placeOfSupply: String(pos),
-        isReverseCharge,
-        applicablePercent,
-        ecomGstin,
-        status: status ? String(status) : "ISSUED",
-        paymentStatus: initialPaymentStatus,
-        notes: notes ? String(notes) : null,
-        subtotal,
-        totalCgst,
-        totalSgst,
-        totalIgst,
-        totalCess,
-        roundOff,
-        totalAmount: grandTotal,
-        paidAmount: initialPaidAmount,
-        items: {
-          create: formattedItems,
+    const invoice = await prisma.$transaction(async (tx) => {
+      const createdInvoice = await tx.salesInvoice.create({
+        data: {
+          businessId,
+          customerId: String(customerId),
+          buyerGstin,
+          invoiceNumber: String(invNum),
+          invoiceDate: invDate,
+          dueDate: dueDate ? new Date(dueDate) : null,
+          supplyType,
+          placeOfSupply: String(pos),
+          isReverseCharge,
+          applicablePercent,
+          ecomGstin,
+          status: status ? String(status) : "ISSUED",
+          paymentStatus: initialPaymentStatus,
+          notes: notes ? String(notes) : null,
+          subtotal,
+          totalCgst,
+          totalSgst,
+          totalIgst,
+          totalCess,
+          roundOff,
+          totalAmount: grandTotal,
+          paidAmount: initialPaidAmount,
+          items: {
+            create: formattedItems,
+          },
+          ...(isCash
+            ? {
+                payments: {
+                  create: [
+                    {
+                      businessId,
+                      amount: grandTotal,
+                      mode: "CASH",
+                      paidOn: invDate,
+                      note: "Payment received in cash",
+                    },
+                  ],
+                },
+              }
+            : {}),
         },
-        ...(isCash
-          ? {
-              payments: {
-                create: [
-                  {
-                    businessId,
-                    amount: grandTotal,
-                    mode: "CASH",
-                    paidOn: invDate,
-                    note: "Payment received in cash",
-                  },
-                ],
+        include: {
+          customer: true,
+          items: true,
+          payments: { orderBy: { paidOn: "desc" } },
+        },
+      });
+
+      if (recipientBusiness) {
+        let vendor = await tx.vendor.findFirst({
+          where: {
+            businessId: recipientBusiness.id,
+            ...(business.gstin
+              ? { gstin: business.gstin }
+              : { name: { equals: business.tradeName || business.name, mode: "insensitive" } }),
+          },
+        });
+        if (!vendor) {
+          vendor = await tx.vendor.create({
+            data: {
+              businessId: recipientBusiness.id,
+              name: business.tradeName || business.name,
+              tradeName: business.tradeName,
+              gstin: business.gstin,
+              stateCode: business.stateCode,
+              stateName: business.stateName,
+              vendorType: business.gstin ? "REGISTERED" : "UNREGISTERED",
+              email: business.email,
+              phone: business.phone,
+              address: business.address,
+            },
+          });
+        }
+
+        const existingBill = await tx.purchaseBill.findFirst({
+          where: {
+            businessId: recipientBusiness.id,
+            vendorId: vendor.id,
+            billNumber: createdInvoice.invoiceNumber,
+          },
+          select: { id: true },
+        });
+        if (existingBill) {
+          recipientDelivery = {
+            status: "ALREADY_EXISTS",
+            message: "A bill with this invoice number is already in the customer's Purchases; no duplicate was added.",
+          };
+        } else {
+          await tx.purchaseBill.create({
+            data: {
+              businessId: recipientBusiness.id,
+              vendorId: vendor.id,
+              sourceSalesInvoiceId: createdInvoice.id,
+              billNumber: createdInvoice.invoiceNumber,
+              billDate: createdInvoice.invoiceDate,
+              receivedDate: new Date(),
+              dueDate: createdInvoice.dueDate,
+              supplyType: createdInvoice.supplyType,
+              placeOfSupply: createdInvoice.placeOfSupply,
+              category: "OTHER",
+              isReverseCharge: createdInvoice.isReverseCharge,
+              isItcEligible: false,
+              itcIneligibilityReason: "Received invoice: review bill details and ITC eligibility before claiming credit.",
+              receiptStatus: "PENDING_REVIEW",
+              status: createdInvoice.paymentStatus,
+              subtotal: createdInvoice.subtotal,
+              totalCgst: createdInvoice.totalCgst,
+              totalSgst: createdInvoice.totalSgst,
+              totalIgst: createdInvoice.totalIgst,
+              totalCess: createdInvoice.totalCess,
+              totalAmount: createdInvoice.totalAmount,
+              paidAmount: createdInvoice.paidAmount,
+              payments: createdInvoice.paidAmount > 0 ? {
+                create: {
+                  amount: createdInvoice.paidAmount,
+                  paymentDate: createdInvoice.invoiceDate,
+                  mode: createdInvoice.payments?.[0]?.mode || "CASH",
+                  notes: "Payment recorded at invoice issuance",
+                },
+              } : undefined,
+              items: {
+                create: createdInvoice.items.map((item) => ({
+                  itemId: null,
+                  description: item.description,
+                  hsnSacCode: item.hsnSacCode,
+                  quantity: item.quantity,
+                  unit: item.unit,
+                  rate: item.rate,
+                  taxableValue: item.taxableValue,
+                  gstRate: item.gstRate,
+                  cgstAmount: item.cgstAmount,
+                  sgstAmount: item.sgstAmount,
+                  igstAmount: item.igstAmount,
+                  cessRate: item.cessRate,
+                  cessAmount: item.cessAmount,
+                  isItcEligible: false,
+                  totalAmount: item.totalAmount,
+                })),
               },
-            }
-          : {}),
-      },
-      include: {
-        customer: true,
-        items: true,
-        payments: { orderBy: { paidOn: "desc" } },
-      },
+            },
+          });
+          recipientDelivery = { status: "PENDING_REVIEW" };
+        }
+      }
+
+      return createdInvoice;
     });
 
-    res.json(invoice);
+    res.json({ ...invoice, ...(recipientDelivery ? { recipientDelivery } : {}) });
   } catch (error: any) {
     console.error("Create invoice error:", error);
     res.status(500).json({ error: "Failed to create sales invoice." });
@@ -360,6 +697,15 @@ router.put("/invoices/:id", authMiddleware, async (req: AuthenticatedRequest, re
       include: { items: true },
     });
     if (!existing) return res.status(404).json({ error: "Sales invoice not found." });
+    const receivedBill = await prisma.purchaseBill.findUnique({
+      where: { sourceSalesInvoiceId: existing.id },
+      select: { id: true, receiptStatus: true },
+    });
+    if (receivedBill?.receiptStatus === "ACCEPTED") {
+      return res.status(409).json({
+        error: "The customer has accepted this invoice. Create a credit or debit note instead of editing it.",
+      });
+    }
 
     const {
       customerId,
@@ -414,6 +760,11 @@ router.put("/invoices/:id", authMiddleware, async (req: AuthenticatedRequest, re
     }
     const customer = await prisma.customer.findFirst({ where: { id: String(customerId), businessId } });
     if (!customer) return res.status(404).json({ error: "Customer not found." });
+    if (receivedBill?.receiptStatus === "PENDING_REVIEW" && customerId !== existing.customerId) {
+      return res.status(409).json({
+        error: "The invoice is awaiting customer review and cannot be reassigned to a different customer.",
+      });
+    }
     const business = await prisma.business.findUnique({ where: { id: businessId } });
     if (!business) return res.status(404).json({ error: "Business profile not found." });
 
@@ -462,36 +813,81 @@ router.put("/invoices/:id", authMiddleware, async (req: AuthenticatedRequest, re
     const beforeRound = subtotal + totalCgst + totalSgst + totalIgst + totalCess;
     const totalAmount = Math.round(beforeRound);
     if (totalAmount > MAX_INVOICE_TOTAL) return res.status(400).json({ error: "Invoice total is too large." });
-    if (totalAmount < existing.paidAmount - 0.01) {
+    if (totalAmount < r2(existing.paidAmount)) {
       return res.status(400).json({ error: "Updated total cannot be lower than the payments already recorded." });
     }
 
-    const invoice = await prisma.$transaction(async (tx) => tx.salesInvoice.update({
-      where: { id: existing.id },
-      data: {
-        customerId: String(customerId),
-        invoiceDate: parsedDate,
-        dueDate: parsedDueDate,
-        supplyType: intraState ? "INTRA_STATE" : "INTER_STATE",
-        placeOfSupply: pos,
-        isReverseCharge,
-        applicablePercent: rawApplicablePercent === undefined || rawApplicablePercent === null || rawApplicablePercent === "" ? null : Number(rawApplicablePercent),
-        ecomGstin,
-        notes: notes ? String(notes) : null,
-        subtotal,
-        totalCgst,
-        totalSgst,
-        totalIgst,
-        totalCess,
-        roundOff: r2(totalAmount - beforeRound),
-        totalAmount,
-        items: {
-          deleteMany: {},
-          create: formattedItems,
+    const invoice = await prisma.$transaction(async (tx) => {
+      const updatedInvoice = await tx.salesInvoice.update({
+        where: { id: existing.id },
+        data: {
+          customerId: String(customerId),
+          invoiceDate: parsedDate,
+          dueDate: parsedDueDate,
+          supplyType: intraState ? "INTRA_STATE" : "INTER_STATE",
+          placeOfSupply: pos,
+          isReverseCharge,
+          applicablePercent: rawApplicablePercent === undefined || rawApplicablePercent === null || rawApplicablePercent === "" ? null : Number(rawApplicablePercent),
+          ecomGstin,
+          notes: notes ? String(notes) : null,
+          subtotal,
+          totalCgst,
+          totalSgst,
+          totalIgst,
+          totalCess,
+          roundOff: r2(totalAmount - beforeRound),
+          totalAmount,
+          paymentStatus: getPaymentStatus(totalAmount, existing.paidAmount),
+          items: {
+            deleteMany: {},
+            create: formattedItems,
+          },
         },
-      },
-      include: { customer: true, items: true },
-    }));
+        include: { customer: true, items: true },
+      });
+
+      if (receivedBill?.receiptStatus === "PENDING_REVIEW") {
+        await tx.purchaseBill.update({
+          where: { id: receivedBill.id },
+          data: {
+            billDate: updatedInvoice.invoiceDate,
+            dueDate: updatedInvoice.dueDate,
+            supplyType: updatedInvoice.supplyType,
+            placeOfSupply: updatedInvoice.placeOfSupply,
+            isReverseCharge: updatedInvoice.isReverseCharge,
+            subtotal: updatedInvoice.subtotal,
+            totalCgst: updatedInvoice.totalCgst,
+            totalSgst: updatedInvoice.totalSgst,
+            totalIgst: updatedInvoice.totalIgst,
+            totalCess: updatedInvoice.totalCess,
+            totalAmount: updatedInvoice.totalAmount,
+            paidAmount: updatedInvoice.paidAmount,
+            status: getPaymentStatus(updatedInvoice.totalAmount, updatedInvoice.paidAmount),
+            items: {
+              deleteMany: {},
+              create: updatedInvoice.items.map((item) => ({
+                itemId: null,
+                description: item.description,
+                hsnSacCode: item.hsnSacCode,
+                quantity: item.quantity,
+                unit: item.unit,
+                rate: item.rate,
+                taxableValue: item.taxableValue,
+                gstRate: item.gstRate,
+                cgstAmount: item.cgstAmount,
+                sgstAmount: item.sgstAmount,
+                igstAmount: item.igstAmount,
+                cessRate: item.cessRate,
+                cessAmount: item.cessAmount,
+                isItcEligible: false,
+                totalAmount: item.totalAmount,
+              })),
+            },
+          },
+        });
+      }
+      return updatedInvoice;
+    });
     res.json(invoice);
   } catch (error: any) {
     console.error("Update sales invoice error:", error);
@@ -503,34 +899,80 @@ router.put("/invoices/:id", authMiddleware, async (req: AuthenticatedRequest, re
 router.patch("/invoices/:id/payment", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const businessId = req.user?.businessId;
+    if (!businessId) return res.status(400).json({ error: "No active business" });
     const id = req.params.id as string;
     const { paidAmount, paymentStatus } = req.body;
 
     const existing = await prisma.salesInvoice.findFirst({ where: { id, businessId } });
     if (!existing) return res.status(404).json({ error: "Invoice not found." });
 
-    const newPaid = paidAmount !== undefined ? Number(paidAmount) : existing.paidAmount;
-    if (!Number.isFinite(newPaid) || newPaid < 0) {
-      return res.status(400).json({ error: "Invalid paid amount." });
+    if (paidAmount === undefined) {
+      return res.status(400).json({ error: "Provide paidAmount; use the payments endpoint to record a payment." });
     }
-    let newStatus = paymentStatus ? String(paymentStatus) : null;
-
-    if (!newStatus) {
-      if (newPaid >= existing.totalAmount) newStatus = "PAID";
-      else if (newPaid > 0) newStatus = "PARTIAL";
-      else newStatus = "UNPAID";
+    const requestedPaidAmount = Number(paidAmount);
+    if (!Number.isFinite(requestedPaidAmount) || requestedPaidAmount < 0) {
+      return res.status(400).json({ error: "Paid amount must be a valid non-negative number." });
+    }
+    const newPaid = r2(requestedPaidAmount);
+    if (newPaid > existing.totalAmount) {
+      return res.status(400).json({ error: "Paid amount must be between 0 and the invoice total." });
+    }
+    if (existing.status === "CANCELLED") {
+      return res.status(400).json({ error: "Cannot record payment against a cancelled invoice." });
+    }
+    if (newPaid < r2(existing.paidAmount)) {
+      return res.status(400).json({ error: "Paid amount cannot be reduced. Use a payment reversal workflow instead." });
+    }
+    const newStatus = getPaymentStatus(existing.totalAmount, newPaid);
+    if (paymentStatus !== undefined && paymentStatus !== newStatus) {
+      return res.status(400).json({ error: "Payment status is calculated from the paid amount and cannot be set independently." });
     }
 
-    const updated = await prisma.salesInvoice.update({
-      where: { id },
-      data: {
-        paidAmount: newPaid,
-        paymentStatus: newStatus,
-      },
+    const updated = await prisma.$transaction(async (tx) => {
+      const delta = r2(newPaid - existing.paidAmount);
+      if (delta > 0) {
+        const paidOn = new Date();
+        await tx.salesPayment.create({
+          data: {
+            salesInvoiceId: id,
+            businessId,
+            amount: delta,
+            mode: "OTHER",
+            paidOn,
+            note: "Payment recorded by seller",
+          },
+        });
+
+        const linkedBill = await tx.purchaseBill.findUnique({
+          where: { sourceSalesInvoiceId: id },
+          select: { id: true },
+        });
+        if (linkedBill) {
+          await tx.purchasePayment.create({
+            data: {
+              purchaseBillId: linkedBill.id,
+              amount: delta,
+              mode: "BANK",
+              paymentDate: paidOn,
+              notes: "Synced from seller: Payment recorded by seller",
+            },
+          });
+          await tx.purchaseBill.update({
+            where: { id: linkedBill.id },
+            data: { paidAmount: newPaid, status: newStatus },
+          });
+        }
+      }
+
+      return tx.salesInvoice.update({
+        where: { id },
+        data: { paidAmount: newPaid, paymentStatus: newStatus },
+      });
     });
 
     res.json(updated);
   } catch (error: any) {
+    console.error("Update invoice payment error:", error);
     res.status(500).json({ error: "Failed to update payment status." });
   }
 });
@@ -569,17 +1011,12 @@ router.post("/invoices/:id/payments", authMiddleware, async (req: AuthenticatedR
       }
 
       const balanceDue = r2(invoice.totalAmount - invoice.paidAmount);
-      if (paymentAmount > balanceDue + 0.01) {
+      if (paymentAmount > balanceDue) {
         throw new Error(`Payment amount cannot exceed the pending balance (${balanceDue}).`);
       }
 
       const newPaidAmount = r2(invoice.paidAmount + paymentAmount);
-      const paymentStatus =
-        newPaidAmount <= 0
-          ? "UNPAID"
-          : newPaidAmount >= invoice.totalAmount - 0.01
-          ? "PAID"
-          : "PARTIAL";
+      const paymentStatus = getPaymentStatus(invoice.totalAmount, newPaidAmount);
 
       await tx.salesPayment.create({
         data: {
@@ -591,6 +1028,30 @@ router.post("/invoices/:id/payments", authMiddleware, async (req: AuthenticatedR
           note: note ? String(note).trim() : null,
         },
       });
+
+      // Synchronize recipient's B2B PurchaseBill & ledger
+      const linkedBill = await tx.purchaseBill.findUnique({
+        where: { sourceSalesInvoiceId: invoiceId },
+        select: { id: true },
+      });
+      if (linkedBill) {
+        await tx.purchaseBill.update({
+          where: { id: linkedBill.id },
+          data: {
+            paidAmount: newPaidAmount,
+            status: paymentStatus,
+          },
+        });
+        await tx.purchasePayment.create({
+          data: {
+            purchaseBillId: linkedBill.id,
+            amount: paymentAmount,
+            mode: paymentMode === "OTHER" ? "BANK" : paymentMode,
+            paymentDate: parsedPaidOn,
+            notes: note ? `Synced from seller: ${note}` : "Payment recorded by seller",
+          },
+        });
+      }
 
       return tx.salesInvoice.update({
         where: { id: invoiceId },
@@ -617,6 +1078,109 @@ router.post("/invoices/:id/payments", authMiddleware, async (req: AuthenticatedR
     }
     console.error("Record sales invoice payment error:", error);
     res.status(500).json({ error: "Failed to record payment." });
+  }
+});
+
+// POST /invoices/:id/remind - Send a payment reminder email and record it on linked bills
+router.post("/invoices/:id/remind", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) return res.status(400).json({ error: "No active business" });
+    const invoiceId = req.params.id as string;
+
+    const invoice = await prisma.salesInvoice.findFirst({
+      where: { id: invoiceId, businessId },
+      include: { customer: true },
+    });
+    if (!invoice) return res.status(404).json({ error: "Sales invoice not found." });
+
+    if (invoice.status === "CANCELLED") {
+      return res.status(400).json({ error: "Cannot send reminder for a cancelled invoice." });
+    }
+
+    const pending = r2(invoice.totalAmount - invoice.paidAmount);
+    if (pending <= 0) {
+      return res.status(400).json({ error: "This invoice is already paid in full." });
+    }
+
+    const customerEmail = invoice.customer.email?.trim();
+    const linkedUser = !customerEmail && invoice.customer.mitraId
+      ? await prisma.user.findUnique({
+          where: { mitraId: invoice.customer.mitraId.trim().toLowerCase() },
+          select: { email: true, name: true },
+        })
+      : null;
+    const recipientEmail = customerEmail || linkedUser?.email;
+    if (!recipientEmail) {
+      return res.status(400).json({
+        error: "No customer email is available. Add an email to the customer profile or link the customer's Mitra ID.",
+      });
+    }
+
+    const business = await prisma.business.findUnique({
+      where: { id: businessId },
+      select: { name: true, tradeName: true, email: true, upiId: true },
+    });
+    if (!business) return res.status(404).json({ error: "Business profile not found." });
+
+    const shopName = business.tradeName || business.name || "Our Shop";
+    const dateFormatted = invoice.invoiceDate.toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+    const dueDateFormatted = invoice.dueDate
+      ? invoice.dueDate.toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })
+      : null;
+    const emailResult = await sendPaymentReminderEmail({
+      to: recipientEmail,
+      customerName: linkedUser?.name || invoice.customer.name,
+      sellerName: shopName,
+      billNumber: invoice.invoiceNumber,
+      billDate: dateFormatted,
+      dueDate: dueDateFormatted,
+      pendingAmount: pending,
+      upiId: business.upiId,
+    });
+    if (!emailResult.success) {
+      return res.status(502).json({ error: "Could not send the payment reminder email. Please check the email configuration and try again." });
+    }
+
+    const now = new Date();
+    const updated = await prisma.$transaction(async (tx) => {
+      const updatedInvoice = await tx.salesInvoice.update({
+        where: { id: invoiceId },
+        data: {
+          lastReminderSentAt: now,
+          reminderCount: { increment: 1 },
+        },
+      });
+      await tx.purchaseBill.updateMany({
+        where: { sourceSalesInvoiceId: invoiceId },
+        data: {
+          lastReminderSentAt: now,
+          reminderCount: { increment: 1 },
+        },
+      });
+      return updatedInvoice;
+    });
+
+    res.json({
+      success: true,
+      message: "Payment reminder email sent.",
+      lastReminderSentAt: updated.lastReminderSentAt,
+      reminderCount: updated.reminderCount,
+      emailSent: true,
+      email: recipientEmail,
+      pendingAmount: pending,
+    });
+  } catch (error: any) {
+    console.error("Send payment reminder error:", error);
+    res.status(500).json({ error: "Failed to send payment reminder." });
   }
 });
 
@@ -743,11 +1307,29 @@ router.get("/invoices/:id/pdf", authMiddleware, async (req: AuthenticatedRequest
     if (!invoice) return res.status(404).json({ error: "Invoice not found." });
 
     const business = await prisma.business.findUnique({ where: { id: businessId } });
-    if (!business) return res.status(404).json({ error: "Business profile not found." });
+    if (!business) return res.status(404).json({ error: "Business not found." });
 
+    renderInvoicePdfStream(res, invoice, business);
+  } catch (error: any) {
+    console.error("PDF route error:", error);
+    res.status(500).json({ error: "Failed to fetch invoice for PDF." });
+  }
+});
+
+export function renderInvoicePdfStream(
+  res: Response,
+  invoice: any,
+  business: any,
+  documentType: "INVOICE" | "BILL" = "INVOICE"
+) {
+  try {
     const doc = new PDFDocument({ margin: 30, size: "A4" });
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `inline; filename="${invoice.invoiceNumber}.pdf"`);
+    const safeDocumentNumber = String(invoice.invoiceNumber).replace(/[^a-zA-Z0-9_-]/g, "_");
+    res.setHeader(
+      "Content-Disposition",
+      `${documentType === "BILL" ? "attachment" : "inline"}; filename="${documentType}-${safeDocumentNumber}.pdf"`
+    );
     doc.pipe(res);
 
     // ---------- Fonts (Zoho uses a serif font) ----------
@@ -755,6 +1337,8 @@ router.get("/invoices/:id/pdf", authMiddleware, async (req: AuthenticatedRequest
       doc.registerFont("Serif", SERIF_REGULAR);
       doc.registerFont("SerifBold", SERIF_BOLD);
     }
+
+
     const F = {
       reg: hasRupeeFont ? "Serif" : "Times-Roman",
       bold: hasRupeeFont ? "SerifBold" : "Times-Bold",
@@ -824,7 +1408,7 @@ router.get("/invoices/:id/pdf", authMiddleware, async (req: AuthenticatedRequest
 
     drawFrame();
 
-    // ==================== 1. HEADER (logo + business + TAX INVOICE) ====================
+    // ==================== 1. HEADER (logo + business + document title) ====================
     let textX = 40;
     // Optional logo: add `logoDataUrl String?` to the Business model later and it shows up here.
     const logoDataUrl = (business as any).logoDataUrl as string | undefined;
@@ -857,7 +1441,11 @@ router.get("/invoices/:id/pdf", authMiddleware, async (req: AuthenticatedRequest
     const headerBottom = Math.max(118, y + 6);
 
     doc.font(F.reg).fontSize(24).fillColor("#111111");
-    doc.text("TAX INVOICE", 340, headerBottom - 40, { width: 215, align: "right", lineBreak: false });
+    doc.text(documentType === "BILL" ? "BILL" : "TAX INVOICE", 340, headerBottom - 40, {
+      width: 215,
+      align: "right",
+      lineBreak: false,
+    });
 
     // ==================== 2. META GRID (invoice no, dates, place of supply) ====================
     const metaTop = headerBottom;
@@ -870,7 +1458,7 @@ router.get("/invoices/:id/pdf", authMiddleware, async (req: AuthenticatedRequest
 
     const metaRows: [string, string][] = [
       ["#", invoice.invoiceNumber],
-      ["Invoice Date", invoiceDateStr],
+      [documentType === "BILL" ? "Bill Date" : "Invoice Date", invoiceDateStr],
       ["Terms", "Due on Receipt"],
       ["Due Date", dueDateStr],
     ];
@@ -910,8 +1498,9 @@ router.get("/invoices/:id/pdf", authMiddleware, async (req: AuthenticatedRequest
       doc.font(F.bold).fontSize(9).fillColor(nameColor).text(c.name, x, py, { width: 245, lineBreak: false });
       py += 12;
       doc.font(F.reg).fontSize(8).fillColor("#333333");
-      if (c.gstin) {
-        doc.text(`GSTIN ${c.gstin}`, x, py, { lineBreak: false });
+      const displayedGstin = invoice.buyerGstin || c.gstin;
+      if (displayedGstin) {
+        doc.text(`GSTIN ${displayedGstin}`, x, py, { lineBreak: false });
         py += 11;
       }
       if (c.address) {
@@ -945,7 +1534,12 @@ router.get("/invoices/:id/pdf", authMiddleware, async (req: AuthenticatedRequest
         doc.addPage();
         drawFrame();
         doc.font(F.bold).fontSize(9).fillColor("#111111");
-        doc.text(`Tax Invoice ${invoice.invoiceNumber} (continued)`, 40, 42, { lineBreak: false });
+        doc.text(
+          `${documentType === "BILL" ? "Bill" : "Tax Invoice"} ${invoice.invoiceNumber} (continued)`,
+          40,
+          42,
+          { lineBreak: false }
+        );
         tableTop = 60;
         drawTableHeader(tableTop);
         itemY = tableTop + HEAD_H + 6;
@@ -1052,7 +1646,8 @@ router.get("/invoices/:id/pdf", authMiddleware, async (req: AuthenticatedRequest
     }
     res.status(500).json({ error: "Failed to generate PDF." });
   }
-});
+}
+
 
 // Credit & Debit Notes API
 router.get("/credit-notes", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {

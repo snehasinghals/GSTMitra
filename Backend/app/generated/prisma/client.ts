@@ -136,3 +136,8 @@ export type Vendor = Prisma.VendorModel
  * 
  */
 export type SalesPayment = Prisma.SalesPaymentModel
+/**
+ * Model HsnCode
+ * 
+ */
+export type HsnCode = Prisma.HsnCodeModel

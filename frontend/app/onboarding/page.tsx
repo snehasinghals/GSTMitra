@@ -27,6 +27,8 @@ const INDIAN_STATES = [
   { code: "37", name: "Andhra Pradesh" },
 ];
 
+const UPI_REGEX = /^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/;
+
 export default function OnboardingPage() {
   const router = useRouter();
   const { user, business, updateBusinessState, refreshContext, loading } = useAuth();
@@ -39,8 +41,10 @@ export default function OnboardingPage() {
   const [turnoverRange, setTurnoverRange] = useState("40L_TO_15CR");
   const [filingFrequency, setFilingFrequency] = useState("MONTHLY");
   const [gstin, setGstin] = useState("");
+  const [upiId, setUpiId] = useState("");
 
   const [gstinError, setGstinError] = useState("");
+  const [upiIdError, setUpiIdError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -65,6 +69,7 @@ export default function OnboardingPage() {
       if (business.businessType) setBusinessType(business.businessType);
       if (business.turnoverRange) setTurnoverRange(business.turnoverRange);
       if (business.filingFrequency) setFilingFrequency(business.filingFrequency);
+      if (business.upiId) setUpiId(business.upiId);
     }
   }, [business]);
 
@@ -102,6 +107,13 @@ export default function OnboardingPage() {
       }
     }
 
+    const cleanUpiId = upiId.trim();
+    if (cleanUpiId && !UPI_REGEX.test(cleanUpiId)) {
+      setUpiIdError("Enter a valid UPI ID, for example name@oksbi.");
+      return;
+    }
+    setUpiIdError("");
+
     setSubmitting(true);
     setErrorMsg("");
 
@@ -115,6 +127,7 @@ export default function OnboardingPage() {
         turnoverRange,
         filingFrequency,
         gstin: gstin.trim() || undefined,
+        upiId: cleanUpiId || undefined,
       }),
     });
 
@@ -383,6 +396,33 @@ export default function OnboardingPage() {
               </div>
 
               <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    UPI payments (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={upiId}
+                    onChange={(e) => {
+                      setUpiId(e.target.value);
+                      setUpiIdError("");
+                    }}
+                    placeholder="e.g. name@oksbi"
+                    autoComplete="off"
+                    aria-invalid={Boolean(upiIdError)}
+                    aria-describedby="upi-id-help"
+                    className={`w-full px-3.5 py-2.5 border rounded-xl text-sm focus:ring-2 focus:outline-none ${
+                      upiIdError
+                        ? "border-red-500 focus:ring-red-400 bg-red-50/30"
+                        : "border-slate-300 focus:ring-blue-500"
+                    }`}
+                  />
+                  <p id="upi-id-help" className="text-xs text-slate-500 mt-1">
+                    Add a UPI ID to show customers a payment QR on bills. You can add or change it later in Settings.
+                  </p>
+                  {upiIdError && <p className="text-xs text-red-600 font-medium mt-1">{upiIdError}</p>}
+                </div>
+
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-xs font-semibold text-slate-700">

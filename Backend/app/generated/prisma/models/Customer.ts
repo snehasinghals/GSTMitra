@@ -28,6 +28,7 @@ export type CustomerMinAggregateOutputType = {
   id: string | null
   businessId: string | null
   name: string | null
+  mitraId: string | null
   tradeName: string | null
   gstin: string | null
   stateCode: string | null
@@ -44,6 +45,7 @@ export type CustomerMaxAggregateOutputType = {
   id: string | null
   businessId: string | null
   name: string | null
+  mitraId: string | null
   tradeName: string | null
   gstin: string | null
   stateCode: string | null
@@ -60,6 +62,7 @@ export type CustomerCountAggregateOutputType = {
   id: number
   businessId: number
   name: number
+  mitraId: number
   tradeName: number
   gstin: number
   stateCode: number
@@ -78,6 +81,7 @@ export type CustomerMinAggregateInputType = {
   id?: true
   businessId?: true
   name?: true
+  mitraId?: true
   tradeName?: true
   gstin?: true
   stateCode?: true
@@ -94,6 +98,7 @@ export type CustomerMaxAggregateInputType = {
   id?: true
   businessId?: true
   name?: true
+  mitraId?: true
   tradeName?: true
   gstin?: true
   stateCode?: true
@@ -110,6 +115,7 @@ export type CustomerCountAggregateInputType = {
   id?: true
   businessId?: true
   name?: true
+  mitraId?: true
   tradeName?: true
   gstin?: true
   stateCode?: true
@@ -199,6 +205,7 @@ export type CustomerGroupByOutputType = {
   id: string
   businessId: string
   name: string
+  mitraId: string | null
   tradeName: string | null
   gstin: string | null
   stateCode: string
@@ -236,6 +243,7 @@ export type CustomerWhereInput = {
   id?: Prisma.StringFilter<"Customer"> | string
   businessId?: Prisma.StringFilter<"Customer"> | string
   name?: Prisma.StringFilter<"Customer"> | string
+  mitraId?: Prisma.StringNullableFilter<"Customer"> | string | null
   tradeName?: Prisma.StringNullableFilter<"Customer"> | string | null
   gstin?: Prisma.StringNullableFilter<"Customer"> | string | null
   stateCode?: Prisma.StringFilter<"Customer"> | string
@@ -255,6 +263,7 @@ export type CustomerOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   businessId?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  mitraId?: Prisma.SortOrderInput | Prisma.SortOrder
   tradeName?: Prisma.SortOrderInput | Prisma.SortOrder
   gstin?: Prisma.SortOrderInput | Prisma.SortOrder
   stateCode?: Prisma.SortOrder
@@ -272,11 +281,13 @@ export type CustomerOrderByWithRelationInput = {
 
 export type CustomerWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  businessId_mitraId?: Prisma.CustomerBusinessIdMitraIdCompoundUniqueInput
   AND?: Prisma.CustomerWhereInput | Prisma.CustomerWhereInput[]
   OR?: Prisma.CustomerWhereInput[]
   NOT?: Prisma.CustomerWhereInput | Prisma.CustomerWhereInput[]
   businessId?: Prisma.StringFilter<"Customer"> | string
   name?: Prisma.StringFilter<"Customer"> | string
+  mitraId?: Prisma.StringNullableFilter<"Customer"> | string | null
   tradeName?: Prisma.StringNullableFilter<"Customer"> | string | null
   gstin?: Prisma.StringNullableFilter<"Customer"> | string | null
   stateCode?: Prisma.StringFilter<"Customer"> | string
@@ -290,12 +301,13 @@ export type CustomerWhereUniqueInput = Prisma.AtLeast<{
   creditDebitNotes?: Prisma.CreditDebitNoteListRelationFilter
   business?: Prisma.XOR<Prisma.BusinessScalarRelationFilter, Prisma.BusinessWhereInput>
   salesInvoices?: Prisma.SalesInvoiceListRelationFilter
-}, "id">
+}, "id" | "businessId_mitraId">
 
 export type CustomerOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   businessId?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  mitraId?: Prisma.SortOrderInput | Prisma.SortOrder
   tradeName?: Prisma.SortOrderInput | Prisma.SortOrder
   gstin?: Prisma.SortOrderInput | Prisma.SortOrder
   stateCode?: Prisma.SortOrder
@@ -318,6 +330,7 @@ export type CustomerScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"Customer"> | string
   businessId?: Prisma.StringWithAggregatesFilter<"Customer"> | string
   name?: Prisma.StringWithAggregatesFilter<"Customer"> | string
+  mitraId?: Prisma.StringNullableWithAggregatesFilter<"Customer"> | string | null
   tradeName?: Prisma.StringNullableWithAggregatesFilter<"Customer"> | string | null
   gstin?: Prisma.StringNullableWithAggregatesFilter<"Customer"> | string | null
   stateCode?: Prisma.StringWithAggregatesFilter<"Customer"> | string
@@ -333,6 +346,7 @@ export type CustomerScalarWhereWithAggregatesInput = {
 export type CustomerCreateInput = {
   id?: string
   name: string
+  mitraId?: string | null
   tradeName?: string | null
   gstin?: string | null
   stateCode?: string
@@ -352,6 +366,7 @@ export type CustomerUncheckedCreateInput = {
   id?: string
   businessId: string
   name: string
+  mitraId?: string | null
   tradeName?: string | null
   gstin?: string | null
   stateCode?: string
@@ -369,6 +384,7 @@ export type CustomerUncheckedCreateInput = {
 export type CustomerUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  mitraId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tradeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   gstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
@@ -388,6 +404,7 @@ export type CustomerUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   businessId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  mitraId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tradeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   gstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
@@ -406,6 +423,7 @@ export type CustomerCreateManyInput = {
   id?: string
   businessId: string
   name: string
+  mitraId?: string | null
   tradeName?: string | null
   gstin?: string | null
   stateCode?: string
@@ -421,6 +439,7 @@ export type CustomerCreateManyInput = {
 export type CustomerUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  mitraId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tradeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   gstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
@@ -437,6 +456,7 @@ export type CustomerUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   businessId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  mitraId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tradeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   gstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
@@ -464,10 +484,16 @@ export type CustomerNullableScalarRelationFilter = {
   isNot?: Prisma.CustomerWhereInput | null
 }
 
+export type CustomerBusinessIdMitraIdCompoundUniqueInput = {
+  businessId: string
+  mitraId: string
+}
+
 export type CustomerCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   businessId?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  mitraId?: Prisma.SortOrder
   tradeName?: Prisma.SortOrder
   gstin?: Prisma.SortOrder
   stateCode?: Prisma.SortOrder
@@ -484,6 +510,7 @@ export type CustomerMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   businessId?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  mitraId?: Prisma.SortOrder
   tradeName?: Prisma.SortOrder
   gstin?: Prisma.SortOrder
   stateCode?: Prisma.SortOrder
@@ -500,6 +527,7 @@ export type CustomerMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   businessId?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  mitraId?: Prisma.SortOrder
   tradeName?: Prisma.SortOrder
   gstin?: Prisma.SortOrder
   stateCode?: Prisma.SortOrder
@@ -592,6 +620,7 @@ export type CustomerUpdateOneRequiredWithoutSalesInvoicesNestedInput = {
 export type CustomerCreateWithoutBusinessInput = {
   id?: string
   name: string
+  mitraId?: string | null
   tradeName?: string | null
   gstin?: string | null
   stateCode?: string
@@ -609,6 +638,7 @@ export type CustomerCreateWithoutBusinessInput = {
 export type CustomerUncheckedCreateWithoutBusinessInput = {
   id?: string
   name: string
+  mitraId?: string | null
   tradeName?: string | null
   gstin?: string | null
   stateCode?: string
@@ -656,6 +686,7 @@ export type CustomerScalarWhereInput = {
   id?: Prisma.StringFilter<"Customer"> | string
   businessId?: Prisma.StringFilter<"Customer"> | string
   name?: Prisma.StringFilter<"Customer"> | string
+  mitraId?: Prisma.StringNullableFilter<"Customer"> | string | null
   tradeName?: Prisma.StringNullableFilter<"Customer"> | string | null
   gstin?: Prisma.StringNullableFilter<"Customer"> | string | null
   stateCode?: Prisma.StringFilter<"Customer"> | string
@@ -671,6 +702,7 @@ export type CustomerScalarWhereInput = {
 export type CustomerCreateWithoutCreditDebitNotesInput = {
   id?: string
   name: string
+  mitraId?: string | null
   tradeName?: string | null
   gstin?: string | null
   stateCode?: string
@@ -689,6 +721,7 @@ export type CustomerUncheckedCreateWithoutCreditDebitNotesInput = {
   id?: string
   businessId: string
   name: string
+  mitraId?: string | null
   tradeName?: string | null
   gstin?: string | null
   stateCode?: string
@@ -721,6 +754,7 @@ export type CustomerUpdateToOneWithWhereWithoutCreditDebitNotesInput = {
 export type CustomerUpdateWithoutCreditDebitNotesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  mitraId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tradeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   gstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
@@ -739,6 +773,7 @@ export type CustomerUncheckedUpdateWithoutCreditDebitNotesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   businessId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  mitraId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tradeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   gstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
@@ -755,6 +790,7 @@ export type CustomerUncheckedUpdateWithoutCreditDebitNotesInput = {
 export type CustomerCreateWithoutSalesInvoicesInput = {
   id?: string
   name: string
+  mitraId?: string | null
   tradeName?: string | null
   gstin?: string | null
   stateCode?: string
@@ -773,6 +809,7 @@ export type CustomerUncheckedCreateWithoutSalesInvoicesInput = {
   id?: string
   businessId: string
   name: string
+  mitraId?: string | null
   tradeName?: string | null
   gstin?: string | null
   stateCode?: string
@@ -805,6 +842,7 @@ export type CustomerUpdateToOneWithWhereWithoutSalesInvoicesInput = {
 export type CustomerUpdateWithoutSalesInvoicesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  mitraId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tradeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   gstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
@@ -823,6 +861,7 @@ export type CustomerUncheckedUpdateWithoutSalesInvoicesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   businessId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  mitraId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tradeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   gstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
@@ -839,6 +878,7 @@ export type CustomerUncheckedUpdateWithoutSalesInvoicesInput = {
 export type CustomerCreateManyBusinessInput = {
   id?: string
   name: string
+  mitraId?: string | null
   tradeName?: string | null
   gstin?: string | null
   stateCode?: string
@@ -854,6 +894,7 @@ export type CustomerCreateManyBusinessInput = {
 export type CustomerUpdateWithoutBusinessInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  mitraId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tradeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   gstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
@@ -871,6 +912,7 @@ export type CustomerUpdateWithoutBusinessInput = {
 export type CustomerUncheckedUpdateWithoutBusinessInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  mitraId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tradeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   gstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
@@ -888,6 +930,7 @@ export type CustomerUncheckedUpdateWithoutBusinessInput = {
 export type CustomerUncheckedUpdateManyWithoutBusinessInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  mitraId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tradeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   gstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
@@ -944,6 +987,7 @@ export type CustomerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   id?: boolean
   businessId?: boolean
   name?: boolean
+  mitraId?: boolean
   tradeName?: boolean
   gstin?: boolean
   stateCode?: boolean
@@ -964,6 +1008,7 @@ export type CustomerSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   id?: boolean
   businessId?: boolean
   name?: boolean
+  mitraId?: boolean
   tradeName?: boolean
   gstin?: boolean
   stateCode?: boolean
@@ -981,6 +1026,7 @@ export type CustomerSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   id?: boolean
   businessId?: boolean
   name?: boolean
+  mitraId?: boolean
   tradeName?: boolean
   gstin?: boolean
   stateCode?: boolean
@@ -998,6 +1044,7 @@ export type CustomerSelectScalar = {
   id?: boolean
   businessId?: boolean
   name?: boolean
+  mitraId?: boolean
   tradeName?: boolean
   gstin?: boolean
   stateCode?: boolean
@@ -1010,7 +1057,7 @@ export type CustomerSelectScalar = {
   updatedAt?: boolean
 }
 
-export type CustomerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "businessId" | "name" | "tradeName" | "gstin" | "stateCode" | "stateName" | "registrationType" | "email" | "phone" | "address" | "createdAt" | "updatedAt", ExtArgs["result"]["customer"]>
+export type CustomerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "businessId" | "name" | "mitraId" | "tradeName" | "gstin" | "stateCode" | "stateName" | "registrationType" | "email" | "phone" | "address" | "createdAt" | "updatedAt", ExtArgs["result"]["customer"]>
 export type CustomerInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   creditDebitNotes?: boolean | Prisma.Customer$creditDebitNotesArgs<ExtArgs>
   business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
@@ -1035,6 +1082,7 @@ export type $CustomerPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     id: string
     businessId: string
     name: string
+    mitraId: string | null
     tradeName: string | null
     gstin: string | null
     stateCode: string
@@ -1474,6 +1522,7 @@ export interface CustomerFieldRefs {
   readonly id: Prisma.FieldRef<"Customer", 'String'>
   readonly businessId: Prisma.FieldRef<"Customer", 'String'>
   readonly name: Prisma.FieldRef<"Customer", 'String'>
+  readonly mitraId: Prisma.FieldRef<"Customer", 'String'>
   readonly tradeName: Prisma.FieldRef<"Customer", 'String'>
   readonly gstin: Prisma.FieldRef<"Customer", 'String'>
   readonly stateCode: Prisma.FieldRef<"Customer", 'String'>

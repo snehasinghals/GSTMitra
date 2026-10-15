@@ -42,7 +42,7 @@ export function MobileBottomNav() {
   // Shop owner navigation (isOnboarded = true)
   const shopTabs = [
     { label: "Home", href: "/home", icon: Home, active: isExact("/home") },
-    { label: "New Bill", href: "/sales?addInvoice=1", icon: PlusCircle, active: false },
+    { label: "New Invoice", href: "/new-bill/create", icon: PlusCircle, active: isUnder("/new-bill") },
     { label: "Sales", href: "/sales", icon: FileText, active: isExact("/sales") },
     { label: "My Bills", href: "/my-bills", icon: Receipt, active: isUnder("/my-bills") },
     { label: "More", href: "#more", icon: MoreHorizontal, active: false },

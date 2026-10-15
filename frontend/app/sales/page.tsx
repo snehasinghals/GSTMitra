@@ -7,7 +7,7 @@ import { apiFetch, API_BASE_URL } from "../lib/api";
 import { useApi } from "../lib/useApi";
 import { INDIAN_STATES, stateNameFromCode, GSTIN_REGEX } from "../lib/states";
 import { TableSkeleton, TableError } from "../components/TableSkeleton";
-import { FileText, Plus, Download, Users, X, PlusCircle, Pencil, Clock, AlertCircle, IndianRupee } from "lucide-react";
+import { FileText, Plus, Download, Users, X, PlusCircle, Pencil, Clock, AlertCircle, IndianRupee, Zap, Bell } from "lucide-react";
 import AddPaymentModal from "./components/AddPaymentModal";
 
 const GST_RATES = [0, 5, 18, 40];
@@ -88,6 +88,7 @@ export default function SalesPage() {
 
   // Customer form
   const [custName, setCustName] = useState("");
+  const [custEmail, setCustEmail] = useState("");
   const [custGstin, setCustGstin] = useState("");
   const [custState, setCustState] = useState("27");
   const [custError, setCustError] = useState("");
@@ -113,6 +114,38 @@ export default function SalesPage() {
 
   // Add Payment modal
   const [paymentInvoice, setPaymentInvoice] = useState<any | null>(null);
+
+  // Payment reminder modal
+  const [remindingId, setRemindingId] = useState<string | null>(null);
+  const [reminderModalData, setReminderModalData] = useState<{
+    invoiceNum: string;
+    customerName: string;
+    email: string;
+    count: number;
+    pendingAmount: number;
+  } | null>(null);
+
+  const handleSendReminder = async (inv: any) => {
+    setRemindingId(inv.id);
+    const { data, error } = await apiFetch<any>(`/sales/invoices/${inv.id}/remind`, {
+      method: "POST",
+    });
+    setRemindingId(null);
+    if (error) {
+      alert(error);
+      return;
+    }
+    if (data?.success) {
+      invoicesQ.mutate();
+      setReminderModalData({
+        invoiceNum: inv.invoiceNumber,
+        customerName: inv.customer?.name || "Customer",
+        email: data.email,
+        count: data.reminderCount,
+        pendingAmount: data.pendingAmount,
+      });
+    }
+  };
 
   const openInvoiceEditor = useCallback(async (invoiceId: string, loadedInvoice?: FocusedInvoice) => {
     const { data, error } = loadedInvoice
@@ -208,6 +241,7 @@ export default function SalesPage() {
         method: "POST",
         body: JSON.stringify({
           name: custName.trim(),
+          email: custEmail.trim() || undefined,
           gstin: custGstin,
           stateCode: custState,
           stateName: stateNameFromCode(custState),
@@ -229,6 +263,7 @@ export default function SalesPage() {
 
       setShowCustomerModal(false);
       setCustName("");
+      setCustEmail("");
       setCustGstin("");
       setCustState("27");
       showToast("Customer added successfully");
@@ -477,7 +512,14 @@ export default function SalesPage() {
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/new-bill/create"
+            className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl shadow-xs transition-all"
+          >
+            <Zap className="w-4 h-4 fill-current" />
+            <span>Generate Invoice</span>
+          </Link>
           <button
             onClick={() => setShowCustomerModal(true)}
             className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs px-3.5 py-2.5 rounded-xl shadow-xs transition-all"
@@ -485,32 +527,7 @@ export default function SalesPage() {
             <Users className="w-4 h-4" />
             <span>Add Customer</span>
           </button>
-          <button
-            // Disabled until customers have loaded, otherwise users get a false "add a customer first" message.
-            disabled={customersQ.loading || !!customersQ.error}
-            onClick={() => {
-              if (customers.length === 0) {
-                alert("Please add at least one customer first.");
-                setShowCustomerModal(true);
-                return;
-              }
-              setEditingInvoiceId(null);
-              setInvDate(todayStr());
-              setInvDueDate("");
-              setInvNotes("");
-              setInvItems([newLine()]);
-              setIsReverseCharge(false);
-              setApplicablePercent("");
-              setIsEcommerceSale(false);
-              setEcomGstin("");
-              setSelectedCustId(customers[0]?.id || "");
-              setShowInvoiceModal(true);
-            }}
-            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Create Tax Invoice</span>
-          </button>
+          
         </div>
       </div>
 
@@ -664,8 +681,8 @@ export default function SalesPage() {
                             </td>
                             <td className="py-3 px-4 font-semibold text-slate-900">
                               {inv.customer?.name || "Customer"}
-                              {inv.customer?.gstin && (
-                                <p className="text-3xs text-slate-400 font-mono">{inv.customer.gstin}</p>
+                              {(inv.buyerGstin || inv.customer?.gstin) && (
+                                <p className="text-3xs text-slate-400 font-mono">{inv.buyerGstin || inv.customer?.gstin}</p>
                               )}
                             </td>
                             <td className="py-3 px-4">
@@ -706,6 +723,12 @@ export default function SalesPage() {
                                   {pending > 0 ? (
                                     <>
                                       Pending: <strong className="text-slate-800 font-mono font-bold">₹{pending.toFixed(2)}</strong>
+                                      {inv.reminderCount > 0 && (
+                                        <span className="ml-1.5 inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-3xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                                          <Bell className="w-2.5 h-2.5" />
+                                          Reminded ({inv.reminderCount}x)
+                                        </span>
+                                      )}
                                     </>
                                   ) : (
                                     <span className="text-emerald-700 font-semibold">Fully settled</span>
@@ -715,13 +738,24 @@ export default function SalesPage() {
                             </td>
                             <td className="py-3 px-4 text-right space-x-2">
                               {inv.status !== "CANCELLED" && pending > 0 && (
-                                <button
-                                  onClick={() => setPaymentInvoice(inv)}
-                                  className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
-                                >
-                                  <IndianRupee className="w-3.5 h-3.5" />
-                                  <span>Add payment</span>
-                                </button>
+                                <>
+                                  <button
+                                    onClick={() => setPaymentInvoice(inv)}
+                                    className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                                  >
+                                    <IndianRupee className="w-3.5 h-3.5" />
+                                    <span>Add payment</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleSendReminder(inv)}
+                                    disabled={remindingId === inv.id}
+                                    title="Send payment reminder to customer by email"
+                                    className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+                                  >
+                                    <Bell className="w-3.5 h-3.5" />
+                                    <span>{remindingId === inv.id ? "Sending..." : "Remind"}</span>
+                                  </button>
+                                </>
                               )}
                               <button
                                 onClick={() => void openInvoiceEditor(inv.id)}
@@ -801,13 +835,23 @@ export default function SalesPage() {
 
                           <div className="flex items-center gap-1.5 flex-wrap">
                             {inv.status !== "CANCELLED" && pending > 0 && (
-                              <button
-                                onClick={() => setPaymentInvoice(inv)}
-                                className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700"
-                              >
-                                <IndianRupee className="w-3 h-3" />
-                                <span>Add payment</span>
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => setPaymentInvoice(inv)}
+                                  className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700"
+                                >
+                                  <IndianRupee className="w-3 h-3" />
+                                  <span>Add payment</span>
+                                </button>
+                                <button
+                                  onClick={() => handleSendReminder(inv)}
+                                  disabled={remindingId === inv.id}
+                                  className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800"
+                                >
+                                  <Bell className="w-3 h-3" />
+                                  <span>{remindingId === inv.id ? "..." : "Remind"}</span>
+                                </button>
+                              </>
                             )}
                             <button
                               onClick={() => void openInvoiceEditor(inv.id)}
@@ -905,6 +949,18 @@ export default function SalesPage() {
                   onChange={(e) => setCustName(e.target.value)}
                   placeholder="e.g. Acme Tech Solutions"
                   required
+                  disabled={savingCustomer}
+                  className="w-full px-3 py-2 border rounded-xl"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Email for payment reminders (Optional)</label>
+                <input
+                  type="email"
+                  value={custEmail}
+                  onChange={(e) => setCustEmail(e.target.value)}
+                  placeholder="customer@example.com"
                   disabled={savingCustomer}
                   className="w-full px-3 py-2 border rounded-xl"
                 />
@@ -1323,6 +1379,46 @@ export default function SalesPage() {
             showToast("Payment recorded successfully");
           }}
         />
+      )}
+
+      {/* Payment reminder email sent */}
+      {reminderModalData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+          <div className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-5 shadow-xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-slate-900">
+                <Bell className="h-5 w-5 text-amber-600" />
+                <h3 className="text-base font-bold">Payment Reminder Emailed</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReminderModalData(null)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900 space-y-1">
+              <p className="font-semibold">
+                Bill #{reminderModalData.invoiceNum} · {reminderModalData.customerName}
+              </p>
+              <p>Due amount: ₹{reminderModalData.pendingAmount.toFixed(2)}</p>
+              <p>Email sent to <strong>{reminderModalData.email}</strong>.</p>
+              <p className="text-2xs text-emerald-800">
+                Reminder sent {reminderModalData.count} time{reminderModalData.count > 1 ? "s" : ""}. The customer can also see it in My Bills.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setReminderModalData(null)}
+              className="w-full rounded-xl border border-slate-300 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition"
+            >
+              Done
+            </button>
+          </div>
+        </div>
       )}
 
 

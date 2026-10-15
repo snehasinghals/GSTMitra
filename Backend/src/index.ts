@@ -22,6 +22,8 @@ import purchasesRoutes from "./routes/purchases.routes.js";
 import rulesRoutes from "./routes/rules.routes.js";
 import healthCheckRoutes from "./routes/health-check.routes.js";
 import filingRoutes from "./routes/filing.routes.js";
+import hsnRoutes from "./routes/hsn.routes.js";
+import myBillsRoutes from "./routes/my-bills.routes.js";
 
 import { authMiddleware, requireShop } from "./middleware/auth.js";
 
@@ -43,6 +45,9 @@ app.get("/health", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/rules", rulesRoutes);
 
+// Customer personal bills (available to any authenticated user, shop not required)
+app.use("/api/my-bills", authMiddleware, myBillsRoutes);
+
 // Shop-only route groups (protected by authMiddleware and requireShop)
 app.use("/api/items", authMiddleware, requireShop, itemsRoutes);
 app.use("/api/customers", authMiddleware, requireShop, customersRoutes);
@@ -51,6 +56,7 @@ app.use("/api/sales", authMiddleware, requireShop, salesRoutes);
 app.use("/api/purchases", authMiddleware, requireShop, purchasesRoutes);
 app.use("/api/health-check", authMiddleware, requireShop, healthCheckRoutes);
 app.use("/api/filing", authMiddleware, requireShop, filingRoutes);
+app.use("/api/hsn", authMiddleware, requireShop, hsnRoutes);
 
 // Catch-all 404 handler for API routes (returns JSON, not HTML)
 app.use("/api", (_req, res) => {

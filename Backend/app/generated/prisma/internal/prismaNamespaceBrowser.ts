@@ -69,7 +69,8 @@ export const ModelName = {
   OtpCode: 'OtpCode',
   ResetToken: 'ResetToken',
   Vendor: 'Vendor',
-  SalesPayment: 'SalesPayment'
+  SalesPayment: 'SalesPayment',
+  HsnCode: 'HsnCode'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -95,6 +96,7 @@ export const BusinessScalarFieldEnum = {
   stateCode: 'stateCode',
   createdAt: 'createdAt',
   address: 'address',
+  upiId: 'upiId',
   bankAccount: 'bankAccount',
   bankBranch: 'bankBranch',
   bankIfsc: 'bankIfsc',
@@ -167,6 +169,7 @@ export const CustomerScalarFieldEnum = {
   id: 'id',
   businessId: 'businessId',
   name: 'name',
+  mitraId: 'mitraId',
   tradeName: 'tradeName',
   gstin: 'gstin',
   stateCode: 'stateCode',
@@ -238,6 +241,7 @@ export const PurchaseBillScalarFieldEnum = {
   id: 'id',
   businessId: 'businessId',
   vendorId: 'vendorId',
+  sourceSalesInvoiceId: 'sourceSalesInvoiceId',
   billNumber: 'billNumber',
   billDate: 'billDate',
   receivedDate: 'receivedDate',
@@ -249,6 +253,7 @@ export const PurchaseBillScalarFieldEnum = {
   isItcEligible: 'isItcEligible',
   itcIneligibilityReason: 'itcIneligibilityReason',
   status: 'status',
+  receiptStatus: 'receiptStatus',
   subtotal: 'subtotal',
   totalCgst: 'totalCgst',
   totalSgst: 'totalSgst',
@@ -256,6 +261,8 @@ export const PurchaseBillScalarFieldEnum = {
   totalCess: 'totalCess',
   totalAmount: 'totalAmount',
   paidAmount: 'paidAmount',
+  lastReminderSentAt: 'lastReminderSentAt',
+  reminderCount: 'reminderCount',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -321,6 +328,7 @@ export const SalesInvoiceScalarFieldEnum = {
   id: 'id',
   businessId: 'businessId',
   customerId: 'customerId',
+  buyerGstin: 'buyerGstin',
   invoiceNumber: 'invoiceNumber',
   invoiceDate: 'invoiceDate',
   dueDate: 'dueDate',
@@ -340,6 +348,8 @@ export const SalesInvoiceScalarFieldEnum = {
   ecomGstin: 'ecomGstin',
   totalAmount: 'totalAmount',
   paidAmount: 'paidAmount',
+  lastReminderSentAt: 'lastReminderSentAt',
+  reminderCount: 'reminderCount',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -447,6 +457,18 @@ export const SalesPaymentScalarFieldEnum = {
 } as const
 
 export type SalesPaymentScalarFieldEnum = (typeof SalesPaymentScalarFieldEnum)[keyof typeof SalesPaymentScalarFieldEnum]
+
+
+export const HsnCodeScalarFieldEnum = {
+  id: 'id',
+  code: 'code',
+  description: 'description',
+  keywords: 'keywords',
+  digits: 'digits',
+  type: 'type'
+} as const
+
+export type HsnCodeScalarFieldEnum = (typeof HsnCodeScalarFieldEnum)[keyof typeof HsnCodeScalarFieldEnum]
 
 
 export const SortOrder = {

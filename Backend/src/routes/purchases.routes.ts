@@ -27,11 +27,23 @@ async function syncBillPayment(tx: Prisma.TransactionClient, billId: string) {
   const bill = await tx.purchaseBill.findUniqueOrThrow({ where: { id: billId } });
   const status = paidAmount <= 0 ? "UNPAID" : paidAmount >= bill.totalAmount - 0.01 ? "PAID" : "PARTIAL";
 
-  return tx.purchaseBill.update({
+  const updatedBill = await tx.purchaseBill.update({
     where: { id: billId },
     data: { paidAmount, status },
     include: { vendor: true, items: true, payments: true },
   });
+
+  if (bill.sourceSalesInvoiceId) {
+    await tx.salesInvoice.update({
+      where: { id: bill.sourceSalesInvoiceId },
+      data: {
+        paidAmount,
+        paymentStatus: status,
+      },
+    });
+  }
+
+  return updatedBill;
 }
 
 // List all purchase bills
@@ -97,6 +109,46 @@ router.get("/bills/:id", authMiddleware, async (req: AuthenticatedRequest, res: 
   }
 });
 
+router.patch("/bills/:id/review", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) return res.status(400).json({ error: "No active business." });
+
+    const decision = req.body?.decision;
+    if (decision !== "ACCEPT" && decision !== "REJECT") {
+      return res.status(400).json({ error: "Decision must be ACCEPT or REJECT." });
+    }
+
+    const result = await prisma.purchaseBill.updateMany({
+      where: {
+        id: req.params.id as string,
+        businessId,
+        sourceSalesInvoiceId: { not: null },
+        receiptStatus: "PENDING_REVIEW",
+      },
+      data: { receiptStatus: decision === "ACCEPT" ? "ACCEPTED" : "REJECTED" },
+    });
+    if (result.count === 0) {
+      const bill = await prisma.purchaseBill.findFirst({
+        where: { id: req.params.id as string, businessId },
+        select: { id: true },
+      });
+      if (!bill) return res.status(404).json({ error: "Received bill not found." });
+      return res.status(409).json({ error: "This bill has already been reviewed." });
+    }
+
+    const bill = await prisma.purchaseBill.findFirst({
+      where: { id: req.params.id as string, businessId },
+      include: { vendor: true, items: true },
+    });
+    if (!bill) return res.status(404).json({ error: "Received bill not found." });
+    res.json(bill);
+  } catch (error) {
+    console.error("Review received purchase bill error:", error);
+    res.status(500).json({ error: "Failed to review received bill." });
+  }
+});
+
 router.patch("/bills/:id/cess", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const businessId = req.user?.businessId;
@@ -127,6 +179,9 @@ router.patch("/bills/:id/cess", authMiddleware, async (req: AuthenticatedRequest
         include: { vendor: true, items: true },
       });
       if (!bill) return null;
+      if (bill.receiptStatus !== "ACCEPTED") {
+        throw new Error("Review this received bill before editing tax details.");
+      }
       if ([...changes.keys()].some((id) => !bill.items.some((line) => line.id === id))) {
         throw new Error("Purchase line not found on this bill.");
       }
@@ -164,6 +219,9 @@ router.patch("/bills/:id/cess", authMiddleware, async (req: AuthenticatedRequest
     if (!updatedBill) return res.status(404).json({ error: "Purchase bill not found." });
     res.json(updatedBill);
   } catch (error) {
+    if (error instanceof Error && error.message === "Review this received bill before editing tax details.") {
+      return res.status(409).json({ error: error.message });
+    }
     if (error instanceof Error && error.message === "Purchase line not found on this bill.") {
       return res.status(400).json({ error: error.message });
     }
@@ -313,6 +371,16 @@ router.get("/bills/:id/pdf", authMiddleware, async (req: AuthenticatedRequest, r
         ],
         ["ITC Eligibility", bill.isItcEligible ? "Eligible" : "Ineligible"],
       ];
+      if (bill.sourceSalesInvoiceId) {
+        metadata.push([
+          "Received Invoice",
+          bill.receiptStatus === "PENDING_REVIEW"
+            ? "Pending customer review"
+            : bill.receiptStatus === "REJECTED"
+              ? "Rejected by customer"
+              : "Accepted by customer",
+        ]);
+      }
       if (!bill.isItcEligible && bill.itcIneligibilityReason) {
         metadata.push(["ITC Reason", bill.itcIneligibilityReason]);
       }
@@ -470,15 +538,15 @@ router.get("/expenses-summary", authMiddleware, async (req: AuthenticatedRequest
 
     const [all, eligible, blocked, byCategory] = await Promise.all([
       prisma.purchaseBill.aggregate({
-        where: { businessId },
+        where: { businessId, receiptStatus: "ACCEPTED" },
         _sum: { totalAmount: true, subtotal: true },
         _count: true,
       }),
-      prisma.purchaseBill.aggregate({ where: { businessId, isItcEligible: true }, _sum: taxFields }),
-      prisma.purchaseBill.aggregate({ where: { businessId, isItcEligible: false }, _sum: taxFields }),
+      prisma.purchaseBill.aggregate({ where: { businessId, receiptStatus: "ACCEPTED", isItcEligible: true }, _sum: taxFields }),
+      prisma.purchaseBill.aggregate({ where: { businessId, receiptStatus: "ACCEPTED", isItcEligible: false }, _sum: taxFields }),
       prisma.purchaseBill.groupBy({
         by: ["category"],
-        where: { businessId },
+        where: { businessId, receiptStatus: "ACCEPTED" },
         _sum: { totalAmount: true },
       }),
     ]);
@@ -514,6 +582,7 @@ router.get("/itc-payment-risk", authMiddleware, async (req: AuthenticatedRequest
     const bills = await prisma.purchaseBill.findMany({
       where: {
         businessId,
+        receiptStatus: "ACCEPTED",
         isItcEligible: true,
         isReverseCharge: false,
         status: { not: "PAID" },
@@ -760,6 +829,9 @@ router.put("/bills/:id", authMiddleware, async (req: AuthenticatedRequest, res: 
       include: { payments: true },
     });
     if (!existing) return res.status(404).json({ error: "Purchase bill not found." });
+    if (existing.receiptStatus !== "ACCEPTED") {
+      return res.status(409).json({ error: "Review this received bill before editing it." });
+    }
 
     const {
       vendorId, billNumber, billDate, dueDate, category, isReverseCharge,
@@ -847,7 +919,7 @@ router.put("/bills/:id", authMiddleware, async (req: AuthenticatedRequest, res: 
     totalIgst = r2(totalIgst);
     totalCess = r2(totalCess);
     const totalAmount = Math.round(subtotal + totalCgst + totalSgst + totalIgst + totalCess);
-    if (totalAmount < existing.paidAmount - 0.01) {
+    if (totalAmount < r2(existing.paidAmount)) {
       return res.status(400).json({ error: "Updated total cannot be lower than the payments already recorded." });
     }
     const status = existing.paidAmount <= 0 ? "UNPAID" : existing.paidAmount >= totalAmount - 0.01 ? "PAID" : "PARTIAL";
@@ -910,13 +982,16 @@ router.post("/bills/:id/payments", authMiddleware, async (req: AuthenticatedRequ
     const updatedBill = await prisma.$transaction(async (tx) => {
       const bill = await tx.purchaseBill.findFirst({ where: { id: billId, businessId } });
       if (!bill) return null;
+      if (bill.receiptStatus !== "ACCEPTED") {
+        throw new Error("Review this received bill before recording a payment.");
+      }
 
       const balanceDue = r2(bill.totalAmount - bill.paidAmount);
-      if (paymentAmount > balanceDue + 0.01) {
+      if (paymentAmount > balanceDue) {
         throw new Error("Payment amount cannot exceed the balance due.");
       }
 
-      await tx.purchasePayment.create({
+      const createdPayment = await tx.purchasePayment.create({
         data: {
           purchaseBillId: billId,
           amount: paymentAmount,
@@ -926,6 +1001,26 @@ router.post("/bills/:id/payments", authMiddleware, async (req: AuthenticatedRequ
           notes: notes ? String(notes) : null,
         },
       });
+      if (bill.sourceSalesInvoiceId) {
+        const invoice = await tx.salesInvoice.findUnique({
+          where: { id: bill.sourceSalesInvoiceId },
+          select: { id: true, businessId: true, status: true },
+        });
+        if (!invoice) throw new Error("The seller invoice linked to this bill no longer exists.");
+        if (invoice.status === "CANCELLED") {
+          throw new Error("Cannot record payment against a cancelled seller invoice.");
+        }
+        await tx.salesPayment.create({
+          data: {
+            salesInvoiceId: invoice.id,
+            businessId: invoice.businessId,
+            amount: paymentAmount,
+            mode: paymentMode === "CHEQUE" ? "BANK" : paymentMode,
+            paidOn: parsedPaymentDate,
+            note: `Payment recorded by purchaser [purchase-payment:${createdPayment.id}]`,
+          },
+        });
+      }
       return syncBillPayment(tx, billId);
     });
 
@@ -934,6 +1029,16 @@ router.post("/bills/:id/payments", authMiddleware, async (req: AuthenticatedRequ
   } catch (error: any) {
     if (error instanceof Error && error.message === "Payment amount cannot exceed the balance due.") {
       return res.status(400).json({ error: error.message });
+    }
+    if (error instanceof Error && error.message === "Review this received bill before recording a payment.") {
+      return res.status(409).json({ error: error.message });
+    }
+    if (
+      error instanceof Error &&
+      (error.message === "The seller invoice linked to this bill no longer exists." ||
+        error.message === "Cannot record payment against a cancelled seller invoice.")
+    ) {
+      return res.status(409).json({ error: error.message });
     }
     console.error("Record purchase bill payment error:", error);
     res.status(500).json({ error: "Failed to record purchase bill payment." });
@@ -957,13 +1062,39 @@ router.delete("/bills/:id/payments/:paymentId", authMiddleware, async (req: Auth
       });
       if (!payment) return null;
 
+      const bill = await tx.purchaseBill.findUniqueOrThrow({
+        where: { id: billId },
+        select: { sourceSalesInvoiceId: true },
+      });
+      if (
+        bill.sourceSalesInvoiceId &&
+        (payment.notes?.startsWith("Synced from seller:") ||
+          payment.notes === "Payment recorded at invoice issuance")
+      ) {
+        throw new Error("Seller-recorded payments cannot be removed from the buyer's bill.");
+      }
+
       await tx.purchasePayment.delete({ where: { id: paymentId } });
+      if (bill.sourceSalesInvoiceId) {
+        await tx.salesPayment.deleteMany({
+          where: {
+            salesInvoiceId: bill.sourceSalesInvoiceId,
+            note: { contains: `[purchase-payment:${paymentId}]` },
+          },
+        });
+      }
       return syncBillPayment(tx, billId);
     });
 
     if (!updatedBill) return res.status(404).json({ error: "Payment not found." });
     res.json(updatedBill);
   } catch (error: any) {
+    if (
+      error instanceof Error &&
+      error.message === "Seller-recorded payments cannot be removed from the buyer's bill."
+    ) {
+      return res.status(409).json({ error: error.message });
+    }
     console.error("Delete purchase bill payment error:", error);
     res.status(500).json({ error: "Failed to delete purchase bill payment." });
   }

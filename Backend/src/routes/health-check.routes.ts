@@ -119,6 +119,7 @@ router.get("/", authMiddleware, async (req: AuthenticatedRequest, res: Response)
     } satisfies Prisma.SalesInvoiceWhereInput;
     const billWhere = {
       businessId,
+      receiptStatus: "ACCEPTED",
       billDate: { gte: start, lt: end },
     } satisfies Prisma.PurchaseBillWhereInput;
 
@@ -458,6 +459,7 @@ router.get("/", authMiddleware, async (req: AuthenticatedRequest, res: Response)
           FROM "PurchaseBill" pb
           JOIN "Vendor" v ON v."id" = pb."vendorId"
           WHERE pb."businessId" = ${businessId}
+            AND pb."receiptStatus" = 'ACCEPTED'
             AND pb."billDate" >= ${start}
             AND pb."billDate" < ${end}
             AND v."gstin" IS NOT NULL
@@ -469,6 +471,7 @@ router.get("/", authMiddleware, async (req: AuthenticatedRequest, res: Response)
           FROM "PurchaseBill" pb
           JOIN "Vendor" v ON v."id" = pb."vendorId"
           WHERE pb."businessId" = ${businessId}
+            AND pb."receiptStatus" = 'ACCEPTED'
             AND pb."billDate" >= ${start}
             AND pb."billDate" < ${end}
             AND v."gstin" IS NOT NULL

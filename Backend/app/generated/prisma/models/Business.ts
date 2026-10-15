@@ -31,6 +31,7 @@ export type BusinessMinAggregateOutputType = {
   stateCode: string | null
   createdAt: Date | null
   address: string | null
+  upiId: string | null
   bankAccount: string | null
   bankBranch: string | null
   bankIfsc: string | null
@@ -55,6 +56,7 @@ export type BusinessMaxAggregateOutputType = {
   stateCode: string | null
   createdAt: Date | null
   address: string | null
+  upiId: string | null
   bankAccount: string | null
   bankBranch: string | null
   bankIfsc: string | null
@@ -79,6 +81,7 @@ export type BusinessCountAggregateOutputType = {
   stateCode: number
   createdAt: number
   address: number
+  upiId: number
   bankAccount: number
   bankBranch: number
   bankIfsc: number
@@ -105,6 +108,7 @@ export type BusinessMinAggregateInputType = {
   stateCode?: true
   createdAt?: true
   address?: true
+  upiId?: true
   bankAccount?: true
   bankBranch?: true
   bankIfsc?: true
@@ -129,6 +133,7 @@ export type BusinessMaxAggregateInputType = {
   stateCode?: true
   createdAt?: true
   address?: true
+  upiId?: true
   bankAccount?: true
   bankBranch?: true
   bankIfsc?: true
@@ -153,6 +158,7 @@ export type BusinessCountAggregateInputType = {
   stateCode?: true
   createdAt?: true
   address?: true
+  upiId?: true
   bankAccount?: true
   bankBranch?: true
   bankIfsc?: true
@@ -250,6 +256,7 @@ export type BusinessGroupByOutputType = {
   stateCode: string
   createdAt: Date
   address: string | null
+  upiId: string | null
   bankAccount: string | null
   bankBranch: string | null
   bankIfsc: string | null
@@ -295,6 +302,7 @@ export type BusinessWhereInput = {
   stateCode?: Prisma.StringFilter<"Business"> | string
   createdAt?: Prisma.DateTimeFilter<"Business"> | Date | string
   address?: Prisma.StringNullableFilter<"Business"> | string | null
+  upiId?: Prisma.StringNullableFilter<"Business"> | string | null
   bankAccount?: Prisma.StringNullableFilter<"Business"> | string | null
   bankBranch?: Prisma.StringNullableFilter<"Business"> | string | null
   bankIfsc?: Prisma.StringNullableFilter<"Business"> | string | null
@@ -329,6 +337,7 @@ export type BusinessOrderByWithRelationInput = {
   stateCode?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   address?: Prisma.SortOrderInput | Prisma.SortOrder
+  upiId?: Prisma.SortOrderInput | Prisma.SortOrder
   bankAccount?: Prisma.SortOrderInput | Prisma.SortOrder
   bankBranch?: Prisma.SortOrderInput | Prisma.SortOrder
   bankIfsc?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -366,6 +375,7 @@ export type BusinessWhereUniqueInput = Prisma.AtLeast<{
   stateCode?: Prisma.StringFilter<"Business"> | string
   createdAt?: Prisma.DateTimeFilter<"Business"> | Date | string
   address?: Prisma.StringNullableFilter<"Business"> | string | null
+  upiId?: Prisma.StringNullableFilter<"Business"> | string | null
   bankAccount?: Prisma.StringNullableFilter<"Business"> | string | null
   bankBranch?: Prisma.StringNullableFilter<"Business"> | string | null
   bankIfsc?: Prisma.StringNullableFilter<"Business"> | string | null
@@ -400,6 +410,7 @@ export type BusinessOrderByWithAggregationInput = {
   stateCode?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   address?: Prisma.SortOrderInput | Prisma.SortOrder
+  upiId?: Prisma.SortOrderInput | Prisma.SortOrder
   bankAccount?: Prisma.SortOrderInput | Prisma.SortOrder
   bankBranch?: Prisma.SortOrderInput | Prisma.SortOrder
   bankIfsc?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -430,6 +441,7 @@ export type BusinessScalarWhereWithAggregatesInput = {
   stateCode?: Prisma.StringWithAggregatesFilter<"Business"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Business"> | Date | string
   address?: Prisma.StringNullableWithAggregatesFilter<"Business"> | string | null
+  upiId?: Prisma.StringNullableWithAggregatesFilter<"Business"> | string | null
   bankAccount?: Prisma.StringNullableWithAggregatesFilter<"Business"> | string | null
   bankBranch?: Prisma.StringNullableWithAggregatesFilter<"Business"> | string | null
   bankIfsc?: Prisma.StringNullableWithAggregatesFilter<"Business"> | string | null
@@ -454,6 +466,7 @@ export type BusinessCreateInput = {
   stateCode?: string
   createdAt?: Date | string
   address?: string | null
+  upiId?: string | null
   bankAccount?: string | null
   bankBranch?: string | null
   bankIfsc?: string | null
@@ -488,6 +501,7 @@ export type BusinessUncheckedCreateInput = {
   stateCode?: string
   createdAt?: Date | string
   address?: string | null
+  upiId?: string | null
   bankAccount?: string | null
   bankBranch?: string | null
   bankIfsc?: string | null
@@ -522,6 +536,7 @@ export type BusinessUpdateInput = {
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  upiId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -556,6 +571,7 @@ export type BusinessUncheckedUpdateInput = {
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  upiId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -590,6 +606,7 @@ export type BusinessCreateManyInput = {
   stateCode?: string
   createdAt?: Date | string
   address?: string | null
+  upiId?: string | null
   bankAccount?: string | null
   bankBranch?: string | null
   bankIfsc?: string | null
@@ -614,6 +631,7 @@ export type BusinessUpdateManyMutationInput = {
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  upiId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -638,6 +656,7 @@ export type BusinessUncheckedUpdateManyInput = {
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  upiId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -662,6 +681,7 @@ export type BusinessCountOrderByAggregateInput = {
   stateCode?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   address?: Prisma.SortOrder
+  upiId?: Prisma.SortOrder
   bankAccount?: Prisma.SortOrder
   bankBranch?: Prisma.SortOrder
   bankIfsc?: Prisma.SortOrder
@@ -686,6 +706,7 @@ export type BusinessMaxOrderByAggregateInput = {
   stateCode?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   address?: Prisma.SortOrder
+  upiId?: Prisma.SortOrder
   bankAccount?: Prisma.SortOrder
   bankBranch?: Prisma.SortOrder
   bankIfsc?: Prisma.SortOrder
@@ -710,6 +731,7 @@ export type BusinessMinOrderByAggregateInput = {
   stateCode?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   address?: Prisma.SortOrder
+  upiId?: Prisma.SortOrder
   bankAccount?: Prisma.SortOrder
   bankBranch?: Prisma.SortOrder
   bankIfsc?: Prisma.SortOrder
@@ -895,6 +917,7 @@ export type BusinessCreateWithoutGstr3bAdjustmentsInput = {
   stateCode?: string
   createdAt?: Date | string
   address?: string | null
+  upiId?: string | null
   bankAccount?: string | null
   bankBranch?: string | null
   bankIfsc?: string | null
@@ -928,6 +951,7 @@ export type BusinessUncheckedCreateWithoutGstr3bAdjustmentsInput = {
   stateCode?: string
   createdAt?: Date | string
   address?: string | null
+  upiId?: string | null
   bankAccount?: string | null
   bankBranch?: string | null
   bankIfsc?: string | null
@@ -977,6 +1001,7 @@ export type BusinessUpdateWithoutGstr3bAdjustmentsInput = {
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  upiId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1010,6 +1035,7 @@ export type BusinessUncheckedUpdateWithoutGstr3bAdjustmentsInput = {
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  upiId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1043,6 +1069,7 @@ export type BusinessCreateWithoutUsersInput = {
   stateCode?: string
   createdAt?: Date | string
   address?: string | null
+  upiId?: string | null
   bankAccount?: string | null
   bankBranch?: string | null
   bankIfsc?: string | null
@@ -1076,6 +1103,7 @@ export type BusinessUncheckedCreateWithoutUsersInput = {
   stateCode?: string
   createdAt?: Date | string
   address?: string | null
+  upiId?: string | null
   bankAccount?: string | null
   bankBranch?: string | null
   bankIfsc?: string | null
@@ -1125,6 +1153,7 @@ export type BusinessUpdateWithoutUsersInput = {
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  upiId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1158,6 +1187,7 @@ export type BusinessUncheckedUpdateWithoutUsersInput = {
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  upiId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1191,6 +1221,7 @@ export type BusinessCreateWithoutCreditDebitNotesInput = {
   stateCode?: string
   createdAt?: Date | string
   address?: string | null
+  upiId?: string | null
   bankAccount?: string | null
   bankBranch?: string | null
   bankIfsc?: string | null
@@ -1224,6 +1255,7 @@ export type BusinessUncheckedCreateWithoutCreditDebitNotesInput = {
   stateCode?: string
   createdAt?: Date | string
   address?: string | null
+  upiId?: string | null
   bankAccount?: string | null
   bankBranch?: string | null
   bankIfsc?: string | null
@@ -1273,6 +1305,7 @@ export type BusinessUpdateWithoutCreditDebitNotesInput = {
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  upiId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1306,6 +1339,7 @@ export type BusinessUncheckedUpdateWithoutCreditDebitNotesInput = {
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  upiId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1339,6 +1373,7 @@ export type BusinessCreateWithoutCustomersInput = {
   stateCode?: string
   createdAt?: Date | string
   address?: string | null
+  upiId?: string | null
   bankAccount?: string | null
   bankBranch?: string | null
   bankIfsc?: string | null
@@ -1372,6 +1407,7 @@ export type BusinessUncheckedCreateWithoutCustomersInput = {
   stateCode?: string
   createdAt?: Date | string
   address?: string | null
+  upiId?: string | null
   bankAccount?: string | null
   bankBranch?: string | null
   bankIfsc?: string | null
@@ -1421,6 +1457,7 @@ export type BusinessUpdateWithoutCustomersInput = {
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  upiId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1454,6 +1491,7 @@ export type BusinessUncheckedUpdateWithoutCustomersInput = {
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  upiId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1487,6 +1525,7 @@ export type BusinessCreateWithoutItemsInput = {
   stateCode?: string
   createdAt?: Date | string
   address?: string | null
+  upiId?: string | null
   bankAccount?: string | null
   bankBranch?: string | null
   bankIfsc?: string | null
@@ -1520,6 +1559,7 @@ export type BusinessUncheckedCreateWithoutItemsInput = {
   stateCode?: string
   createdAt?: Date | string
   address?: string | null
+  upiId?: string | null
   bankAccount?: string | null
   bankBranch?: string | null
   bankIfsc?: string | null
@@ -1569,6 +1609,7 @@ export type BusinessUpdateWithoutItemsInput = {
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  upiId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1602,6 +1643,7 @@ export type BusinessUncheckedUpdateWithoutItemsInput = {
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  upiId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1635,6 +1677,7 @@ export type BusinessCreateWithoutPurchaseBillsInput = {
   stateCode?: string
   createdAt?: Date | string
   address?: string | null
+  upiId?: string | null
   bankAccount?: string | null
   bankBranch?: string | null
   bankIfsc?: string | null
@@ -1668,6 +1711,7 @@ export type BusinessUncheckedCreateWithoutPurchaseBillsInput = {
   stateCode?: string
   createdAt?: Date | string
   address?: string | null
+  upiId?: string | null
   bankAccount?: string | null
   bankBranch?: string | null
   bankIfsc?: string | null
@@ -1717,6 +1761,7 @@ export type BusinessUpdateWithoutPurchaseBillsInput = {
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  upiId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1750,6 +1795,7 @@ export type BusinessUncheckedUpdateWithoutPurchaseBillsInput = {
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  upiId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1783,6 +1829,7 @@ export type BusinessCreateWithoutReturnFilingsInput = {
   stateCode?: string
   createdAt?: Date | string
   address?: string | null
+  upiId?: string | null
   bankAccount?: string | null
   bankBranch?: string | null
   bankIfsc?: string | null
@@ -1816,6 +1863,7 @@ export type BusinessUncheckedCreateWithoutReturnFilingsInput = {
   stateCode?: string
   createdAt?: Date | string
   address?: string | null
+  upiId?: string | null
   bankAccount?: string | null
   bankBranch?: string | null
   bankIfsc?: string | null
@@ -1865,6 +1913,7 @@ export type BusinessUpdateWithoutReturnFilingsInput = {
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  upiId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1898,6 +1947,7 @@ export type BusinessUncheckedUpdateWithoutReturnFilingsInput = {
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  upiId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1931,6 +1981,7 @@ export type BusinessCreateWithoutSalesInvoicesInput = {
   stateCode?: string
   createdAt?: Date | string
   address?: string | null
+  upiId?: string | null
   bankAccount?: string | null
   bankBranch?: string | null
   bankIfsc?: string | null
@@ -1964,6 +2015,7 @@ export type BusinessUncheckedCreateWithoutSalesInvoicesInput = {
   stateCode?: string
   createdAt?: Date | string
   address?: string | null
+  upiId?: string | null
   bankAccount?: string | null
   bankBranch?: string | null
   bankIfsc?: string | null
@@ -2013,6 +2065,7 @@ export type BusinessUpdateWithoutSalesInvoicesInput = {
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  upiId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2046,6 +2099,7 @@ export type BusinessUncheckedUpdateWithoutSalesInvoicesInput = {
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  upiId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2079,6 +2133,7 @@ export type BusinessCreateWithoutVendorsInput = {
   stateCode?: string
   createdAt?: Date | string
   address?: string | null
+  upiId?: string | null
   bankAccount?: string | null
   bankBranch?: string | null
   bankIfsc?: string | null
@@ -2112,6 +2167,7 @@ export type BusinessUncheckedCreateWithoutVendorsInput = {
   stateCode?: string
   createdAt?: Date | string
   address?: string | null
+  upiId?: string | null
   bankAccount?: string | null
   bankBranch?: string | null
   bankIfsc?: string | null
@@ -2161,6 +2217,7 @@ export type BusinessUpdateWithoutVendorsInput = {
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  upiId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2194,6 +2251,7 @@ export type BusinessUncheckedUpdateWithoutVendorsInput = {
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  upiId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2227,6 +2285,7 @@ export type BusinessCreateWithoutSalesPaymentsInput = {
   stateCode?: string
   createdAt?: Date | string
   address?: string | null
+  upiId?: string | null
   bankAccount?: string | null
   bankBranch?: string | null
   bankIfsc?: string | null
@@ -2260,6 +2319,7 @@ export type BusinessUncheckedCreateWithoutSalesPaymentsInput = {
   stateCode?: string
   createdAt?: Date | string
   address?: string | null
+  upiId?: string | null
   bankAccount?: string | null
   bankBranch?: string | null
   bankIfsc?: string | null
@@ -2309,6 +2369,7 @@ export type BusinessUpdateWithoutSalesPaymentsInput = {
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  upiId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2342,6 +2403,7 @@ export type BusinessUncheckedUpdateWithoutSalesPaymentsInput = {
   stateCode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  upiId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankBranch?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bankIfsc?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2487,6 +2549,7 @@ export type BusinessSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   stateCode?: boolean
   createdAt?: boolean
   address?: boolean
+  upiId?: boolean
   bankAccount?: boolean
   bankBranch?: boolean
   bankIfsc?: boolean
@@ -2522,6 +2585,7 @@ export type BusinessSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   stateCode?: boolean
   createdAt?: boolean
   address?: boolean
+  upiId?: boolean
   bankAccount?: boolean
   bankBranch?: boolean
   bankIfsc?: boolean
@@ -2546,6 +2610,7 @@ export type BusinessSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   stateCode?: boolean
   createdAt?: boolean
   address?: boolean
+  upiId?: boolean
   bankAccount?: boolean
   bankBranch?: boolean
   bankIfsc?: boolean
@@ -2570,6 +2635,7 @@ export type BusinessSelectScalar = {
   stateCode?: boolean
   createdAt?: boolean
   address?: boolean
+  upiId?: boolean
   bankAccount?: boolean
   bankBranch?: boolean
   bankIfsc?: boolean
@@ -2587,7 +2653,7 @@ export type BusinessSelectScalar = {
   updatedAt?: boolean
 }
 
-export type BusinessOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "gstin" | "stateCode" | "createdAt" | "address" | "bankAccount" | "bankBranch" | "bankIfsc" | "bankName" | "businessType" | "email" | "filingFrequency" | "isOnboarded" | "phone" | "pincode" | "registrationType" | "stateName" | "tradeName" | "turnoverRange" | "updatedAt", ExtArgs["result"]["business"]>
+export type BusinessOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "gstin" | "stateCode" | "createdAt" | "address" | "upiId" | "bankAccount" | "bankBranch" | "bankIfsc" | "bankName" | "businessType" | "email" | "filingFrequency" | "isOnboarded" | "phone" | "pincode" | "registrationType" | "stateName" | "tradeName" | "turnoverRange" | "updatedAt", ExtArgs["result"]["business"]>
 export type BusinessInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   users?: boolean | Prisma.Business$usersArgs<ExtArgs>
   creditDebitNotes?: boolean | Prisma.Business$creditDebitNotesArgs<ExtArgs>
@@ -2625,6 +2691,7 @@ export type $BusinessPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     stateCode: string
     createdAt: Date
     address: string | null
+    upiId: string | null
     bankAccount: string | null
     bankBranch: string | null
     bankIfsc: string | null
@@ -3079,6 +3146,7 @@ export interface BusinessFieldRefs {
   readonly stateCode: Prisma.FieldRef<"Business", 'String'>
   readonly createdAt: Prisma.FieldRef<"Business", 'DateTime'>
   readonly address: Prisma.FieldRef<"Business", 'String'>
+  readonly upiId: Prisma.FieldRef<"Business", 'String'>
   readonly bankAccount: Prisma.FieldRef<"Business", 'String'>
   readonly bankBranch: Prisma.FieldRef<"Business", 'String'>
   readonly bankIfsc: Prisma.FieldRef<"Business", 'String'>

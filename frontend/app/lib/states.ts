@@ -45,3 +45,17 @@ export function stateNameFromCode(code: string): string {
 
 // Standard 15-character GSTIN format.
 export const GSTIN_REGEX = /^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+
+export function normalizeGstin(gstin: string | null | undefined): string {
+  if (!gstin) return "";
+  return gstin.trim().toUpperCase();
+}
+
+export function isValidGstin(gstin: string | null | undefined): boolean {
+  const clean = normalizeGstin(gstin);
+  if (clean.length !== 15) return false;
+  if (!GSTIN_REGEX.test(clean)) return false;
+
+  const stateCode = clean.substring(0, 2);
+  return INDIAN_STATES.some((s) => s.code === stateCode);
+}

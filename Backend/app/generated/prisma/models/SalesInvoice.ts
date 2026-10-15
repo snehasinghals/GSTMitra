@@ -36,6 +36,7 @@ export type SalesInvoiceAvgAggregateOutputType = {
   applicablePercent: number | null
   totalAmount: number | null
   paidAmount: number | null
+  reminderCount: number | null
 }
 
 export type SalesInvoiceSumAggregateOutputType = {
@@ -48,12 +49,14 @@ export type SalesInvoiceSumAggregateOutputType = {
   applicablePercent: number | null
   totalAmount: number | null
   paidAmount: number | null
+  reminderCount: number | null
 }
 
 export type SalesInvoiceMinAggregateOutputType = {
   id: string | null
   businessId: string | null
   customerId: string | null
+  buyerGstin: string | null
   invoiceNumber: string | null
   invoiceDate: Date | null
   dueDate: Date | null
@@ -73,6 +76,8 @@ export type SalesInvoiceMinAggregateOutputType = {
   ecomGstin: string | null
   totalAmount: number | null
   paidAmount: number | null
+  lastReminderSentAt: Date | null
+  reminderCount: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -81,6 +86,7 @@ export type SalesInvoiceMaxAggregateOutputType = {
   id: string | null
   businessId: string | null
   customerId: string | null
+  buyerGstin: string | null
   invoiceNumber: string | null
   invoiceDate: Date | null
   dueDate: Date | null
@@ -100,6 +106,8 @@ export type SalesInvoiceMaxAggregateOutputType = {
   ecomGstin: string | null
   totalAmount: number | null
   paidAmount: number | null
+  lastReminderSentAt: Date | null
+  reminderCount: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -108,6 +116,7 @@ export type SalesInvoiceCountAggregateOutputType = {
   id: number
   businessId: number
   customerId: number
+  buyerGstin: number
   invoiceNumber: number
   invoiceDate: number
   dueDate: number
@@ -127,6 +136,8 @@ export type SalesInvoiceCountAggregateOutputType = {
   ecomGstin: number
   totalAmount: number
   paidAmount: number
+  lastReminderSentAt: number
+  reminderCount: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -143,6 +154,7 @@ export type SalesInvoiceAvgAggregateInputType = {
   applicablePercent?: true
   totalAmount?: true
   paidAmount?: true
+  reminderCount?: true
 }
 
 export type SalesInvoiceSumAggregateInputType = {
@@ -155,12 +167,14 @@ export type SalesInvoiceSumAggregateInputType = {
   applicablePercent?: true
   totalAmount?: true
   paidAmount?: true
+  reminderCount?: true
 }
 
 export type SalesInvoiceMinAggregateInputType = {
   id?: true
   businessId?: true
   customerId?: true
+  buyerGstin?: true
   invoiceNumber?: true
   invoiceDate?: true
   dueDate?: true
@@ -180,6 +194,8 @@ export type SalesInvoiceMinAggregateInputType = {
   ecomGstin?: true
   totalAmount?: true
   paidAmount?: true
+  lastReminderSentAt?: true
+  reminderCount?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -188,6 +204,7 @@ export type SalesInvoiceMaxAggregateInputType = {
   id?: true
   businessId?: true
   customerId?: true
+  buyerGstin?: true
   invoiceNumber?: true
   invoiceDate?: true
   dueDate?: true
@@ -207,6 +224,8 @@ export type SalesInvoiceMaxAggregateInputType = {
   ecomGstin?: true
   totalAmount?: true
   paidAmount?: true
+  lastReminderSentAt?: true
+  reminderCount?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -215,6 +234,7 @@ export type SalesInvoiceCountAggregateInputType = {
   id?: true
   businessId?: true
   customerId?: true
+  buyerGstin?: true
   invoiceNumber?: true
   invoiceDate?: true
   dueDate?: true
@@ -234,6 +254,8 @@ export type SalesInvoiceCountAggregateInputType = {
   ecomGstin?: true
   totalAmount?: true
   paidAmount?: true
+  lastReminderSentAt?: true
+  reminderCount?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -329,6 +351,7 @@ export type SalesInvoiceGroupByOutputType = {
   id: string
   businessId: string
   customerId: string
+  buyerGstin: string | null
   invoiceNumber: string
   invoiceDate: Date
   dueDate: Date | null
@@ -348,6 +371,8 @@ export type SalesInvoiceGroupByOutputType = {
   ecomGstin: string | null
   totalAmount: number
   paidAmount: number
+  lastReminderSentAt: Date | null
+  reminderCount: number
   createdAt: Date
   updatedAt: Date
   _count: SalesInvoiceCountAggregateOutputType | null
@@ -379,6 +404,7 @@ export type SalesInvoiceWhereInput = {
   id?: Prisma.StringFilter<"SalesInvoice"> | string
   businessId?: Prisma.StringFilter<"SalesInvoice"> | string
   customerId?: Prisma.StringFilter<"SalesInvoice"> | string
+  buyerGstin?: Prisma.StringNullableFilter<"SalesInvoice"> | string | null
   invoiceNumber?: Prisma.StringFilter<"SalesInvoice"> | string
   invoiceDate?: Prisma.DateTimeFilter<"SalesInvoice"> | Date | string
   dueDate?: Prisma.DateTimeNullableFilter<"SalesInvoice"> | Date | string | null
@@ -398,11 +424,14 @@ export type SalesInvoiceWhereInput = {
   ecomGstin?: Prisma.StringNullableFilter<"SalesInvoice"> | string | null
   totalAmount?: Prisma.FloatFilter<"SalesInvoice"> | number
   paidAmount?: Prisma.FloatFilter<"SalesInvoice"> | number
+  lastReminderSentAt?: Prisma.DateTimeNullableFilter<"SalesInvoice"> | Date | string | null
+  reminderCount?: Prisma.IntFilter<"SalesInvoice"> | number
   createdAt?: Prisma.DateTimeFilter<"SalesInvoice"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SalesInvoice"> | Date | string
   creditDebitNotes?: Prisma.CreditDebitNoteListRelationFilter
   business?: Prisma.XOR<Prisma.BusinessScalarRelationFilter, Prisma.BusinessWhereInput>
   customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
+  receivedPurchaseBill?: Prisma.XOR<Prisma.PurchaseBillNullableScalarRelationFilter, Prisma.PurchaseBillWhereInput> | null
   items?: Prisma.SalesInvoiceItemListRelationFilter
   payments?: Prisma.SalesPaymentListRelationFilter
 }
@@ -411,6 +440,7 @@ export type SalesInvoiceOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   businessId?: Prisma.SortOrder
   customerId?: Prisma.SortOrder
+  buyerGstin?: Prisma.SortOrderInput | Prisma.SortOrder
   invoiceNumber?: Prisma.SortOrder
   invoiceDate?: Prisma.SortOrder
   dueDate?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -430,11 +460,14 @@ export type SalesInvoiceOrderByWithRelationInput = {
   ecomGstin?: Prisma.SortOrderInput | Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   paidAmount?: Prisma.SortOrder
+  lastReminderSentAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  reminderCount?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   creditDebitNotes?: Prisma.CreditDebitNoteOrderByRelationAggregateInput
   business?: Prisma.BusinessOrderByWithRelationInput
   customer?: Prisma.CustomerOrderByWithRelationInput
+  receivedPurchaseBill?: Prisma.PurchaseBillOrderByWithRelationInput
   items?: Prisma.SalesInvoiceItemOrderByRelationAggregateInput
   payments?: Prisma.SalesPaymentOrderByRelationAggregateInput
 }
@@ -447,6 +480,7 @@ export type SalesInvoiceWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.SalesInvoiceWhereInput | Prisma.SalesInvoiceWhereInput[]
   businessId?: Prisma.StringFilter<"SalesInvoice"> | string
   customerId?: Prisma.StringFilter<"SalesInvoice"> | string
+  buyerGstin?: Prisma.StringNullableFilter<"SalesInvoice"> | string | null
   invoiceNumber?: Prisma.StringFilter<"SalesInvoice"> | string
   invoiceDate?: Prisma.DateTimeFilter<"SalesInvoice"> | Date | string
   dueDate?: Prisma.DateTimeNullableFilter<"SalesInvoice"> | Date | string | null
@@ -466,11 +500,14 @@ export type SalesInvoiceWhereUniqueInput = Prisma.AtLeast<{
   ecomGstin?: Prisma.StringNullableFilter<"SalesInvoice"> | string | null
   totalAmount?: Prisma.FloatFilter<"SalesInvoice"> | number
   paidAmount?: Prisma.FloatFilter<"SalesInvoice"> | number
+  lastReminderSentAt?: Prisma.DateTimeNullableFilter<"SalesInvoice"> | Date | string | null
+  reminderCount?: Prisma.IntFilter<"SalesInvoice"> | number
   createdAt?: Prisma.DateTimeFilter<"SalesInvoice"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SalesInvoice"> | Date | string
   creditDebitNotes?: Prisma.CreditDebitNoteListRelationFilter
   business?: Prisma.XOR<Prisma.BusinessScalarRelationFilter, Prisma.BusinessWhereInput>
   customer?: Prisma.XOR<Prisma.CustomerScalarRelationFilter, Prisma.CustomerWhereInput>
+  receivedPurchaseBill?: Prisma.XOR<Prisma.PurchaseBillNullableScalarRelationFilter, Prisma.PurchaseBillWhereInput> | null
   items?: Prisma.SalesInvoiceItemListRelationFilter
   payments?: Prisma.SalesPaymentListRelationFilter
 }, "id" | "businessId_invoiceNumber">
@@ -479,6 +516,7 @@ export type SalesInvoiceOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   businessId?: Prisma.SortOrder
   customerId?: Prisma.SortOrder
+  buyerGstin?: Prisma.SortOrderInput | Prisma.SortOrder
   invoiceNumber?: Prisma.SortOrder
   invoiceDate?: Prisma.SortOrder
   dueDate?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -498,6 +536,8 @@ export type SalesInvoiceOrderByWithAggregationInput = {
   ecomGstin?: Prisma.SortOrderInput | Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   paidAmount?: Prisma.SortOrder
+  lastReminderSentAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  reminderCount?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.SalesInvoiceCountOrderByAggregateInput
@@ -514,6 +554,7 @@ export type SalesInvoiceScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"SalesInvoice"> | string
   businessId?: Prisma.StringWithAggregatesFilter<"SalesInvoice"> | string
   customerId?: Prisma.StringWithAggregatesFilter<"SalesInvoice"> | string
+  buyerGstin?: Prisma.StringNullableWithAggregatesFilter<"SalesInvoice"> | string | null
   invoiceNumber?: Prisma.StringWithAggregatesFilter<"SalesInvoice"> | string
   invoiceDate?: Prisma.DateTimeWithAggregatesFilter<"SalesInvoice"> | Date | string
   dueDate?: Prisma.DateTimeNullableWithAggregatesFilter<"SalesInvoice"> | Date | string | null
@@ -533,12 +574,15 @@ export type SalesInvoiceScalarWhereWithAggregatesInput = {
   ecomGstin?: Prisma.StringNullableWithAggregatesFilter<"SalesInvoice"> | string | null
   totalAmount?: Prisma.FloatWithAggregatesFilter<"SalesInvoice"> | number
   paidAmount?: Prisma.FloatWithAggregatesFilter<"SalesInvoice"> | number
+  lastReminderSentAt?: Prisma.DateTimeNullableWithAggregatesFilter<"SalesInvoice"> | Date | string | null
+  reminderCount?: Prisma.IntWithAggregatesFilter<"SalesInvoice"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"SalesInvoice"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"SalesInvoice"> | Date | string
 }
 
 export type SalesInvoiceCreateInput = {
   id?: string
+  buyerGstin?: string | null
   invoiceNumber: string
   invoiceDate: Date | string
   dueDate?: Date | string | null
@@ -558,11 +602,14 @@ export type SalesInvoiceCreateInput = {
   ecomGstin?: string | null
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   creditDebitNotes?: Prisma.CreditDebitNoteCreateNestedManyWithoutOriginalInvoiceInput
   business: Prisma.BusinessCreateNestedOneWithoutSalesInvoicesInput
   customer: Prisma.CustomerCreateNestedOneWithoutSalesInvoicesInput
+  receivedPurchaseBill?: Prisma.PurchaseBillCreateNestedOneWithoutSourceSalesInvoiceInput
   items?: Prisma.SalesInvoiceItemCreateNestedManyWithoutSalesInvoiceInput
   payments?: Prisma.SalesPaymentCreateNestedManyWithoutSalesInvoiceInput
 }
@@ -571,6 +618,7 @@ export type SalesInvoiceUncheckedCreateInput = {
   id?: string
   businessId: string
   customerId: string
+  buyerGstin?: string | null
   invoiceNumber: string
   invoiceDate: Date | string
   dueDate?: Date | string | null
@@ -590,15 +638,19 @@ export type SalesInvoiceUncheckedCreateInput = {
   ecomGstin?: string | null
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   creditDebitNotes?: Prisma.CreditDebitNoteUncheckedCreateNestedManyWithoutOriginalInvoiceInput
+  receivedPurchaseBill?: Prisma.PurchaseBillUncheckedCreateNestedOneWithoutSourceSalesInvoiceInput
   items?: Prisma.SalesInvoiceItemUncheckedCreateNestedManyWithoutSalesInvoiceInput
   payments?: Prisma.SalesPaymentUncheckedCreateNestedManyWithoutSalesInvoiceInput
 }
 
 export type SalesInvoiceUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  buyerGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
   invoiceDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -618,11 +670,14 @@ export type SalesInvoiceUpdateInput = {
   ecomGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   creditDebitNotes?: Prisma.CreditDebitNoteUpdateManyWithoutOriginalInvoiceNestedInput
   business?: Prisma.BusinessUpdateOneRequiredWithoutSalesInvoicesNestedInput
   customer?: Prisma.CustomerUpdateOneRequiredWithoutSalesInvoicesNestedInput
+  receivedPurchaseBill?: Prisma.PurchaseBillUpdateOneWithoutSourceSalesInvoiceNestedInput
   items?: Prisma.SalesInvoiceItemUpdateManyWithoutSalesInvoiceNestedInput
   payments?: Prisma.SalesPaymentUpdateManyWithoutSalesInvoiceNestedInput
 }
@@ -631,6 +686,7 @@ export type SalesInvoiceUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   businessId?: Prisma.StringFieldUpdateOperationsInput | string
   customerId?: Prisma.StringFieldUpdateOperationsInput | string
+  buyerGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
   invoiceDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -650,9 +706,12 @@ export type SalesInvoiceUncheckedUpdateInput = {
   ecomGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   creditDebitNotes?: Prisma.CreditDebitNoteUncheckedUpdateManyWithoutOriginalInvoiceNestedInput
+  receivedPurchaseBill?: Prisma.PurchaseBillUncheckedUpdateOneWithoutSourceSalesInvoiceNestedInput
   items?: Prisma.SalesInvoiceItemUncheckedUpdateManyWithoutSalesInvoiceNestedInput
   payments?: Prisma.SalesPaymentUncheckedUpdateManyWithoutSalesInvoiceNestedInput
 }
@@ -661,6 +720,7 @@ export type SalesInvoiceCreateManyInput = {
   id?: string
   businessId: string
   customerId: string
+  buyerGstin?: string | null
   invoiceNumber: string
   invoiceDate: Date | string
   dueDate?: Date | string | null
@@ -680,12 +740,15 @@ export type SalesInvoiceCreateManyInput = {
   ecomGstin?: string | null
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
 
 export type SalesInvoiceUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  buyerGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
   invoiceDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -705,6 +768,8 @@ export type SalesInvoiceUpdateManyMutationInput = {
   ecomGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -713,6 +778,7 @@ export type SalesInvoiceUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   businessId?: Prisma.StringFieldUpdateOperationsInput | string
   customerId?: Prisma.StringFieldUpdateOperationsInput | string
+  buyerGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
   invoiceDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -732,6 +798,8 @@ export type SalesInvoiceUncheckedUpdateManyInput = {
   ecomGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -760,6 +828,7 @@ export type SalesInvoiceCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   businessId?: Prisma.SortOrder
   customerId?: Prisma.SortOrder
+  buyerGstin?: Prisma.SortOrder
   invoiceNumber?: Prisma.SortOrder
   invoiceDate?: Prisma.SortOrder
   dueDate?: Prisma.SortOrder
@@ -779,6 +848,8 @@ export type SalesInvoiceCountOrderByAggregateInput = {
   ecomGstin?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   paidAmount?: Prisma.SortOrder
+  lastReminderSentAt?: Prisma.SortOrder
+  reminderCount?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -793,12 +864,14 @@ export type SalesInvoiceAvgOrderByAggregateInput = {
   applicablePercent?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   paidAmount?: Prisma.SortOrder
+  reminderCount?: Prisma.SortOrder
 }
 
 export type SalesInvoiceMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   businessId?: Prisma.SortOrder
   customerId?: Prisma.SortOrder
+  buyerGstin?: Prisma.SortOrder
   invoiceNumber?: Prisma.SortOrder
   invoiceDate?: Prisma.SortOrder
   dueDate?: Prisma.SortOrder
@@ -818,6 +891,8 @@ export type SalesInvoiceMaxOrderByAggregateInput = {
   ecomGstin?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   paidAmount?: Prisma.SortOrder
+  lastReminderSentAt?: Prisma.SortOrder
+  reminderCount?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -826,6 +901,7 @@ export type SalesInvoiceMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   businessId?: Prisma.SortOrder
   customerId?: Prisma.SortOrder
+  buyerGstin?: Prisma.SortOrder
   invoiceNumber?: Prisma.SortOrder
   invoiceDate?: Prisma.SortOrder
   dueDate?: Prisma.SortOrder
@@ -845,6 +921,8 @@ export type SalesInvoiceMinOrderByAggregateInput = {
   ecomGstin?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   paidAmount?: Prisma.SortOrder
+  lastReminderSentAt?: Prisma.SortOrder
+  reminderCount?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -859,6 +937,7 @@ export type SalesInvoiceSumOrderByAggregateInput = {
   applicablePercent?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   paidAmount?: Prisma.SortOrder
+  reminderCount?: Prisma.SortOrder
 }
 
 export type SalesInvoiceScalarRelationFilter = {
@@ -966,6 +1045,22 @@ export type SalesInvoiceUncheckedUpdateManyWithoutCustomerNestedInput = {
   deleteMany?: Prisma.SalesInvoiceScalarWhereInput | Prisma.SalesInvoiceScalarWhereInput[]
 }
 
+export type SalesInvoiceCreateNestedOneWithoutReceivedPurchaseBillInput = {
+  create?: Prisma.XOR<Prisma.SalesInvoiceCreateWithoutReceivedPurchaseBillInput, Prisma.SalesInvoiceUncheckedCreateWithoutReceivedPurchaseBillInput>
+  connectOrCreate?: Prisma.SalesInvoiceCreateOrConnectWithoutReceivedPurchaseBillInput
+  connect?: Prisma.SalesInvoiceWhereUniqueInput
+}
+
+export type SalesInvoiceUpdateOneWithoutReceivedPurchaseBillNestedInput = {
+  create?: Prisma.XOR<Prisma.SalesInvoiceCreateWithoutReceivedPurchaseBillInput, Prisma.SalesInvoiceUncheckedCreateWithoutReceivedPurchaseBillInput>
+  connectOrCreate?: Prisma.SalesInvoiceCreateOrConnectWithoutReceivedPurchaseBillInput
+  upsert?: Prisma.SalesInvoiceUpsertWithoutReceivedPurchaseBillInput
+  disconnect?: Prisma.SalesInvoiceWhereInput | boolean
+  delete?: Prisma.SalesInvoiceWhereInput | boolean
+  connect?: Prisma.SalesInvoiceWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.SalesInvoiceUpdateToOneWithWhereWithoutReceivedPurchaseBillInput, Prisma.SalesInvoiceUpdateWithoutReceivedPurchaseBillInput>, Prisma.SalesInvoiceUncheckedUpdateWithoutReceivedPurchaseBillInput>
+}
+
 export type NullableFloatFieldUpdateOperationsInput = {
   set?: number | null
   increment?: number
@@ -1004,6 +1099,7 @@ export type SalesInvoiceUpdateOneRequiredWithoutPaymentsNestedInput = {
 
 export type SalesInvoiceCreateWithoutBusinessInput = {
   id?: string
+  buyerGstin?: string | null
   invoiceNumber: string
   invoiceDate: Date | string
   dueDate?: Date | string | null
@@ -1023,10 +1119,13 @@ export type SalesInvoiceCreateWithoutBusinessInput = {
   ecomGstin?: string | null
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   creditDebitNotes?: Prisma.CreditDebitNoteCreateNestedManyWithoutOriginalInvoiceInput
   customer: Prisma.CustomerCreateNestedOneWithoutSalesInvoicesInput
+  receivedPurchaseBill?: Prisma.PurchaseBillCreateNestedOneWithoutSourceSalesInvoiceInput
   items?: Prisma.SalesInvoiceItemCreateNestedManyWithoutSalesInvoiceInput
   payments?: Prisma.SalesPaymentCreateNestedManyWithoutSalesInvoiceInput
 }
@@ -1034,6 +1133,7 @@ export type SalesInvoiceCreateWithoutBusinessInput = {
 export type SalesInvoiceUncheckedCreateWithoutBusinessInput = {
   id?: string
   customerId: string
+  buyerGstin?: string | null
   invoiceNumber: string
   invoiceDate: Date | string
   dueDate?: Date | string | null
@@ -1053,9 +1153,12 @@ export type SalesInvoiceUncheckedCreateWithoutBusinessInput = {
   ecomGstin?: string | null
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   creditDebitNotes?: Prisma.CreditDebitNoteUncheckedCreateNestedManyWithoutOriginalInvoiceInput
+  receivedPurchaseBill?: Prisma.PurchaseBillUncheckedCreateNestedOneWithoutSourceSalesInvoiceInput
   items?: Prisma.SalesInvoiceItemUncheckedCreateNestedManyWithoutSalesInvoiceInput
   payments?: Prisma.SalesPaymentUncheckedCreateNestedManyWithoutSalesInvoiceInput
 }
@@ -1093,6 +1196,7 @@ export type SalesInvoiceScalarWhereInput = {
   id?: Prisma.StringFilter<"SalesInvoice"> | string
   businessId?: Prisma.StringFilter<"SalesInvoice"> | string
   customerId?: Prisma.StringFilter<"SalesInvoice"> | string
+  buyerGstin?: Prisma.StringNullableFilter<"SalesInvoice"> | string | null
   invoiceNumber?: Prisma.StringFilter<"SalesInvoice"> | string
   invoiceDate?: Prisma.DateTimeFilter<"SalesInvoice"> | Date | string
   dueDate?: Prisma.DateTimeNullableFilter<"SalesInvoice"> | Date | string | null
@@ -1112,12 +1216,15 @@ export type SalesInvoiceScalarWhereInput = {
   ecomGstin?: Prisma.StringNullableFilter<"SalesInvoice"> | string | null
   totalAmount?: Prisma.FloatFilter<"SalesInvoice"> | number
   paidAmount?: Prisma.FloatFilter<"SalesInvoice"> | number
+  lastReminderSentAt?: Prisma.DateTimeNullableFilter<"SalesInvoice"> | Date | string | null
+  reminderCount?: Prisma.IntFilter<"SalesInvoice"> | number
   createdAt?: Prisma.DateTimeFilter<"SalesInvoice"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SalesInvoice"> | Date | string
 }
 
 export type SalesInvoiceCreateWithoutCreditDebitNotesInput = {
   id?: string
+  buyerGstin?: string | null
   invoiceNumber: string
   invoiceDate: Date | string
   dueDate?: Date | string | null
@@ -1137,10 +1244,13 @@ export type SalesInvoiceCreateWithoutCreditDebitNotesInput = {
   ecomGstin?: string | null
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   business: Prisma.BusinessCreateNestedOneWithoutSalesInvoicesInput
   customer: Prisma.CustomerCreateNestedOneWithoutSalesInvoicesInput
+  receivedPurchaseBill?: Prisma.PurchaseBillCreateNestedOneWithoutSourceSalesInvoiceInput
   items?: Prisma.SalesInvoiceItemCreateNestedManyWithoutSalesInvoiceInput
   payments?: Prisma.SalesPaymentCreateNestedManyWithoutSalesInvoiceInput
 }
@@ -1149,6 +1259,7 @@ export type SalesInvoiceUncheckedCreateWithoutCreditDebitNotesInput = {
   id?: string
   businessId: string
   customerId: string
+  buyerGstin?: string | null
   invoiceNumber: string
   invoiceDate: Date | string
   dueDate?: Date | string | null
@@ -1168,8 +1279,11 @@ export type SalesInvoiceUncheckedCreateWithoutCreditDebitNotesInput = {
   ecomGstin?: string | null
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
+  receivedPurchaseBill?: Prisma.PurchaseBillUncheckedCreateNestedOneWithoutSourceSalesInvoiceInput
   items?: Prisma.SalesInvoiceItemUncheckedCreateNestedManyWithoutSalesInvoiceInput
   payments?: Prisma.SalesPaymentUncheckedCreateNestedManyWithoutSalesInvoiceInput
 }
@@ -1192,6 +1306,7 @@ export type SalesInvoiceUpdateToOneWithWhereWithoutCreditDebitNotesInput = {
 
 export type SalesInvoiceUpdateWithoutCreditDebitNotesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  buyerGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
   invoiceDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1211,10 +1326,13 @@ export type SalesInvoiceUpdateWithoutCreditDebitNotesInput = {
   ecomGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   business?: Prisma.BusinessUpdateOneRequiredWithoutSalesInvoicesNestedInput
   customer?: Prisma.CustomerUpdateOneRequiredWithoutSalesInvoicesNestedInput
+  receivedPurchaseBill?: Prisma.PurchaseBillUpdateOneWithoutSourceSalesInvoiceNestedInput
   items?: Prisma.SalesInvoiceItemUpdateManyWithoutSalesInvoiceNestedInput
   payments?: Prisma.SalesPaymentUpdateManyWithoutSalesInvoiceNestedInput
 }
@@ -1223,6 +1341,7 @@ export type SalesInvoiceUncheckedUpdateWithoutCreditDebitNotesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   businessId?: Prisma.StringFieldUpdateOperationsInput | string
   customerId?: Prisma.StringFieldUpdateOperationsInput | string
+  buyerGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
   invoiceDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1242,14 +1361,18 @@ export type SalesInvoiceUncheckedUpdateWithoutCreditDebitNotesInput = {
   ecomGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  receivedPurchaseBill?: Prisma.PurchaseBillUncheckedUpdateOneWithoutSourceSalesInvoiceNestedInput
   items?: Prisma.SalesInvoiceItemUncheckedUpdateManyWithoutSalesInvoiceNestedInput
   payments?: Prisma.SalesPaymentUncheckedUpdateManyWithoutSalesInvoiceNestedInput
 }
 
 export type SalesInvoiceCreateWithoutCustomerInput = {
   id?: string
+  buyerGstin?: string | null
   invoiceNumber: string
   invoiceDate: Date | string
   dueDate?: Date | string | null
@@ -1269,10 +1392,13 @@ export type SalesInvoiceCreateWithoutCustomerInput = {
   ecomGstin?: string | null
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   creditDebitNotes?: Prisma.CreditDebitNoteCreateNestedManyWithoutOriginalInvoiceInput
   business: Prisma.BusinessCreateNestedOneWithoutSalesInvoicesInput
+  receivedPurchaseBill?: Prisma.PurchaseBillCreateNestedOneWithoutSourceSalesInvoiceInput
   items?: Prisma.SalesInvoiceItemCreateNestedManyWithoutSalesInvoiceInput
   payments?: Prisma.SalesPaymentCreateNestedManyWithoutSalesInvoiceInput
 }
@@ -1280,6 +1406,7 @@ export type SalesInvoiceCreateWithoutCustomerInput = {
 export type SalesInvoiceUncheckedCreateWithoutCustomerInput = {
   id?: string
   businessId: string
+  buyerGstin?: string | null
   invoiceNumber: string
   invoiceDate: Date | string
   dueDate?: Date | string | null
@@ -1299,9 +1426,12 @@ export type SalesInvoiceUncheckedCreateWithoutCustomerInput = {
   ecomGstin?: string | null
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   creditDebitNotes?: Prisma.CreditDebitNoteUncheckedCreateNestedManyWithoutOriginalInvoiceInput
+  receivedPurchaseBill?: Prisma.PurchaseBillUncheckedCreateNestedOneWithoutSourceSalesInvoiceInput
   items?: Prisma.SalesInvoiceItemUncheckedCreateNestedManyWithoutSalesInvoiceInput
   payments?: Prisma.SalesPaymentUncheckedCreateNestedManyWithoutSalesInvoiceInput
 }
@@ -1332,8 +1462,9 @@ export type SalesInvoiceUpdateManyWithWhereWithoutCustomerInput = {
   data: Prisma.XOR<Prisma.SalesInvoiceUpdateManyMutationInput, Prisma.SalesInvoiceUncheckedUpdateManyWithoutCustomerInput>
 }
 
-export type SalesInvoiceCreateWithoutItemsInput = {
+export type SalesInvoiceCreateWithoutReceivedPurchaseBillInput = {
   id?: string
+  buyerGstin?: string | null
   invoiceNumber: string
   invoiceDate: Date | string
   dueDate?: Date | string | null
@@ -1353,11 +1484,162 @@ export type SalesInvoiceCreateWithoutItemsInput = {
   ecomGstin?: string | null
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   creditDebitNotes?: Prisma.CreditDebitNoteCreateNestedManyWithoutOriginalInvoiceInput
   business: Prisma.BusinessCreateNestedOneWithoutSalesInvoicesInput
   customer: Prisma.CustomerCreateNestedOneWithoutSalesInvoicesInput
+  items?: Prisma.SalesInvoiceItemCreateNestedManyWithoutSalesInvoiceInput
+  payments?: Prisma.SalesPaymentCreateNestedManyWithoutSalesInvoiceInput
+}
+
+export type SalesInvoiceUncheckedCreateWithoutReceivedPurchaseBillInput = {
+  id?: string
+  businessId: string
+  customerId: string
+  buyerGstin?: string | null
+  invoiceNumber: string
+  invoiceDate: Date | string
+  dueDate?: Date | string | null
+  supplyType?: string
+  placeOfSupply?: string
+  status?: string
+  paymentStatus?: string
+  notes?: string | null
+  subtotal: number
+  totalCgst?: number
+  totalSgst?: number
+  totalIgst?: number
+  totalCess?: number
+  roundOff?: number
+  isReverseCharge?: boolean
+  applicablePercent?: number | null
+  ecomGstin?: string | null
+  totalAmount: number
+  paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  creditDebitNotes?: Prisma.CreditDebitNoteUncheckedCreateNestedManyWithoutOriginalInvoiceInput
+  items?: Prisma.SalesInvoiceItemUncheckedCreateNestedManyWithoutSalesInvoiceInput
+  payments?: Prisma.SalesPaymentUncheckedCreateNestedManyWithoutSalesInvoiceInput
+}
+
+export type SalesInvoiceCreateOrConnectWithoutReceivedPurchaseBillInput = {
+  where: Prisma.SalesInvoiceWhereUniqueInput
+  create: Prisma.XOR<Prisma.SalesInvoiceCreateWithoutReceivedPurchaseBillInput, Prisma.SalesInvoiceUncheckedCreateWithoutReceivedPurchaseBillInput>
+}
+
+export type SalesInvoiceUpsertWithoutReceivedPurchaseBillInput = {
+  update: Prisma.XOR<Prisma.SalesInvoiceUpdateWithoutReceivedPurchaseBillInput, Prisma.SalesInvoiceUncheckedUpdateWithoutReceivedPurchaseBillInput>
+  create: Prisma.XOR<Prisma.SalesInvoiceCreateWithoutReceivedPurchaseBillInput, Prisma.SalesInvoiceUncheckedCreateWithoutReceivedPurchaseBillInput>
+  where?: Prisma.SalesInvoiceWhereInput
+}
+
+export type SalesInvoiceUpdateToOneWithWhereWithoutReceivedPurchaseBillInput = {
+  where?: Prisma.SalesInvoiceWhereInput
+  data: Prisma.XOR<Prisma.SalesInvoiceUpdateWithoutReceivedPurchaseBillInput, Prisma.SalesInvoiceUncheckedUpdateWithoutReceivedPurchaseBillInput>
+}
+
+export type SalesInvoiceUpdateWithoutReceivedPurchaseBillInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  buyerGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
+  invoiceDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  supplyType?: Prisma.StringFieldUpdateOperationsInput | string
+  placeOfSupply?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  paymentStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
+  totalCgst?: Prisma.FloatFieldUpdateOperationsInput | number
+  totalSgst?: Prisma.FloatFieldUpdateOperationsInput | number
+  totalIgst?: Prisma.FloatFieldUpdateOperationsInput | number
+  totalCess?: Prisma.FloatFieldUpdateOperationsInput | number
+  roundOff?: Prisma.FloatFieldUpdateOperationsInput | number
+  isReverseCharge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  applicablePercent?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  ecomGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  creditDebitNotes?: Prisma.CreditDebitNoteUpdateManyWithoutOriginalInvoiceNestedInput
+  business?: Prisma.BusinessUpdateOneRequiredWithoutSalesInvoicesNestedInput
+  customer?: Prisma.CustomerUpdateOneRequiredWithoutSalesInvoicesNestedInput
+  items?: Prisma.SalesInvoiceItemUpdateManyWithoutSalesInvoiceNestedInput
+  payments?: Prisma.SalesPaymentUpdateManyWithoutSalesInvoiceNestedInput
+}
+
+export type SalesInvoiceUncheckedUpdateWithoutReceivedPurchaseBillInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  businessId?: Prisma.StringFieldUpdateOperationsInput | string
+  customerId?: Prisma.StringFieldUpdateOperationsInput | string
+  buyerGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
+  invoiceDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  supplyType?: Prisma.StringFieldUpdateOperationsInput | string
+  placeOfSupply?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  paymentStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
+  totalCgst?: Prisma.FloatFieldUpdateOperationsInput | number
+  totalSgst?: Prisma.FloatFieldUpdateOperationsInput | number
+  totalIgst?: Prisma.FloatFieldUpdateOperationsInput | number
+  totalCess?: Prisma.FloatFieldUpdateOperationsInput | number
+  roundOff?: Prisma.FloatFieldUpdateOperationsInput | number
+  isReverseCharge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  applicablePercent?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  ecomGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  creditDebitNotes?: Prisma.CreditDebitNoteUncheckedUpdateManyWithoutOriginalInvoiceNestedInput
+  items?: Prisma.SalesInvoiceItemUncheckedUpdateManyWithoutSalesInvoiceNestedInput
+  payments?: Prisma.SalesPaymentUncheckedUpdateManyWithoutSalesInvoiceNestedInput
+}
+
+export type SalesInvoiceCreateWithoutItemsInput = {
+  id?: string
+  buyerGstin?: string | null
+  invoiceNumber: string
+  invoiceDate: Date | string
+  dueDate?: Date | string | null
+  supplyType?: string
+  placeOfSupply?: string
+  status?: string
+  paymentStatus?: string
+  notes?: string | null
+  subtotal: number
+  totalCgst?: number
+  totalSgst?: number
+  totalIgst?: number
+  totalCess?: number
+  roundOff?: number
+  isReverseCharge?: boolean
+  applicablePercent?: number | null
+  ecomGstin?: string | null
+  totalAmount: number
+  paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  creditDebitNotes?: Prisma.CreditDebitNoteCreateNestedManyWithoutOriginalInvoiceInput
+  business: Prisma.BusinessCreateNestedOneWithoutSalesInvoicesInput
+  customer: Prisma.CustomerCreateNestedOneWithoutSalesInvoicesInput
+  receivedPurchaseBill?: Prisma.PurchaseBillCreateNestedOneWithoutSourceSalesInvoiceInput
   payments?: Prisma.SalesPaymentCreateNestedManyWithoutSalesInvoiceInput
 }
 
@@ -1365,6 +1647,7 @@ export type SalesInvoiceUncheckedCreateWithoutItemsInput = {
   id?: string
   businessId: string
   customerId: string
+  buyerGstin?: string | null
   invoiceNumber: string
   invoiceDate: Date | string
   dueDate?: Date | string | null
@@ -1384,9 +1667,12 @@ export type SalesInvoiceUncheckedCreateWithoutItemsInput = {
   ecomGstin?: string | null
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   creditDebitNotes?: Prisma.CreditDebitNoteUncheckedCreateNestedManyWithoutOriginalInvoiceInput
+  receivedPurchaseBill?: Prisma.PurchaseBillUncheckedCreateNestedOneWithoutSourceSalesInvoiceInput
   payments?: Prisma.SalesPaymentUncheckedCreateNestedManyWithoutSalesInvoiceInput
 }
 
@@ -1408,6 +1694,7 @@ export type SalesInvoiceUpdateToOneWithWhereWithoutItemsInput = {
 
 export type SalesInvoiceUpdateWithoutItemsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  buyerGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
   invoiceDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1427,11 +1714,14 @@ export type SalesInvoiceUpdateWithoutItemsInput = {
   ecomGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   creditDebitNotes?: Prisma.CreditDebitNoteUpdateManyWithoutOriginalInvoiceNestedInput
   business?: Prisma.BusinessUpdateOneRequiredWithoutSalesInvoicesNestedInput
   customer?: Prisma.CustomerUpdateOneRequiredWithoutSalesInvoicesNestedInput
+  receivedPurchaseBill?: Prisma.PurchaseBillUpdateOneWithoutSourceSalesInvoiceNestedInput
   payments?: Prisma.SalesPaymentUpdateManyWithoutSalesInvoiceNestedInput
 }
 
@@ -1439,6 +1729,7 @@ export type SalesInvoiceUncheckedUpdateWithoutItemsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   businessId?: Prisma.StringFieldUpdateOperationsInput | string
   customerId?: Prisma.StringFieldUpdateOperationsInput | string
+  buyerGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
   invoiceDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1458,14 +1749,18 @@ export type SalesInvoiceUncheckedUpdateWithoutItemsInput = {
   ecomGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   creditDebitNotes?: Prisma.CreditDebitNoteUncheckedUpdateManyWithoutOriginalInvoiceNestedInput
+  receivedPurchaseBill?: Prisma.PurchaseBillUncheckedUpdateOneWithoutSourceSalesInvoiceNestedInput
   payments?: Prisma.SalesPaymentUncheckedUpdateManyWithoutSalesInvoiceNestedInput
 }
 
 export type SalesInvoiceCreateWithoutPaymentsInput = {
   id?: string
+  buyerGstin?: string | null
   invoiceNumber: string
   invoiceDate: Date | string
   dueDate?: Date | string | null
@@ -1485,11 +1780,14 @@ export type SalesInvoiceCreateWithoutPaymentsInput = {
   ecomGstin?: string | null
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   creditDebitNotes?: Prisma.CreditDebitNoteCreateNestedManyWithoutOriginalInvoiceInput
   business: Prisma.BusinessCreateNestedOneWithoutSalesInvoicesInput
   customer: Prisma.CustomerCreateNestedOneWithoutSalesInvoicesInput
+  receivedPurchaseBill?: Prisma.PurchaseBillCreateNestedOneWithoutSourceSalesInvoiceInput
   items?: Prisma.SalesInvoiceItemCreateNestedManyWithoutSalesInvoiceInput
 }
 
@@ -1497,6 +1795,7 @@ export type SalesInvoiceUncheckedCreateWithoutPaymentsInput = {
   id?: string
   businessId: string
   customerId: string
+  buyerGstin?: string | null
   invoiceNumber: string
   invoiceDate: Date | string
   dueDate?: Date | string | null
@@ -1516,9 +1815,12 @@ export type SalesInvoiceUncheckedCreateWithoutPaymentsInput = {
   ecomGstin?: string | null
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   creditDebitNotes?: Prisma.CreditDebitNoteUncheckedCreateNestedManyWithoutOriginalInvoiceInput
+  receivedPurchaseBill?: Prisma.PurchaseBillUncheckedCreateNestedOneWithoutSourceSalesInvoiceInput
   items?: Prisma.SalesInvoiceItemUncheckedCreateNestedManyWithoutSalesInvoiceInput
 }
 
@@ -1540,6 +1842,7 @@ export type SalesInvoiceUpdateToOneWithWhereWithoutPaymentsInput = {
 
 export type SalesInvoiceUpdateWithoutPaymentsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  buyerGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
   invoiceDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1559,11 +1862,14 @@ export type SalesInvoiceUpdateWithoutPaymentsInput = {
   ecomGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   creditDebitNotes?: Prisma.CreditDebitNoteUpdateManyWithoutOriginalInvoiceNestedInput
   business?: Prisma.BusinessUpdateOneRequiredWithoutSalesInvoicesNestedInput
   customer?: Prisma.CustomerUpdateOneRequiredWithoutSalesInvoicesNestedInput
+  receivedPurchaseBill?: Prisma.PurchaseBillUpdateOneWithoutSourceSalesInvoiceNestedInput
   items?: Prisma.SalesInvoiceItemUpdateManyWithoutSalesInvoiceNestedInput
 }
 
@@ -1571,6 +1877,7 @@ export type SalesInvoiceUncheckedUpdateWithoutPaymentsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   businessId?: Prisma.StringFieldUpdateOperationsInput | string
   customerId?: Prisma.StringFieldUpdateOperationsInput | string
+  buyerGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
   invoiceDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1590,15 +1897,19 @@ export type SalesInvoiceUncheckedUpdateWithoutPaymentsInput = {
   ecomGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   creditDebitNotes?: Prisma.CreditDebitNoteUncheckedUpdateManyWithoutOriginalInvoiceNestedInput
+  receivedPurchaseBill?: Prisma.PurchaseBillUncheckedUpdateOneWithoutSourceSalesInvoiceNestedInput
   items?: Prisma.SalesInvoiceItemUncheckedUpdateManyWithoutSalesInvoiceNestedInput
 }
 
 export type SalesInvoiceCreateManyBusinessInput = {
   id?: string
   customerId: string
+  buyerGstin?: string | null
   invoiceNumber: string
   invoiceDate: Date | string
   dueDate?: Date | string | null
@@ -1618,12 +1929,15 @@ export type SalesInvoiceCreateManyBusinessInput = {
   ecomGstin?: string | null
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
 
 export type SalesInvoiceUpdateWithoutBusinessInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  buyerGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
   invoiceDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1643,10 +1957,13 @@ export type SalesInvoiceUpdateWithoutBusinessInput = {
   ecomGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   creditDebitNotes?: Prisma.CreditDebitNoteUpdateManyWithoutOriginalInvoiceNestedInput
   customer?: Prisma.CustomerUpdateOneRequiredWithoutSalesInvoicesNestedInput
+  receivedPurchaseBill?: Prisma.PurchaseBillUpdateOneWithoutSourceSalesInvoiceNestedInput
   items?: Prisma.SalesInvoiceItemUpdateManyWithoutSalesInvoiceNestedInput
   payments?: Prisma.SalesPaymentUpdateManyWithoutSalesInvoiceNestedInput
 }
@@ -1654,6 +1971,7 @@ export type SalesInvoiceUpdateWithoutBusinessInput = {
 export type SalesInvoiceUncheckedUpdateWithoutBusinessInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   customerId?: Prisma.StringFieldUpdateOperationsInput | string
+  buyerGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
   invoiceDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1673,9 +1991,12 @@ export type SalesInvoiceUncheckedUpdateWithoutBusinessInput = {
   ecomGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   creditDebitNotes?: Prisma.CreditDebitNoteUncheckedUpdateManyWithoutOriginalInvoiceNestedInput
+  receivedPurchaseBill?: Prisma.PurchaseBillUncheckedUpdateOneWithoutSourceSalesInvoiceNestedInput
   items?: Prisma.SalesInvoiceItemUncheckedUpdateManyWithoutSalesInvoiceNestedInput
   payments?: Prisma.SalesPaymentUncheckedUpdateManyWithoutSalesInvoiceNestedInput
 }
@@ -1683,6 +2004,7 @@ export type SalesInvoiceUncheckedUpdateWithoutBusinessInput = {
 export type SalesInvoiceUncheckedUpdateManyWithoutBusinessInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   customerId?: Prisma.StringFieldUpdateOperationsInput | string
+  buyerGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
   invoiceDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1702,6 +2024,8 @@ export type SalesInvoiceUncheckedUpdateManyWithoutBusinessInput = {
   ecomGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1709,6 +2033,7 @@ export type SalesInvoiceUncheckedUpdateManyWithoutBusinessInput = {
 export type SalesInvoiceCreateManyCustomerInput = {
   id?: string
   businessId: string
+  buyerGstin?: string | null
   invoiceNumber: string
   invoiceDate: Date | string
   dueDate?: Date | string | null
@@ -1728,12 +2053,15 @@ export type SalesInvoiceCreateManyCustomerInput = {
   ecomGstin?: string | null
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
 
 export type SalesInvoiceUpdateWithoutCustomerInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  buyerGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
   invoiceDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1753,10 +2081,13 @@ export type SalesInvoiceUpdateWithoutCustomerInput = {
   ecomGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   creditDebitNotes?: Prisma.CreditDebitNoteUpdateManyWithoutOriginalInvoiceNestedInput
   business?: Prisma.BusinessUpdateOneRequiredWithoutSalesInvoicesNestedInput
+  receivedPurchaseBill?: Prisma.PurchaseBillUpdateOneWithoutSourceSalesInvoiceNestedInput
   items?: Prisma.SalesInvoiceItemUpdateManyWithoutSalesInvoiceNestedInput
   payments?: Prisma.SalesPaymentUpdateManyWithoutSalesInvoiceNestedInput
 }
@@ -1764,6 +2095,7 @@ export type SalesInvoiceUpdateWithoutCustomerInput = {
 export type SalesInvoiceUncheckedUpdateWithoutCustomerInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   businessId?: Prisma.StringFieldUpdateOperationsInput | string
+  buyerGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
   invoiceDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1783,9 +2115,12 @@ export type SalesInvoiceUncheckedUpdateWithoutCustomerInput = {
   ecomGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   creditDebitNotes?: Prisma.CreditDebitNoteUncheckedUpdateManyWithoutOriginalInvoiceNestedInput
+  receivedPurchaseBill?: Prisma.PurchaseBillUncheckedUpdateOneWithoutSourceSalesInvoiceNestedInput
   items?: Prisma.SalesInvoiceItemUncheckedUpdateManyWithoutSalesInvoiceNestedInput
   payments?: Prisma.SalesPaymentUncheckedUpdateManyWithoutSalesInvoiceNestedInput
 }
@@ -1793,6 +2128,7 @@ export type SalesInvoiceUncheckedUpdateWithoutCustomerInput = {
 export type SalesInvoiceUncheckedUpdateManyWithoutCustomerInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   businessId?: Prisma.StringFieldUpdateOperationsInput | string
+  buyerGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
   invoiceDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1812,6 +2148,8 @@ export type SalesInvoiceUncheckedUpdateManyWithoutCustomerInput = {
   ecomGstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1869,6 +2207,7 @@ export type SalesInvoiceSelect<ExtArgs extends runtime.Types.Extensions.Internal
   id?: boolean
   businessId?: boolean
   customerId?: boolean
+  buyerGstin?: boolean
   invoiceNumber?: boolean
   invoiceDate?: boolean
   dueDate?: boolean
@@ -1888,11 +2227,14 @@ export type SalesInvoiceSelect<ExtArgs extends runtime.Types.Extensions.Internal
   ecomGstin?: boolean
   totalAmount?: boolean
   paidAmount?: boolean
+  lastReminderSentAt?: boolean
+  reminderCount?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   creditDebitNotes?: boolean | Prisma.SalesInvoice$creditDebitNotesArgs<ExtArgs>
   business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
   customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
+  receivedPurchaseBill?: boolean | Prisma.SalesInvoice$receivedPurchaseBillArgs<ExtArgs>
   items?: boolean | Prisma.SalesInvoice$itemsArgs<ExtArgs>
   payments?: boolean | Prisma.SalesInvoice$paymentsArgs<ExtArgs>
   _count?: boolean | Prisma.SalesInvoiceCountOutputTypeDefaultArgs<ExtArgs>
@@ -1902,6 +2244,7 @@ export type SalesInvoiceSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   id?: boolean
   businessId?: boolean
   customerId?: boolean
+  buyerGstin?: boolean
   invoiceNumber?: boolean
   invoiceDate?: boolean
   dueDate?: boolean
@@ -1921,6 +2264,8 @@ export type SalesInvoiceSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   ecomGstin?: boolean
   totalAmount?: boolean
   paidAmount?: boolean
+  lastReminderSentAt?: boolean
+  reminderCount?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
@@ -1931,6 +2276,7 @@ export type SalesInvoiceSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   id?: boolean
   businessId?: boolean
   customerId?: boolean
+  buyerGstin?: boolean
   invoiceNumber?: boolean
   invoiceDate?: boolean
   dueDate?: boolean
@@ -1950,6 +2296,8 @@ export type SalesInvoiceSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   ecomGstin?: boolean
   totalAmount?: boolean
   paidAmount?: boolean
+  lastReminderSentAt?: boolean
+  reminderCount?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
@@ -1960,6 +2308,7 @@ export type SalesInvoiceSelectScalar = {
   id?: boolean
   businessId?: boolean
   customerId?: boolean
+  buyerGstin?: boolean
   invoiceNumber?: boolean
   invoiceDate?: boolean
   dueDate?: boolean
@@ -1979,15 +2328,18 @@ export type SalesInvoiceSelectScalar = {
   ecomGstin?: boolean
   totalAmount?: boolean
   paidAmount?: boolean
+  lastReminderSentAt?: boolean
+  reminderCount?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type SalesInvoiceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "businessId" | "customerId" | "invoiceNumber" | "invoiceDate" | "dueDate" | "supplyType" | "placeOfSupply" | "status" | "paymentStatus" | "notes" | "subtotal" | "totalCgst" | "totalSgst" | "totalIgst" | "totalCess" | "roundOff" | "isReverseCharge" | "applicablePercent" | "ecomGstin" | "totalAmount" | "paidAmount" | "createdAt" | "updatedAt", ExtArgs["result"]["salesInvoice"]>
+export type SalesInvoiceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "businessId" | "customerId" | "buyerGstin" | "invoiceNumber" | "invoiceDate" | "dueDate" | "supplyType" | "placeOfSupply" | "status" | "paymentStatus" | "notes" | "subtotal" | "totalCgst" | "totalSgst" | "totalIgst" | "totalCess" | "roundOff" | "isReverseCharge" | "applicablePercent" | "ecomGstin" | "totalAmount" | "paidAmount" | "lastReminderSentAt" | "reminderCount" | "createdAt" | "updatedAt", ExtArgs["result"]["salesInvoice"]>
 export type SalesInvoiceInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   creditDebitNotes?: boolean | Prisma.SalesInvoice$creditDebitNotesArgs<ExtArgs>
   business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
   customer?: boolean | Prisma.CustomerDefaultArgs<ExtArgs>
+  receivedPurchaseBill?: boolean | Prisma.SalesInvoice$receivedPurchaseBillArgs<ExtArgs>
   items?: boolean | Prisma.SalesInvoice$itemsArgs<ExtArgs>
   payments?: boolean | Prisma.SalesInvoice$paymentsArgs<ExtArgs>
   _count?: boolean | Prisma.SalesInvoiceCountOutputTypeDefaultArgs<ExtArgs>
@@ -2007,6 +2359,7 @@ export type $SalesInvoicePayload<ExtArgs extends runtime.Types.Extensions.Intern
     creditDebitNotes: Prisma.$CreditDebitNotePayload<ExtArgs>[]
     business: Prisma.$BusinessPayload<ExtArgs>
     customer: Prisma.$CustomerPayload<ExtArgs>
+    receivedPurchaseBill: Prisma.$PurchaseBillPayload<ExtArgs> | null
     items: Prisma.$SalesInvoiceItemPayload<ExtArgs>[]
     payments: Prisma.$SalesPaymentPayload<ExtArgs>[]
   }
@@ -2014,6 +2367,7 @@ export type $SalesInvoicePayload<ExtArgs extends runtime.Types.Extensions.Intern
     id: string
     businessId: string
     customerId: string
+    buyerGstin: string | null
     invoiceNumber: string
     invoiceDate: Date
     dueDate: Date | null
@@ -2033,6 +2387,8 @@ export type $SalesInvoicePayload<ExtArgs extends runtime.Types.Extensions.Intern
     ecomGstin: string | null
     totalAmount: number
     paidAmount: number
+    lastReminderSentAt: Date | null
+    reminderCount: number
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["salesInvoice"]>
@@ -2432,6 +2788,7 @@ export interface Prisma__SalesInvoiceClient<T, Null = never, ExtArgs extends run
   creditDebitNotes<T extends Prisma.SalesInvoice$creditDebitNotesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SalesInvoice$creditDebitNotesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CreditDebitNotePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   business<T extends Prisma.BusinessDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.BusinessDefaultArgs<ExtArgs>>): Prisma.Prisma__BusinessClient<runtime.Types.Result.GetResult<Prisma.$BusinessPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   customer<T extends Prisma.CustomerDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CustomerDefaultArgs<ExtArgs>>): Prisma.Prisma__CustomerClient<runtime.Types.Result.GetResult<Prisma.$CustomerPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  receivedPurchaseBill<T extends Prisma.SalesInvoice$receivedPurchaseBillArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SalesInvoice$receivedPurchaseBillArgs<ExtArgs>>): Prisma.Prisma__PurchaseBillClient<runtime.Types.Result.GetResult<Prisma.$PurchaseBillPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   items<T extends Prisma.SalesInvoice$itemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SalesInvoice$itemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SalesInvoiceItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   payments<T extends Prisma.SalesInvoice$paymentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SalesInvoice$paymentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SalesPaymentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
@@ -2466,6 +2823,7 @@ export interface SalesInvoiceFieldRefs {
   readonly id: Prisma.FieldRef<"SalesInvoice", 'String'>
   readonly businessId: Prisma.FieldRef<"SalesInvoice", 'String'>
   readonly customerId: Prisma.FieldRef<"SalesInvoice", 'String'>
+  readonly buyerGstin: Prisma.FieldRef<"SalesInvoice", 'String'>
   readonly invoiceNumber: Prisma.FieldRef<"SalesInvoice", 'String'>
   readonly invoiceDate: Prisma.FieldRef<"SalesInvoice", 'DateTime'>
   readonly dueDate: Prisma.FieldRef<"SalesInvoice", 'DateTime'>
@@ -2485,6 +2843,8 @@ export interface SalesInvoiceFieldRefs {
   readonly ecomGstin: Prisma.FieldRef<"SalesInvoice", 'String'>
   readonly totalAmount: Prisma.FieldRef<"SalesInvoice", 'Float'>
   readonly paidAmount: Prisma.FieldRef<"SalesInvoice", 'Float'>
+  readonly lastReminderSentAt: Prisma.FieldRef<"SalesInvoice", 'DateTime'>
+  readonly reminderCount: Prisma.FieldRef<"SalesInvoice", 'Int'>
   readonly createdAt: Prisma.FieldRef<"SalesInvoice", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"SalesInvoice", 'DateTime'>
 }
@@ -2909,6 +3269,25 @@ export type SalesInvoice$creditDebitNotesArgs<ExtArgs extends runtime.Types.Exte
   take?: number
   skip?: number
   distinct?: Prisma.CreditDebitNoteScalarFieldEnum | Prisma.CreditDebitNoteScalarFieldEnum[]
+}
+
+/**
+ * SalesInvoice.receivedPurchaseBill
+ */
+export type SalesInvoice$receivedPurchaseBillArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the PurchaseBill
+   */
+  select?: Prisma.PurchaseBillSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the PurchaseBill
+   */
+  omit?: Prisma.PurchaseBillOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PurchaseBillInclude<ExtArgs> | null
+  where?: Prisma.PurchaseBillWhereInput
 }
 
 /**

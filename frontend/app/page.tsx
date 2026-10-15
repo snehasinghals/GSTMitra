@@ -134,11 +134,11 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center gap-2 self-start sm:self-auto">
             <Link
-              href="/sales?addInvoice=1"
+              href="/new-bill/create"
               className="bg-white text-emerald-800 hover:bg-emerald-50 font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs transition-all flex items-center gap-1.5"
             >
               <PlusCircle className="w-4 h-4" />
-              <span>New Bill</span>
+              <span>New Invoice</span>
             </Link>
             <button
               onClick={() => setShowJustOnboarded(false)}

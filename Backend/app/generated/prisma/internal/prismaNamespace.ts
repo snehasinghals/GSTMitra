@@ -415,7 +415,8 @@ export const ModelName = {
   OtpCode: 'OtpCode',
   ResetToken: 'ResetToken',
   Vendor: 'Vendor',
-  SalesPayment: 'SalesPayment'
+  SalesPayment: 'SalesPayment',
+  HsnCode: 'HsnCode'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -431,7 +432,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "business" | "gstr3bAdjustment" | "businessUser" | "creditDebitNote" | "customer" | "gstRule" | "gstRuleAudit" | "item" | "purchaseBill" | "purchasePayment" | "purchaseBillItem" | "returnFilingHistory" | "salesInvoice" | "salesInvoiceItem" | "user" | "otpCode" | "resetToken" | "vendor" | "salesPayment"
+    modelProps: "business" | "gstr3bAdjustment" | "businessUser" | "creditDebitNote" | "customer" | "gstRule" | "gstRuleAudit" | "item" | "purchaseBill" | "purchasePayment" | "purchaseBillItem" | "returnFilingHistory" | "salesInvoice" | "salesInvoiceItem" | "user" | "otpCode" | "resetToken" | "vendor" | "salesPayment" | "hsnCode"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1841,6 +1842,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    HsnCode: {
+      payload: Prisma.$HsnCodePayload<ExtArgs>
+      fields: Prisma.HsnCodeFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.HsnCodeFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$HsnCodePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.HsnCodeFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$HsnCodePayload>
+        }
+        findFirst: {
+          args: Prisma.HsnCodeFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$HsnCodePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.HsnCodeFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$HsnCodePayload>
+        }
+        findMany: {
+          args: Prisma.HsnCodeFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$HsnCodePayload>[]
+        }
+        create: {
+          args: Prisma.HsnCodeCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$HsnCodePayload>
+        }
+        createMany: {
+          args: Prisma.HsnCodeCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.HsnCodeCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$HsnCodePayload>[]
+        }
+        delete: {
+          args: Prisma.HsnCodeDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$HsnCodePayload>
+        }
+        update: {
+          args: Prisma.HsnCodeUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$HsnCodePayload>
+        }
+        deleteMany: {
+          args: Prisma.HsnCodeDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.HsnCodeUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.HsnCodeUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$HsnCodePayload>[]
+        }
+        upsert: {
+          args: Prisma.HsnCodeUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$HsnCodePayload>
+        }
+        aggregate: {
+          args: Prisma.HsnCodeAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateHsnCode>
+        }
+        groupBy: {
+          args: Prisma.HsnCodeGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.HsnCodeGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.HsnCodeCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.HsnCodeCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -1887,6 +1962,7 @@ export const BusinessScalarFieldEnum = {
   stateCode: 'stateCode',
   createdAt: 'createdAt',
   address: 'address',
+  upiId: 'upiId',
   bankAccount: 'bankAccount',
   bankBranch: 'bankBranch',
   bankIfsc: 'bankIfsc',
@@ -1959,6 +2035,7 @@ export const CustomerScalarFieldEnum = {
   id: 'id',
   businessId: 'businessId',
   name: 'name',
+  mitraId: 'mitraId',
   tradeName: 'tradeName',
   gstin: 'gstin',
   stateCode: 'stateCode',
@@ -2030,6 +2107,7 @@ export const PurchaseBillScalarFieldEnum = {
   id: 'id',
   businessId: 'businessId',
   vendorId: 'vendorId',
+  sourceSalesInvoiceId: 'sourceSalesInvoiceId',
   billNumber: 'billNumber',
   billDate: 'billDate',
   receivedDate: 'receivedDate',
@@ -2041,6 +2119,7 @@ export const PurchaseBillScalarFieldEnum = {
   isItcEligible: 'isItcEligible',
   itcIneligibilityReason: 'itcIneligibilityReason',
   status: 'status',
+  receiptStatus: 'receiptStatus',
   subtotal: 'subtotal',
   totalCgst: 'totalCgst',
   totalSgst: 'totalSgst',
@@ -2048,6 +2127,8 @@ export const PurchaseBillScalarFieldEnum = {
   totalCess: 'totalCess',
   totalAmount: 'totalAmount',
   paidAmount: 'paidAmount',
+  lastReminderSentAt: 'lastReminderSentAt',
+  reminderCount: 'reminderCount',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -2113,6 +2194,7 @@ export const SalesInvoiceScalarFieldEnum = {
   id: 'id',
   businessId: 'businessId',
   customerId: 'customerId',
+  buyerGstin: 'buyerGstin',
   invoiceNumber: 'invoiceNumber',
   invoiceDate: 'invoiceDate',
   dueDate: 'dueDate',
@@ -2132,6 +2214,8 @@ export const SalesInvoiceScalarFieldEnum = {
   ecomGstin: 'ecomGstin',
   totalAmount: 'totalAmount',
   paidAmount: 'paidAmount',
+  lastReminderSentAt: 'lastReminderSentAt',
+  reminderCount: 'reminderCount',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -2239,6 +2323,18 @@ export const SalesPaymentScalarFieldEnum = {
 } as const
 
 export type SalesPaymentScalarFieldEnum = (typeof SalesPaymentScalarFieldEnum)[keyof typeof SalesPaymentScalarFieldEnum]
+
+
+export const HsnCodeScalarFieldEnum = {
+  id: 'id',
+  code: 'code',
+  description: 'description',
+  keywords: 'keywords',
+  digits: 'digits',
+  type: 'type'
+} as const
+
+export type HsnCodeScalarFieldEnum = (typeof HsnCodeScalarFieldEnum)[keyof typeof HsnCodeScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -2503,6 +2599,7 @@ export type GlobalOmitConfig = {
   resetToken?: Prisma.ResetTokenOmit
   vendor?: Prisma.VendorOmit
   salesPayment?: Prisma.SalesPaymentOmit
+  hsnCode?: Prisma.HsnCodeOmit
 }
 
 /* Types for Logging */

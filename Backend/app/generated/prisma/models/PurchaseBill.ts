@@ -34,6 +34,7 @@ export type PurchaseBillAvgAggregateOutputType = {
   totalCess: number | null
   totalAmount: number | null
   paidAmount: number | null
+  reminderCount: number | null
 }
 
 export type PurchaseBillSumAggregateOutputType = {
@@ -44,12 +45,14 @@ export type PurchaseBillSumAggregateOutputType = {
   totalCess: number | null
   totalAmount: number | null
   paidAmount: number | null
+  reminderCount: number | null
 }
 
 export type PurchaseBillMinAggregateOutputType = {
   id: string | null
   businessId: string | null
   vendorId: string | null
+  sourceSalesInvoiceId: string | null
   billNumber: string | null
   billDate: Date | null
   receivedDate: Date | null
@@ -61,6 +64,7 @@ export type PurchaseBillMinAggregateOutputType = {
   isItcEligible: boolean | null
   itcIneligibilityReason: string | null
   status: string | null
+  receiptStatus: string | null
   subtotal: number | null
   totalCgst: number | null
   totalSgst: number | null
@@ -68,6 +72,8 @@ export type PurchaseBillMinAggregateOutputType = {
   totalCess: number | null
   totalAmount: number | null
   paidAmount: number | null
+  lastReminderSentAt: Date | null
+  reminderCount: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -76,6 +82,7 @@ export type PurchaseBillMaxAggregateOutputType = {
   id: string | null
   businessId: string | null
   vendorId: string | null
+  sourceSalesInvoiceId: string | null
   billNumber: string | null
   billDate: Date | null
   receivedDate: Date | null
@@ -87,6 +94,7 @@ export type PurchaseBillMaxAggregateOutputType = {
   isItcEligible: boolean | null
   itcIneligibilityReason: string | null
   status: string | null
+  receiptStatus: string | null
   subtotal: number | null
   totalCgst: number | null
   totalSgst: number | null
@@ -94,6 +102,8 @@ export type PurchaseBillMaxAggregateOutputType = {
   totalCess: number | null
   totalAmount: number | null
   paidAmount: number | null
+  lastReminderSentAt: Date | null
+  reminderCount: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -102,6 +112,7 @@ export type PurchaseBillCountAggregateOutputType = {
   id: number
   businessId: number
   vendorId: number
+  sourceSalesInvoiceId: number
   billNumber: number
   billDate: number
   receivedDate: number
@@ -113,6 +124,7 @@ export type PurchaseBillCountAggregateOutputType = {
   isItcEligible: number
   itcIneligibilityReason: number
   status: number
+  receiptStatus: number
   subtotal: number
   totalCgst: number
   totalSgst: number
@@ -120,6 +132,8 @@ export type PurchaseBillCountAggregateOutputType = {
   totalCess: number
   totalAmount: number
   paidAmount: number
+  lastReminderSentAt: number
+  reminderCount: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -134,6 +148,7 @@ export type PurchaseBillAvgAggregateInputType = {
   totalCess?: true
   totalAmount?: true
   paidAmount?: true
+  reminderCount?: true
 }
 
 export type PurchaseBillSumAggregateInputType = {
@@ -144,12 +159,14 @@ export type PurchaseBillSumAggregateInputType = {
   totalCess?: true
   totalAmount?: true
   paidAmount?: true
+  reminderCount?: true
 }
 
 export type PurchaseBillMinAggregateInputType = {
   id?: true
   businessId?: true
   vendorId?: true
+  sourceSalesInvoiceId?: true
   billNumber?: true
   billDate?: true
   receivedDate?: true
@@ -161,6 +178,7 @@ export type PurchaseBillMinAggregateInputType = {
   isItcEligible?: true
   itcIneligibilityReason?: true
   status?: true
+  receiptStatus?: true
   subtotal?: true
   totalCgst?: true
   totalSgst?: true
@@ -168,6 +186,8 @@ export type PurchaseBillMinAggregateInputType = {
   totalCess?: true
   totalAmount?: true
   paidAmount?: true
+  lastReminderSentAt?: true
+  reminderCount?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -176,6 +196,7 @@ export type PurchaseBillMaxAggregateInputType = {
   id?: true
   businessId?: true
   vendorId?: true
+  sourceSalesInvoiceId?: true
   billNumber?: true
   billDate?: true
   receivedDate?: true
@@ -187,6 +208,7 @@ export type PurchaseBillMaxAggregateInputType = {
   isItcEligible?: true
   itcIneligibilityReason?: true
   status?: true
+  receiptStatus?: true
   subtotal?: true
   totalCgst?: true
   totalSgst?: true
@@ -194,6 +216,8 @@ export type PurchaseBillMaxAggregateInputType = {
   totalCess?: true
   totalAmount?: true
   paidAmount?: true
+  lastReminderSentAt?: true
+  reminderCount?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -202,6 +226,7 @@ export type PurchaseBillCountAggregateInputType = {
   id?: true
   businessId?: true
   vendorId?: true
+  sourceSalesInvoiceId?: true
   billNumber?: true
   billDate?: true
   receivedDate?: true
@@ -213,6 +238,7 @@ export type PurchaseBillCountAggregateInputType = {
   isItcEligible?: true
   itcIneligibilityReason?: true
   status?: true
+  receiptStatus?: true
   subtotal?: true
   totalCgst?: true
   totalSgst?: true
@@ -220,6 +246,8 @@ export type PurchaseBillCountAggregateInputType = {
   totalCess?: true
   totalAmount?: true
   paidAmount?: true
+  lastReminderSentAt?: true
+  reminderCount?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -315,6 +343,7 @@ export type PurchaseBillGroupByOutputType = {
   id: string
   businessId: string
   vendorId: string
+  sourceSalesInvoiceId: string | null
   billNumber: string
   billDate: Date
   receivedDate: Date | null
@@ -326,6 +355,7 @@ export type PurchaseBillGroupByOutputType = {
   isItcEligible: boolean
   itcIneligibilityReason: string | null
   status: string
+  receiptStatus: string
   subtotal: number
   totalCgst: number
   totalSgst: number
@@ -333,6 +363,8 @@ export type PurchaseBillGroupByOutputType = {
   totalCess: number
   totalAmount: number
   paidAmount: number
+  lastReminderSentAt: Date | null
+  reminderCount: number
   createdAt: Date
   updatedAt: Date
   _count: PurchaseBillCountAggregateOutputType | null
@@ -364,6 +396,7 @@ export type PurchaseBillWhereInput = {
   id?: Prisma.StringFilter<"PurchaseBill"> | string
   businessId?: Prisma.StringFilter<"PurchaseBill"> | string
   vendorId?: Prisma.StringFilter<"PurchaseBill"> | string
+  sourceSalesInvoiceId?: Prisma.StringNullableFilter<"PurchaseBill"> | string | null
   billNumber?: Prisma.StringFilter<"PurchaseBill"> | string
   billDate?: Prisma.DateTimeFilter<"PurchaseBill"> | Date | string
   receivedDate?: Prisma.DateTimeNullableFilter<"PurchaseBill"> | Date | string | null
@@ -375,6 +408,7 @@ export type PurchaseBillWhereInput = {
   isItcEligible?: Prisma.BoolFilter<"PurchaseBill"> | boolean
   itcIneligibilityReason?: Prisma.StringNullableFilter<"PurchaseBill"> | string | null
   status?: Prisma.StringFilter<"PurchaseBill"> | string
+  receiptStatus?: Prisma.StringFilter<"PurchaseBill"> | string
   subtotal?: Prisma.FloatFilter<"PurchaseBill"> | number
   totalCgst?: Prisma.FloatFilter<"PurchaseBill"> | number
   totalSgst?: Prisma.FloatFilter<"PurchaseBill"> | number
@@ -382,10 +416,13 @@ export type PurchaseBillWhereInput = {
   totalCess?: Prisma.FloatFilter<"PurchaseBill"> | number
   totalAmount?: Prisma.FloatFilter<"PurchaseBill"> | number
   paidAmount?: Prisma.FloatFilter<"PurchaseBill"> | number
+  lastReminderSentAt?: Prisma.DateTimeNullableFilter<"PurchaseBill"> | Date | string | null
+  reminderCount?: Prisma.IntFilter<"PurchaseBill"> | number
   createdAt?: Prisma.DateTimeFilter<"PurchaseBill"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"PurchaseBill"> | Date | string
   business?: Prisma.XOR<Prisma.BusinessScalarRelationFilter, Prisma.BusinessWhereInput>
   vendor?: Prisma.XOR<Prisma.VendorScalarRelationFilter, Prisma.VendorWhereInput>
+  sourceSalesInvoice?: Prisma.XOR<Prisma.SalesInvoiceNullableScalarRelationFilter, Prisma.SalesInvoiceWhereInput> | null
   items?: Prisma.PurchaseBillItemListRelationFilter
   payments?: Prisma.PurchasePaymentListRelationFilter
 }
@@ -394,6 +431,7 @@ export type PurchaseBillOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   businessId?: Prisma.SortOrder
   vendorId?: Prisma.SortOrder
+  sourceSalesInvoiceId?: Prisma.SortOrderInput | Prisma.SortOrder
   billNumber?: Prisma.SortOrder
   billDate?: Prisma.SortOrder
   receivedDate?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -405,6 +443,7 @@ export type PurchaseBillOrderByWithRelationInput = {
   isItcEligible?: Prisma.SortOrder
   itcIneligibilityReason?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
+  receiptStatus?: Prisma.SortOrder
   subtotal?: Prisma.SortOrder
   totalCgst?: Prisma.SortOrder
   totalSgst?: Prisma.SortOrder
@@ -412,16 +451,20 @@ export type PurchaseBillOrderByWithRelationInput = {
   totalCess?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   paidAmount?: Prisma.SortOrder
+  lastReminderSentAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  reminderCount?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   business?: Prisma.BusinessOrderByWithRelationInput
   vendor?: Prisma.VendorOrderByWithRelationInput
+  sourceSalesInvoice?: Prisma.SalesInvoiceOrderByWithRelationInput
   items?: Prisma.PurchaseBillItemOrderByRelationAggregateInput
   payments?: Prisma.PurchasePaymentOrderByRelationAggregateInput
 }
 
 export type PurchaseBillWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  sourceSalesInvoiceId?: string
   businessId_vendorId_billNumber?: Prisma.PurchaseBillBusinessIdVendorIdBillNumberCompoundUniqueInput
   AND?: Prisma.PurchaseBillWhereInput | Prisma.PurchaseBillWhereInput[]
   OR?: Prisma.PurchaseBillWhereInput[]
@@ -439,6 +482,7 @@ export type PurchaseBillWhereUniqueInput = Prisma.AtLeast<{
   isItcEligible?: Prisma.BoolFilter<"PurchaseBill"> | boolean
   itcIneligibilityReason?: Prisma.StringNullableFilter<"PurchaseBill"> | string | null
   status?: Prisma.StringFilter<"PurchaseBill"> | string
+  receiptStatus?: Prisma.StringFilter<"PurchaseBill"> | string
   subtotal?: Prisma.FloatFilter<"PurchaseBill"> | number
   totalCgst?: Prisma.FloatFilter<"PurchaseBill"> | number
   totalSgst?: Prisma.FloatFilter<"PurchaseBill"> | number
@@ -446,18 +490,22 @@ export type PurchaseBillWhereUniqueInput = Prisma.AtLeast<{
   totalCess?: Prisma.FloatFilter<"PurchaseBill"> | number
   totalAmount?: Prisma.FloatFilter<"PurchaseBill"> | number
   paidAmount?: Prisma.FloatFilter<"PurchaseBill"> | number
+  lastReminderSentAt?: Prisma.DateTimeNullableFilter<"PurchaseBill"> | Date | string | null
+  reminderCount?: Prisma.IntFilter<"PurchaseBill"> | number
   createdAt?: Prisma.DateTimeFilter<"PurchaseBill"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"PurchaseBill"> | Date | string
   business?: Prisma.XOR<Prisma.BusinessScalarRelationFilter, Prisma.BusinessWhereInput>
   vendor?: Prisma.XOR<Prisma.VendorScalarRelationFilter, Prisma.VendorWhereInput>
+  sourceSalesInvoice?: Prisma.XOR<Prisma.SalesInvoiceNullableScalarRelationFilter, Prisma.SalesInvoiceWhereInput> | null
   items?: Prisma.PurchaseBillItemListRelationFilter
   payments?: Prisma.PurchasePaymentListRelationFilter
-}, "id" | "businessId_vendorId_billNumber">
+}, "id" | "sourceSalesInvoiceId" | "businessId_vendorId_billNumber">
 
 export type PurchaseBillOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   businessId?: Prisma.SortOrder
   vendorId?: Prisma.SortOrder
+  sourceSalesInvoiceId?: Prisma.SortOrderInput | Prisma.SortOrder
   billNumber?: Prisma.SortOrder
   billDate?: Prisma.SortOrder
   receivedDate?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -469,6 +517,7 @@ export type PurchaseBillOrderByWithAggregationInput = {
   isItcEligible?: Prisma.SortOrder
   itcIneligibilityReason?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
+  receiptStatus?: Prisma.SortOrder
   subtotal?: Prisma.SortOrder
   totalCgst?: Prisma.SortOrder
   totalSgst?: Prisma.SortOrder
@@ -476,6 +525,8 @@ export type PurchaseBillOrderByWithAggregationInput = {
   totalCess?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   paidAmount?: Prisma.SortOrder
+  lastReminderSentAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  reminderCount?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.PurchaseBillCountOrderByAggregateInput
@@ -492,6 +543,7 @@ export type PurchaseBillScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"PurchaseBill"> | string
   businessId?: Prisma.StringWithAggregatesFilter<"PurchaseBill"> | string
   vendorId?: Prisma.StringWithAggregatesFilter<"PurchaseBill"> | string
+  sourceSalesInvoiceId?: Prisma.StringNullableWithAggregatesFilter<"PurchaseBill"> | string | null
   billNumber?: Prisma.StringWithAggregatesFilter<"PurchaseBill"> | string
   billDate?: Prisma.DateTimeWithAggregatesFilter<"PurchaseBill"> | Date | string
   receivedDate?: Prisma.DateTimeNullableWithAggregatesFilter<"PurchaseBill"> | Date | string | null
@@ -503,6 +555,7 @@ export type PurchaseBillScalarWhereWithAggregatesInput = {
   isItcEligible?: Prisma.BoolWithAggregatesFilter<"PurchaseBill"> | boolean
   itcIneligibilityReason?: Prisma.StringNullableWithAggregatesFilter<"PurchaseBill"> | string | null
   status?: Prisma.StringWithAggregatesFilter<"PurchaseBill"> | string
+  receiptStatus?: Prisma.StringWithAggregatesFilter<"PurchaseBill"> | string
   subtotal?: Prisma.FloatWithAggregatesFilter<"PurchaseBill"> | number
   totalCgst?: Prisma.FloatWithAggregatesFilter<"PurchaseBill"> | number
   totalSgst?: Prisma.FloatWithAggregatesFilter<"PurchaseBill"> | number
@@ -510,6 +563,8 @@ export type PurchaseBillScalarWhereWithAggregatesInput = {
   totalCess?: Prisma.FloatWithAggregatesFilter<"PurchaseBill"> | number
   totalAmount?: Prisma.FloatWithAggregatesFilter<"PurchaseBill"> | number
   paidAmount?: Prisma.FloatWithAggregatesFilter<"PurchaseBill"> | number
+  lastReminderSentAt?: Prisma.DateTimeNullableWithAggregatesFilter<"PurchaseBill"> | Date | string | null
+  reminderCount?: Prisma.IntWithAggregatesFilter<"PurchaseBill"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"PurchaseBill"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"PurchaseBill"> | Date | string
 }
@@ -527,6 +582,7 @@ export type PurchaseBillCreateInput = {
   isItcEligible?: boolean
   itcIneligibilityReason?: string | null
   status?: string
+  receiptStatus?: string
   subtotal: number
   totalCgst?: number
   totalSgst?: number
@@ -534,10 +590,13 @@ export type PurchaseBillCreateInput = {
   totalCess?: number
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   business: Prisma.BusinessCreateNestedOneWithoutPurchaseBillsInput
   vendor: Prisma.VendorCreateNestedOneWithoutPurchaseBillsInput
+  sourceSalesInvoice?: Prisma.SalesInvoiceCreateNestedOneWithoutReceivedPurchaseBillInput
   items?: Prisma.PurchaseBillItemCreateNestedManyWithoutPurchaseBillInput
   payments?: Prisma.PurchasePaymentCreateNestedManyWithoutPurchaseBillInput
 }
@@ -546,6 +605,7 @@ export type PurchaseBillUncheckedCreateInput = {
   id?: string
   businessId: string
   vendorId: string
+  sourceSalesInvoiceId?: string | null
   billNumber: string
   billDate: Date | string
   receivedDate?: Date | string | null
@@ -557,6 +617,7 @@ export type PurchaseBillUncheckedCreateInput = {
   isItcEligible?: boolean
   itcIneligibilityReason?: string | null
   status?: string
+  receiptStatus?: string
   subtotal: number
   totalCgst?: number
   totalSgst?: number
@@ -564,6 +625,8 @@ export type PurchaseBillUncheckedCreateInput = {
   totalCess?: number
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   items?: Prisma.PurchaseBillItemUncheckedCreateNestedManyWithoutPurchaseBillInput
@@ -583,6 +646,7 @@ export type PurchaseBillUpdateInput = {
   isItcEligible?: Prisma.BoolFieldUpdateOperationsInput | boolean
   itcIneligibilityReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiptStatus?: Prisma.StringFieldUpdateOperationsInput | string
   subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
   totalCgst?: Prisma.FloatFieldUpdateOperationsInput | number
   totalSgst?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -590,10 +654,13 @@ export type PurchaseBillUpdateInput = {
   totalCess?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   business?: Prisma.BusinessUpdateOneRequiredWithoutPurchaseBillsNestedInput
   vendor?: Prisma.VendorUpdateOneRequiredWithoutPurchaseBillsNestedInput
+  sourceSalesInvoice?: Prisma.SalesInvoiceUpdateOneWithoutReceivedPurchaseBillNestedInput
   items?: Prisma.PurchaseBillItemUpdateManyWithoutPurchaseBillNestedInput
   payments?: Prisma.PurchasePaymentUpdateManyWithoutPurchaseBillNestedInput
 }
@@ -602,6 +669,7 @@ export type PurchaseBillUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   businessId?: Prisma.StringFieldUpdateOperationsInput | string
   vendorId?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceSalesInvoiceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billNumber?: Prisma.StringFieldUpdateOperationsInput | string
   billDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   receivedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -613,6 +681,7 @@ export type PurchaseBillUncheckedUpdateInput = {
   isItcEligible?: Prisma.BoolFieldUpdateOperationsInput | boolean
   itcIneligibilityReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiptStatus?: Prisma.StringFieldUpdateOperationsInput | string
   subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
   totalCgst?: Prisma.FloatFieldUpdateOperationsInput | number
   totalSgst?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -620,6 +689,8 @@ export type PurchaseBillUncheckedUpdateInput = {
   totalCess?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   items?: Prisma.PurchaseBillItemUncheckedUpdateManyWithoutPurchaseBillNestedInput
@@ -630,6 +701,7 @@ export type PurchaseBillCreateManyInput = {
   id?: string
   businessId: string
   vendorId: string
+  sourceSalesInvoiceId?: string | null
   billNumber: string
   billDate: Date | string
   receivedDate?: Date | string | null
@@ -641,6 +713,7 @@ export type PurchaseBillCreateManyInput = {
   isItcEligible?: boolean
   itcIneligibilityReason?: string | null
   status?: string
+  receiptStatus?: string
   subtotal: number
   totalCgst?: number
   totalSgst?: number
@@ -648,6 +721,8 @@ export type PurchaseBillCreateManyInput = {
   totalCess?: number
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -665,6 +740,7 @@ export type PurchaseBillUpdateManyMutationInput = {
   isItcEligible?: Prisma.BoolFieldUpdateOperationsInput | boolean
   itcIneligibilityReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiptStatus?: Prisma.StringFieldUpdateOperationsInput | string
   subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
   totalCgst?: Prisma.FloatFieldUpdateOperationsInput | number
   totalSgst?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -672,6 +748,8 @@ export type PurchaseBillUpdateManyMutationInput = {
   totalCess?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -680,6 +758,7 @@ export type PurchaseBillUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   businessId?: Prisma.StringFieldUpdateOperationsInput | string
   vendorId?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceSalesInvoiceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billNumber?: Prisma.StringFieldUpdateOperationsInput | string
   billDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   receivedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -691,6 +770,7 @@ export type PurchaseBillUncheckedUpdateManyInput = {
   isItcEligible?: Prisma.BoolFieldUpdateOperationsInput | boolean
   itcIneligibilityReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiptStatus?: Prisma.StringFieldUpdateOperationsInput | string
   subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
   totalCgst?: Prisma.FloatFieldUpdateOperationsInput | number
   totalSgst?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -698,6 +778,8 @@ export type PurchaseBillUncheckedUpdateManyInput = {
   totalCess?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -722,6 +804,7 @@ export type PurchaseBillCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   businessId?: Prisma.SortOrder
   vendorId?: Prisma.SortOrder
+  sourceSalesInvoiceId?: Prisma.SortOrder
   billNumber?: Prisma.SortOrder
   billDate?: Prisma.SortOrder
   receivedDate?: Prisma.SortOrder
@@ -733,6 +816,7 @@ export type PurchaseBillCountOrderByAggregateInput = {
   isItcEligible?: Prisma.SortOrder
   itcIneligibilityReason?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  receiptStatus?: Prisma.SortOrder
   subtotal?: Prisma.SortOrder
   totalCgst?: Prisma.SortOrder
   totalSgst?: Prisma.SortOrder
@@ -740,6 +824,8 @@ export type PurchaseBillCountOrderByAggregateInput = {
   totalCess?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   paidAmount?: Prisma.SortOrder
+  lastReminderSentAt?: Prisma.SortOrder
+  reminderCount?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -752,12 +838,14 @@ export type PurchaseBillAvgOrderByAggregateInput = {
   totalCess?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   paidAmount?: Prisma.SortOrder
+  reminderCount?: Prisma.SortOrder
 }
 
 export type PurchaseBillMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   businessId?: Prisma.SortOrder
   vendorId?: Prisma.SortOrder
+  sourceSalesInvoiceId?: Prisma.SortOrder
   billNumber?: Prisma.SortOrder
   billDate?: Prisma.SortOrder
   receivedDate?: Prisma.SortOrder
@@ -769,6 +857,7 @@ export type PurchaseBillMaxOrderByAggregateInput = {
   isItcEligible?: Prisma.SortOrder
   itcIneligibilityReason?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  receiptStatus?: Prisma.SortOrder
   subtotal?: Prisma.SortOrder
   totalCgst?: Prisma.SortOrder
   totalSgst?: Prisma.SortOrder
@@ -776,6 +865,8 @@ export type PurchaseBillMaxOrderByAggregateInput = {
   totalCess?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   paidAmount?: Prisma.SortOrder
+  lastReminderSentAt?: Prisma.SortOrder
+  reminderCount?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -784,6 +875,7 @@ export type PurchaseBillMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   businessId?: Prisma.SortOrder
   vendorId?: Prisma.SortOrder
+  sourceSalesInvoiceId?: Prisma.SortOrder
   billNumber?: Prisma.SortOrder
   billDate?: Prisma.SortOrder
   receivedDate?: Prisma.SortOrder
@@ -795,6 +887,7 @@ export type PurchaseBillMinOrderByAggregateInput = {
   isItcEligible?: Prisma.SortOrder
   itcIneligibilityReason?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  receiptStatus?: Prisma.SortOrder
   subtotal?: Prisma.SortOrder
   totalCgst?: Prisma.SortOrder
   totalSgst?: Prisma.SortOrder
@@ -802,6 +895,8 @@ export type PurchaseBillMinOrderByAggregateInput = {
   totalCess?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   paidAmount?: Prisma.SortOrder
+  lastReminderSentAt?: Prisma.SortOrder
+  reminderCount?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -814,11 +909,17 @@ export type PurchaseBillSumOrderByAggregateInput = {
   totalCess?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
   paidAmount?: Prisma.SortOrder
+  reminderCount?: Prisma.SortOrder
 }
 
 export type PurchaseBillScalarRelationFilter = {
   is?: Prisma.PurchaseBillWhereInput
   isNot?: Prisma.PurchaseBillWhereInput
+}
+
+export type PurchaseBillNullableScalarRelationFilter = {
+  is?: Prisma.PurchaseBillWhereInput | null
+  isNot?: Prisma.PurchaseBillWhereInput | null
 }
 
 export type PurchaseBillCreateNestedManyWithoutBusinessInput = {
@@ -863,6 +964,14 @@ export type PurchaseBillUncheckedUpdateManyWithoutBusinessNestedInput = {
   deleteMany?: Prisma.PurchaseBillScalarWhereInput | Prisma.PurchaseBillScalarWhereInput[]
 }
 
+export type IntFieldUpdateOperationsInput = {
+  set?: number
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
+}
+
 export type PurchaseBillCreateNestedOneWithoutPaymentsInput = {
   create?: Prisma.XOR<Prisma.PurchaseBillCreateWithoutPaymentsInput, Prisma.PurchaseBillUncheckedCreateWithoutPaymentsInput>
   connectOrCreate?: Prisma.PurchaseBillCreateOrConnectWithoutPaymentsInput
@@ -889,6 +998,38 @@ export type PurchaseBillUpdateOneRequiredWithoutItemsNestedInput = {
   upsert?: Prisma.PurchaseBillUpsertWithoutItemsInput
   connect?: Prisma.PurchaseBillWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.PurchaseBillUpdateToOneWithWhereWithoutItemsInput, Prisma.PurchaseBillUpdateWithoutItemsInput>, Prisma.PurchaseBillUncheckedUpdateWithoutItemsInput>
+}
+
+export type PurchaseBillCreateNestedOneWithoutSourceSalesInvoiceInput = {
+  create?: Prisma.XOR<Prisma.PurchaseBillCreateWithoutSourceSalesInvoiceInput, Prisma.PurchaseBillUncheckedCreateWithoutSourceSalesInvoiceInput>
+  connectOrCreate?: Prisma.PurchaseBillCreateOrConnectWithoutSourceSalesInvoiceInput
+  connect?: Prisma.PurchaseBillWhereUniqueInput
+}
+
+export type PurchaseBillUncheckedCreateNestedOneWithoutSourceSalesInvoiceInput = {
+  create?: Prisma.XOR<Prisma.PurchaseBillCreateWithoutSourceSalesInvoiceInput, Prisma.PurchaseBillUncheckedCreateWithoutSourceSalesInvoiceInput>
+  connectOrCreate?: Prisma.PurchaseBillCreateOrConnectWithoutSourceSalesInvoiceInput
+  connect?: Prisma.PurchaseBillWhereUniqueInput
+}
+
+export type PurchaseBillUpdateOneWithoutSourceSalesInvoiceNestedInput = {
+  create?: Prisma.XOR<Prisma.PurchaseBillCreateWithoutSourceSalesInvoiceInput, Prisma.PurchaseBillUncheckedCreateWithoutSourceSalesInvoiceInput>
+  connectOrCreate?: Prisma.PurchaseBillCreateOrConnectWithoutSourceSalesInvoiceInput
+  upsert?: Prisma.PurchaseBillUpsertWithoutSourceSalesInvoiceInput
+  disconnect?: Prisma.PurchaseBillWhereInput | boolean
+  delete?: Prisma.PurchaseBillWhereInput | boolean
+  connect?: Prisma.PurchaseBillWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.PurchaseBillUpdateToOneWithWhereWithoutSourceSalesInvoiceInput, Prisma.PurchaseBillUpdateWithoutSourceSalesInvoiceInput>, Prisma.PurchaseBillUncheckedUpdateWithoutSourceSalesInvoiceInput>
+}
+
+export type PurchaseBillUncheckedUpdateOneWithoutSourceSalesInvoiceNestedInput = {
+  create?: Prisma.XOR<Prisma.PurchaseBillCreateWithoutSourceSalesInvoiceInput, Prisma.PurchaseBillUncheckedCreateWithoutSourceSalesInvoiceInput>
+  connectOrCreate?: Prisma.PurchaseBillCreateOrConnectWithoutSourceSalesInvoiceInput
+  upsert?: Prisma.PurchaseBillUpsertWithoutSourceSalesInvoiceInput
+  disconnect?: Prisma.PurchaseBillWhereInput | boolean
+  delete?: Prisma.PurchaseBillWhereInput | boolean
+  connect?: Prisma.PurchaseBillWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.PurchaseBillUpdateToOneWithWhereWithoutSourceSalesInvoiceInput, Prisma.PurchaseBillUpdateWithoutSourceSalesInvoiceInput>, Prisma.PurchaseBillUncheckedUpdateWithoutSourceSalesInvoiceInput>
 }
 
 export type PurchaseBillCreateNestedManyWithoutVendorInput = {
@@ -946,6 +1087,7 @@ export type PurchaseBillCreateWithoutBusinessInput = {
   isItcEligible?: boolean
   itcIneligibilityReason?: string | null
   status?: string
+  receiptStatus?: string
   subtotal: number
   totalCgst?: number
   totalSgst?: number
@@ -953,9 +1095,12 @@ export type PurchaseBillCreateWithoutBusinessInput = {
   totalCess?: number
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   vendor: Prisma.VendorCreateNestedOneWithoutPurchaseBillsInput
+  sourceSalesInvoice?: Prisma.SalesInvoiceCreateNestedOneWithoutReceivedPurchaseBillInput
   items?: Prisma.PurchaseBillItemCreateNestedManyWithoutPurchaseBillInput
   payments?: Prisma.PurchasePaymentCreateNestedManyWithoutPurchaseBillInput
 }
@@ -963,6 +1108,7 @@ export type PurchaseBillCreateWithoutBusinessInput = {
 export type PurchaseBillUncheckedCreateWithoutBusinessInput = {
   id?: string
   vendorId: string
+  sourceSalesInvoiceId?: string | null
   billNumber: string
   billDate: Date | string
   receivedDate?: Date | string | null
@@ -974,6 +1120,7 @@ export type PurchaseBillUncheckedCreateWithoutBusinessInput = {
   isItcEligible?: boolean
   itcIneligibilityReason?: string | null
   status?: string
+  receiptStatus?: string
   subtotal: number
   totalCgst?: number
   totalSgst?: number
@@ -981,6 +1128,8 @@ export type PurchaseBillUncheckedCreateWithoutBusinessInput = {
   totalCess?: number
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   items?: Prisma.PurchaseBillItemUncheckedCreateNestedManyWithoutPurchaseBillInput
@@ -1020,6 +1169,7 @@ export type PurchaseBillScalarWhereInput = {
   id?: Prisma.StringFilter<"PurchaseBill"> | string
   businessId?: Prisma.StringFilter<"PurchaseBill"> | string
   vendorId?: Prisma.StringFilter<"PurchaseBill"> | string
+  sourceSalesInvoiceId?: Prisma.StringNullableFilter<"PurchaseBill"> | string | null
   billNumber?: Prisma.StringFilter<"PurchaseBill"> | string
   billDate?: Prisma.DateTimeFilter<"PurchaseBill"> | Date | string
   receivedDate?: Prisma.DateTimeNullableFilter<"PurchaseBill"> | Date | string | null
@@ -1031,6 +1181,7 @@ export type PurchaseBillScalarWhereInput = {
   isItcEligible?: Prisma.BoolFilter<"PurchaseBill"> | boolean
   itcIneligibilityReason?: Prisma.StringNullableFilter<"PurchaseBill"> | string | null
   status?: Prisma.StringFilter<"PurchaseBill"> | string
+  receiptStatus?: Prisma.StringFilter<"PurchaseBill"> | string
   subtotal?: Prisma.FloatFilter<"PurchaseBill"> | number
   totalCgst?: Prisma.FloatFilter<"PurchaseBill"> | number
   totalSgst?: Prisma.FloatFilter<"PurchaseBill"> | number
@@ -1038,6 +1189,8 @@ export type PurchaseBillScalarWhereInput = {
   totalCess?: Prisma.FloatFilter<"PurchaseBill"> | number
   totalAmount?: Prisma.FloatFilter<"PurchaseBill"> | number
   paidAmount?: Prisma.FloatFilter<"PurchaseBill"> | number
+  lastReminderSentAt?: Prisma.DateTimeNullableFilter<"PurchaseBill"> | Date | string | null
+  reminderCount?: Prisma.IntFilter<"PurchaseBill"> | number
   createdAt?: Prisma.DateTimeFilter<"PurchaseBill"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"PurchaseBill"> | Date | string
 }
@@ -1055,6 +1208,7 @@ export type PurchaseBillCreateWithoutPaymentsInput = {
   isItcEligible?: boolean
   itcIneligibilityReason?: string | null
   status?: string
+  receiptStatus?: string
   subtotal: number
   totalCgst?: number
   totalSgst?: number
@@ -1062,10 +1216,13 @@ export type PurchaseBillCreateWithoutPaymentsInput = {
   totalCess?: number
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   business: Prisma.BusinessCreateNestedOneWithoutPurchaseBillsInput
   vendor: Prisma.VendorCreateNestedOneWithoutPurchaseBillsInput
+  sourceSalesInvoice?: Prisma.SalesInvoiceCreateNestedOneWithoutReceivedPurchaseBillInput
   items?: Prisma.PurchaseBillItemCreateNestedManyWithoutPurchaseBillInput
 }
 
@@ -1073,6 +1230,7 @@ export type PurchaseBillUncheckedCreateWithoutPaymentsInput = {
   id?: string
   businessId: string
   vendorId: string
+  sourceSalesInvoiceId?: string | null
   billNumber: string
   billDate: Date | string
   receivedDate?: Date | string | null
@@ -1084,6 +1242,7 @@ export type PurchaseBillUncheckedCreateWithoutPaymentsInput = {
   isItcEligible?: boolean
   itcIneligibilityReason?: string | null
   status?: string
+  receiptStatus?: string
   subtotal: number
   totalCgst?: number
   totalSgst?: number
@@ -1091,6 +1250,8 @@ export type PurchaseBillUncheckedCreateWithoutPaymentsInput = {
   totalCess?: number
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   items?: Prisma.PurchaseBillItemUncheckedCreateNestedManyWithoutPurchaseBillInput
@@ -1125,6 +1286,7 @@ export type PurchaseBillUpdateWithoutPaymentsInput = {
   isItcEligible?: Prisma.BoolFieldUpdateOperationsInput | boolean
   itcIneligibilityReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiptStatus?: Prisma.StringFieldUpdateOperationsInput | string
   subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
   totalCgst?: Prisma.FloatFieldUpdateOperationsInput | number
   totalSgst?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -1132,10 +1294,13 @@ export type PurchaseBillUpdateWithoutPaymentsInput = {
   totalCess?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   business?: Prisma.BusinessUpdateOneRequiredWithoutPurchaseBillsNestedInput
   vendor?: Prisma.VendorUpdateOneRequiredWithoutPurchaseBillsNestedInput
+  sourceSalesInvoice?: Prisma.SalesInvoiceUpdateOneWithoutReceivedPurchaseBillNestedInput
   items?: Prisma.PurchaseBillItemUpdateManyWithoutPurchaseBillNestedInput
 }
 
@@ -1143,6 +1308,7 @@ export type PurchaseBillUncheckedUpdateWithoutPaymentsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   businessId?: Prisma.StringFieldUpdateOperationsInput | string
   vendorId?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceSalesInvoiceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billNumber?: Prisma.StringFieldUpdateOperationsInput | string
   billDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   receivedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1154,6 +1320,7 @@ export type PurchaseBillUncheckedUpdateWithoutPaymentsInput = {
   isItcEligible?: Prisma.BoolFieldUpdateOperationsInput | boolean
   itcIneligibilityReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiptStatus?: Prisma.StringFieldUpdateOperationsInput | string
   subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
   totalCgst?: Prisma.FloatFieldUpdateOperationsInput | number
   totalSgst?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -1161,6 +1328,8 @@ export type PurchaseBillUncheckedUpdateWithoutPaymentsInput = {
   totalCess?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   items?: Prisma.PurchaseBillItemUncheckedUpdateManyWithoutPurchaseBillNestedInput
@@ -1179,6 +1348,7 @@ export type PurchaseBillCreateWithoutItemsInput = {
   isItcEligible?: boolean
   itcIneligibilityReason?: string | null
   status?: string
+  receiptStatus?: string
   subtotal: number
   totalCgst?: number
   totalSgst?: number
@@ -1186,10 +1356,13 @@ export type PurchaseBillCreateWithoutItemsInput = {
   totalCess?: number
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   business: Prisma.BusinessCreateNestedOneWithoutPurchaseBillsInput
   vendor: Prisma.VendorCreateNestedOneWithoutPurchaseBillsInput
+  sourceSalesInvoice?: Prisma.SalesInvoiceCreateNestedOneWithoutReceivedPurchaseBillInput
   payments?: Prisma.PurchasePaymentCreateNestedManyWithoutPurchaseBillInput
 }
 
@@ -1197,6 +1370,7 @@ export type PurchaseBillUncheckedCreateWithoutItemsInput = {
   id?: string
   businessId: string
   vendorId: string
+  sourceSalesInvoiceId?: string | null
   billNumber: string
   billDate: Date | string
   receivedDate?: Date | string | null
@@ -1208,6 +1382,7 @@ export type PurchaseBillUncheckedCreateWithoutItemsInput = {
   isItcEligible?: boolean
   itcIneligibilityReason?: string | null
   status?: string
+  receiptStatus?: string
   subtotal: number
   totalCgst?: number
   totalSgst?: number
@@ -1215,6 +1390,8 @@ export type PurchaseBillUncheckedCreateWithoutItemsInput = {
   totalCess?: number
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   payments?: Prisma.PurchasePaymentUncheckedCreateNestedManyWithoutPurchaseBillInput
@@ -1249,6 +1426,7 @@ export type PurchaseBillUpdateWithoutItemsInput = {
   isItcEligible?: Prisma.BoolFieldUpdateOperationsInput | boolean
   itcIneligibilityReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiptStatus?: Prisma.StringFieldUpdateOperationsInput | string
   subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
   totalCgst?: Prisma.FloatFieldUpdateOperationsInput | number
   totalSgst?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -1256,14 +1434,157 @@ export type PurchaseBillUpdateWithoutItemsInput = {
   totalCess?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   business?: Prisma.BusinessUpdateOneRequiredWithoutPurchaseBillsNestedInput
   vendor?: Prisma.VendorUpdateOneRequiredWithoutPurchaseBillsNestedInput
+  sourceSalesInvoice?: Prisma.SalesInvoiceUpdateOneWithoutReceivedPurchaseBillNestedInput
   payments?: Prisma.PurchasePaymentUpdateManyWithoutPurchaseBillNestedInput
 }
 
 export type PurchaseBillUncheckedUpdateWithoutItemsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  businessId?: Prisma.StringFieldUpdateOperationsInput | string
+  vendorId?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceSalesInvoiceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  billNumber?: Prisma.StringFieldUpdateOperationsInput | string
+  billDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  receivedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  supplyType?: Prisma.StringFieldUpdateOperationsInput | string
+  placeOfSupply?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.StringFieldUpdateOperationsInput | string
+  isReverseCharge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isItcEligible?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  itcIneligibilityReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiptStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
+  totalCgst?: Prisma.FloatFieldUpdateOperationsInput | number
+  totalSgst?: Prisma.FloatFieldUpdateOperationsInput | number
+  totalIgst?: Prisma.FloatFieldUpdateOperationsInput | number
+  totalCess?: Prisma.FloatFieldUpdateOperationsInput | number
+  totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  payments?: Prisma.PurchasePaymentUncheckedUpdateManyWithoutPurchaseBillNestedInput
+}
+
+export type PurchaseBillCreateWithoutSourceSalesInvoiceInput = {
+  id?: string
+  billNumber: string
+  billDate: Date | string
+  receivedDate?: Date | string | null
+  dueDate?: Date | string | null
+  supplyType?: string
+  placeOfSupply?: string
+  category?: string
+  isReverseCharge?: boolean
+  isItcEligible?: boolean
+  itcIneligibilityReason?: string | null
+  status?: string
+  receiptStatus?: string
+  subtotal: number
+  totalCgst?: number
+  totalSgst?: number
+  totalIgst?: number
+  totalCess?: number
+  totalAmount: number
+  paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  business: Prisma.BusinessCreateNestedOneWithoutPurchaseBillsInput
+  vendor: Prisma.VendorCreateNestedOneWithoutPurchaseBillsInput
+  items?: Prisma.PurchaseBillItemCreateNestedManyWithoutPurchaseBillInput
+  payments?: Prisma.PurchasePaymentCreateNestedManyWithoutPurchaseBillInput
+}
+
+export type PurchaseBillUncheckedCreateWithoutSourceSalesInvoiceInput = {
+  id?: string
+  businessId: string
+  vendorId: string
+  billNumber: string
+  billDate: Date | string
+  receivedDate?: Date | string | null
+  dueDate?: Date | string | null
+  supplyType?: string
+  placeOfSupply?: string
+  category?: string
+  isReverseCharge?: boolean
+  isItcEligible?: boolean
+  itcIneligibilityReason?: string | null
+  status?: string
+  receiptStatus?: string
+  subtotal: number
+  totalCgst?: number
+  totalSgst?: number
+  totalIgst?: number
+  totalCess?: number
+  totalAmount: number
+  paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  items?: Prisma.PurchaseBillItemUncheckedCreateNestedManyWithoutPurchaseBillInput
+  payments?: Prisma.PurchasePaymentUncheckedCreateNestedManyWithoutPurchaseBillInput
+}
+
+export type PurchaseBillCreateOrConnectWithoutSourceSalesInvoiceInput = {
+  where: Prisma.PurchaseBillWhereUniqueInput
+  create: Prisma.XOR<Prisma.PurchaseBillCreateWithoutSourceSalesInvoiceInput, Prisma.PurchaseBillUncheckedCreateWithoutSourceSalesInvoiceInput>
+}
+
+export type PurchaseBillUpsertWithoutSourceSalesInvoiceInput = {
+  update: Prisma.XOR<Prisma.PurchaseBillUpdateWithoutSourceSalesInvoiceInput, Prisma.PurchaseBillUncheckedUpdateWithoutSourceSalesInvoiceInput>
+  create: Prisma.XOR<Prisma.PurchaseBillCreateWithoutSourceSalesInvoiceInput, Prisma.PurchaseBillUncheckedCreateWithoutSourceSalesInvoiceInput>
+  where?: Prisma.PurchaseBillWhereInput
+}
+
+export type PurchaseBillUpdateToOneWithWhereWithoutSourceSalesInvoiceInput = {
+  where?: Prisma.PurchaseBillWhereInput
+  data: Prisma.XOR<Prisma.PurchaseBillUpdateWithoutSourceSalesInvoiceInput, Prisma.PurchaseBillUncheckedUpdateWithoutSourceSalesInvoiceInput>
+}
+
+export type PurchaseBillUpdateWithoutSourceSalesInvoiceInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  billNumber?: Prisma.StringFieldUpdateOperationsInput | string
+  billDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  receivedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  supplyType?: Prisma.StringFieldUpdateOperationsInput | string
+  placeOfSupply?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.StringFieldUpdateOperationsInput | string
+  isReverseCharge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isItcEligible?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  itcIneligibilityReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiptStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
+  totalCgst?: Prisma.FloatFieldUpdateOperationsInput | number
+  totalSgst?: Prisma.FloatFieldUpdateOperationsInput | number
+  totalIgst?: Prisma.FloatFieldUpdateOperationsInput | number
+  totalCess?: Prisma.FloatFieldUpdateOperationsInput | number
+  totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  business?: Prisma.BusinessUpdateOneRequiredWithoutPurchaseBillsNestedInput
+  vendor?: Prisma.VendorUpdateOneRequiredWithoutPurchaseBillsNestedInput
+  items?: Prisma.PurchaseBillItemUpdateManyWithoutPurchaseBillNestedInput
+  payments?: Prisma.PurchasePaymentUpdateManyWithoutPurchaseBillNestedInput
+}
+
+export type PurchaseBillUncheckedUpdateWithoutSourceSalesInvoiceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   businessId?: Prisma.StringFieldUpdateOperationsInput | string
   vendorId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1278,6 +1599,7 @@ export type PurchaseBillUncheckedUpdateWithoutItemsInput = {
   isItcEligible?: Prisma.BoolFieldUpdateOperationsInput | boolean
   itcIneligibilityReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiptStatus?: Prisma.StringFieldUpdateOperationsInput | string
   subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
   totalCgst?: Prisma.FloatFieldUpdateOperationsInput | number
   totalSgst?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -1285,8 +1607,11 @@ export type PurchaseBillUncheckedUpdateWithoutItemsInput = {
   totalCess?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  items?: Prisma.PurchaseBillItemUncheckedUpdateManyWithoutPurchaseBillNestedInput
   payments?: Prisma.PurchasePaymentUncheckedUpdateManyWithoutPurchaseBillNestedInput
 }
 
@@ -1303,6 +1628,7 @@ export type PurchaseBillCreateWithoutVendorInput = {
   isItcEligible?: boolean
   itcIneligibilityReason?: string | null
   status?: string
+  receiptStatus?: string
   subtotal: number
   totalCgst?: number
   totalSgst?: number
@@ -1310,9 +1636,12 @@ export type PurchaseBillCreateWithoutVendorInput = {
   totalCess?: number
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   business: Prisma.BusinessCreateNestedOneWithoutPurchaseBillsInput
+  sourceSalesInvoice?: Prisma.SalesInvoiceCreateNestedOneWithoutReceivedPurchaseBillInput
   items?: Prisma.PurchaseBillItemCreateNestedManyWithoutPurchaseBillInput
   payments?: Prisma.PurchasePaymentCreateNestedManyWithoutPurchaseBillInput
 }
@@ -1320,6 +1649,7 @@ export type PurchaseBillCreateWithoutVendorInput = {
 export type PurchaseBillUncheckedCreateWithoutVendorInput = {
   id?: string
   businessId: string
+  sourceSalesInvoiceId?: string | null
   billNumber: string
   billDate: Date | string
   receivedDate?: Date | string | null
@@ -1331,6 +1661,7 @@ export type PurchaseBillUncheckedCreateWithoutVendorInput = {
   isItcEligible?: boolean
   itcIneligibilityReason?: string | null
   status?: string
+  receiptStatus?: string
   subtotal: number
   totalCgst?: number
   totalSgst?: number
@@ -1338,6 +1669,8 @@ export type PurchaseBillUncheckedCreateWithoutVendorInput = {
   totalCess?: number
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   items?: Prisma.PurchaseBillItemUncheckedCreateNestedManyWithoutPurchaseBillInput
@@ -1373,6 +1706,7 @@ export type PurchaseBillUpdateManyWithWhereWithoutVendorInput = {
 export type PurchaseBillCreateManyBusinessInput = {
   id?: string
   vendorId: string
+  sourceSalesInvoiceId?: string | null
   billNumber: string
   billDate: Date | string
   receivedDate?: Date | string | null
@@ -1384,6 +1718,7 @@ export type PurchaseBillCreateManyBusinessInput = {
   isItcEligible?: boolean
   itcIneligibilityReason?: string | null
   status?: string
+  receiptStatus?: string
   subtotal: number
   totalCgst?: number
   totalSgst?: number
@@ -1391,6 +1726,8 @@ export type PurchaseBillCreateManyBusinessInput = {
   totalCess?: number
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1408,6 +1745,7 @@ export type PurchaseBillUpdateWithoutBusinessInput = {
   isItcEligible?: Prisma.BoolFieldUpdateOperationsInput | boolean
   itcIneligibilityReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiptStatus?: Prisma.StringFieldUpdateOperationsInput | string
   subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
   totalCgst?: Prisma.FloatFieldUpdateOperationsInput | number
   totalSgst?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -1415,9 +1753,12 @@ export type PurchaseBillUpdateWithoutBusinessInput = {
   totalCess?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   vendor?: Prisma.VendorUpdateOneRequiredWithoutPurchaseBillsNestedInput
+  sourceSalesInvoice?: Prisma.SalesInvoiceUpdateOneWithoutReceivedPurchaseBillNestedInput
   items?: Prisma.PurchaseBillItemUpdateManyWithoutPurchaseBillNestedInput
   payments?: Prisma.PurchasePaymentUpdateManyWithoutPurchaseBillNestedInput
 }
@@ -1425,6 +1766,7 @@ export type PurchaseBillUpdateWithoutBusinessInput = {
 export type PurchaseBillUncheckedUpdateWithoutBusinessInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   vendorId?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceSalesInvoiceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billNumber?: Prisma.StringFieldUpdateOperationsInput | string
   billDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   receivedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1436,6 +1778,7 @@ export type PurchaseBillUncheckedUpdateWithoutBusinessInput = {
   isItcEligible?: Prisma.BoolFieldUpdateOperationsInput | boolean
   itcIneligibilityReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiptStatus?: Prisma.StringFieldUpdateOperationsInput | string
   subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
   totalCgst?: Prisma.FloatFieldUpdateOperationsInput | number
   totalSgst?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -1443,6 +1786,8 @@ export type PurchaseBillUncheckedUpdateWithoutBusinessInput = {
   totalCess?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   items?: Prisma.PurchaseBillItemUncheckedUpdateManyWithoutPurchaseBillNestedInput
@@ -1452,6 +1797,7 @@ export type PurchaseBillUncheckedUpdateWithoutBusinessInput = {
 export type PurchaseBillUncheckedUpdateManyWithoutBusinessInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   vendorId?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceSalesInvoiceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billNumber?: Prisma.StringFieldUpdateOperationsInput | string
   billDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   receivedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1463,6 +1809,7 @@ export type PurchaseBillUncheckedUpdateManyWithoutBusinessInput = {
   isItcEligible?: Prisma.BoolFieldUpdateOperationsInput | boolean
   itcIneligibilityReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiptStatus?: Prisma.StringFieldUpdateOperationsInput | string
   subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
   totalCgst?: Prisma.FloatFieldUpdateOperationsInput | number
   totalSgst?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -1470,6 +1817,8 @@ export type PurchaseBillUncheckedUpdateManyWithoutBusinessInput = {
   totalCess?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1477,6 +1826,7 @@ export type PurchaseBillUncheckedUpdateManyWithoutBusinessInput = {
 export type PurchaseBillCreateManyVendorInput = {
   id?: string
   businessId: string
+  sourceSalesInvoiceId?: string | null
   billNumber: string
   billDate: Date | string
   receivedDate?: Date | string | null
@@ -1488,6 +1838,7 @@ export type PurchaseBillCreateManyVendorInput = {
   isItcEligible?: boolean
   itcIneligibilityReason?: string | null
   status?: string
+  receiptStatus?: string
   subtotal: number
   totalCgst?: number
   totalSgst?: number
@@ -1495,6 +1846,8 @@ export type PurchaseBillCreateManyVendorInput = {
   totalCess?: number
   totalAmount: number
   paidAmount?: number
+  lastReminderSentAt?: Date | string | null
+  reminderCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1512,6 +1865,7 @@ export type PurchaseBillUpdateWithoutVendorInput = {
   isItcEligible?: Prisma.BoolFieldUpdateOperationsInput | boolean
   itcIneligibilityReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiptStatus?: Prisma.StringFieldUpdateOperationsInput | string
   subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
   totalCgst?: Prisma.FloatFieldUpdateOperationsInput | number
   totalSgst?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -1519,9 +1873,12 @@ export type PurchaseBillUpdateWithoutVendorInput = {
   totalCess?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   business?: Prisma.BusinessUpdateOneRequiredWithoutPurchaseBillsNestedInput
+  sourceSalesInvoice?: Prisma.SalesInvoiceUpdateOneWithoutReceivedPurchaseBillNestedInput
   items?: Prisma.PurchaseBillItemUpdateManyWithoutPurchaseBillNestedInput
   payments?: Prisma.PurchasePaymentUpdateManyWithoutPurchaseBillNestedInput
 }
@@ -1529,6 +1886,7 @@ export type PurchaseBillUpdateWithoutVendorInput = {
 export type PurchaseBillUncheckedUpdateWithoutVendorInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   businessId?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceSalesInvoiceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billNumber?: Prisma.StringFieldUpdateOperationsInput | string
   billDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   receivedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1540,6 +1898,7 @@ export type PurchaseBillUncheckedUpdateWithoutVendorInput = {
   isItcEligible?: Prisma.BoolFieldUpdateOperationsInput | boolean
   itcIneligibilityReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiptStatus?: Prisma.StringFieldUpdateOperationsInput | string
   subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
   totalCgst?: Prisma.FloatFieldUpdateOperationsInput | number
   totalSgst?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -1547,6 +1906,8 @@ export type PurchaseBillUncheckedUpdateWithoutVendorInput = {
   totalCess?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   items?: Prisma.PurchaseBillItemUncheckedUpdateManyWithoutPurchaseBillNestedInput
@@ -1556,6 +1917,7 @@ export type PurchaseBillUncheckedUpdateWithoutVendorInput = {
 export type PurchaseBillUncheckedUpdateManyWithoutVendorInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   businessId?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceSalesInvoiceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   billNumber?: Prisma.StringFieldUpdateOperationsInput | string
   billDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   receivedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1567,6 +1929,7 @@ export type PurchaseBillUncheckedUpdateManyWithoutVendorInput = {
   isItcEligible?: Prisma.BoolFieldUpdateOperationsInput | boolean
   itcIneligibilityReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  receiptStatus?: Prisma.StringFieldUpdateOperationsInput | string
   subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
   totalCgst?: Prisma.FloatFieldUpdateOperationsInput | number
   totalSgst?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -1574,6 +1937,8 @@ export type PurchaseBillUncheckedUpdateManyWithoutVendorInput = {
   totalCess?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   paidAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  lastReminderSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reminderCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1622,6 +1987,7 @@ export type PurchaseBillSelect<ExtArgs extends runtime.Types.Extensions.Internal
   id?: boolean
   businessId?: boolean
   vendorId?: boolean
+  sourceSalesInvoiceId?: boolean
   billNumber?: boolean
   billDate?: boolean
   receivedDate?: boolean
@@ -1633,6 +1999,7 @@ export type PurchaseBillSelect<ExtArgs extends runtime.Types.Extensions.Internal
   isItcEligible?: boolean
   itcIneligibilityReason?: boolean
   status?: boolean
+  receiptStatus?: boolean
   subtotal?: boolean
   totalCgst?: boolean
   totalSgst?: boolean
@@ -1640,10 +2007,13 @@ export type PurchaseBillSelect<ExtArgs extends runtime.Types.Extensions.Internal
   totalCess?: boolean
   totalAmount?: boolean
   paidAmount?: boolean
+  lastReminderSentAt?: boolean
+  reminderCount?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
   vendor?: boolean | Prisma.VendorDefaultArgs<ExtArgs>
+  sourceSalesInvoice?: boolean | Prisma.PurchaseBill$sourceSalesInvoiceArgs<ExtArgs>
   items?: boolean | Prisma.PurchaseBill$itemsArgs<ExtArgs>
   payments?: boolean | Prisma.PurchaseBill$paymentsArgs<ExtArgs>
   _count?: boolean | Prisma.PurchaseBillCountOutputTypeDefaultArgs<ExtArgs>
@@ -1653,6 +2023,7 @@ export type PurchaseBillSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   id?: boolean
   businessId?: boolean
   vendorId?: boolean
+  sourceSalesInvoiceId?: boolean
   billNumber?: boolean
   billDate?: boolean
   receivedDate?: boolean
@@ -1664,6 +2035,7 @@ export type PurchaseBillSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   isItcEligible?: boolean
   itcIneligibilityReason?: boolean
   status?: boolean
+  receiptStatus?: boolean
   subtotal?: boolean
   totalCgst?: boolean
   totalSgst?: boolean
@@ -1671,16 +2043,20 @@ export type PurchaseBillSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   totalCess?: boolean
   totalAmount?: boolean
   paidAmount?: boolean
+  lastReminderSentAt?: boolean
+  reminderCount?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
   vendor?: boolean | Prisma.VendorDefaultArgs<ExtArgs>
+  sourceSalesInvoice?: boolean | Prisma.PurchaseBill$sourceSalesInvoiceArgs<ExtArgs>
 }, ExtArgs["result"]["purchaseBill"]>
 
 export type PurchaseBillSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   businessId?: boolean
   vendorId?: boolean
+  sourceSalesInvoiceId?: boolean
   billNumber?: boolean
   billDate?: boolean
   receivedDate?: boolean
@@ -1692,6 +2068,7 @@ export type PurchaseBillSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   isItcEligible?: boolean
   itcIneligibilityReason?: boolean
   status?: boolean
+  receiptStatus?: boolean
   subtotal?: boolean
   totalCgst?: boolean
   totalSgst?: boolean
@@ -1699,16 +2076,20 @@ export type PurchaseBillSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   totalCess?: boolean
   totalAmount?: boolean
   paidAmount?: boolean
+  lastReminderSentAt?: boolean
+  reminderCount?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
   vendor?: boolean | Prisma.VendorDefaultArgs<ExtArgs>
+  sourceSalesInvoice?: boolean | Prisma.PurchaseBill$sourceSalesInvoiceArgs<ExtArgs>
 }, ExtArgs["result"]["purchaseBill"]>
 
 export type PurchaseBillSelectScalar = {
   id?: boolean
   businessId?: boolean
   vendorId?: boolean
+  sourceSalesInvoiceId?: boolean
   billNumber?: boolean
   billDate?: boolean
   receivedDate?: boolean
@@ -1720,6 +2101,7 @@ export type PurchaseBillSelectScalar = {
   isItcEligible?: boolean
   itcIneligibilityReason?: boolean
   status?: boolean
+  receiptStatus?: boolean
   subtotal?: boolean
   totalCgst?: boolean
   totalSgst?: boolean
@@ -1727,14 +2109,17 @@ export type PurchaseBillSelectScalar = {
   totalCess?: boolean
   totalAmount?: boolean
   paidAmount?: boolean
+  lastReminderSentAt?: boolean
+  reminderCount?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type PurchaseBillOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "businessId" | "vendorId" | "billNumber" | "billDate" | "receivedDate" | "dueDate" | "supplyType" | "placeOfSupply" | "category" | "isReverseCharge" | "isItcEligible" | "itcIneligibilityReason" | "status" | "subtotal" | "totalCgst" | "totalSgst" | "totalIgst" | "totalCess" | "totalAmount" | "paidAmount" | "createdAt" | "updatedAt", ExtArgs["result"]["purchaseBill"]>
+export type PurchaseBillOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "businessId" | "vendorId" | "sourceSalesInvoiceId" | "billNumber" | "billDate" | "receivedDate" | "dueDate" | "supplyType" | "placeOfSupply" | "category" | "isReverseCharge" | "isItcEligible" | "itcIneligibilityReason" | "status" | "receiptStatus" | "subtotal" | "totalCgst" | "totalSgst" | "totalIgst" | "totalCess" | "totalAmount" | "paidAmount" | "lastReminderSentAt" | "reminderCount" | "createdAt" | "updatedAt", ExtArgs["result"]["purchaseBill"]>
 export type PurchaseBillInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
   vendor?: boolean | Prisma.VendorDefaultArgs<ExtArgs>
+  sourceSalesInvoice?: boolean | Prisma.PurchaseBill$sourceSalesInvoiceArgs<ExtArgs>
   items?: boolean | Prisma.PurchaseBill$itemsArgs<ExtArgs>
   payments?: boolean | Prisma.PurchaseBill$paymentsArgs<ExtArgs>
   _count?: boolean | Prisma.PurchaseBillCountOutputTypeDefaultArgs<ExtArgs>
@@ -1742,10 +2127,12 @@ export type PurchaseBillInclude<ExtArgs extends runtime.Types.Extensions.Interna
 export type PurchaseBillIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
   vendor?: boolean | Prisma.VendorDefaultArgs<ExtArgs>
+  sourceSalesInvoice?: boolean | Prisma.PurchaseBill$sourceSalesInvoiceArgs<ExtArgs>
 }
 export type PurchaseBillIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
   vendor?: boolean | Prisma.VendorDefaultArgs<ExtArgs>
+  sourceSalesInvoice?: boolean | Prisma.PurchaseBill$sourceSalesInvoiceArgs<ExtArgs>
 }
 
 export type $PurchaseBillPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1753,6 +2140,7 @@ export type $PurchaseBillPayload<ExtArgs extends runtime.Types.Extensions.Intern
   objects: {
     business: Prisma.$BusinessPayload<ExtArgs>
     vendor: Prisma.$VendorPayload<ExtArgs>
+    sourceSalesInvoice: Prisma.$SalesInvoicePayload<ExtArgs> | null
     items: Prisma.$PurchaseBillItemPayload<ExtArgs>[]
     payments: Prisma.$PurchasePaymentPayload<ExtArgs>[]
   }
@@ -1760,6 +2148,7 @@ export type $PurchaseBillPayload<ExtArgs extends runtime.Types.Extensions.Intern
     id: string
     businessId: string
     vendorId: string
+    sourceSalesInvoiceId: string | null
     billNumber: string
     billDate: Date
     receivedDate: Date | null
@@ -1771,6 +2160,7 @@ export type $PurchaseBillPayload<ExtArgs extends runtime.Types.Extensions.Intern
     isItcEligible: boolean
     itcIneligibilityReason: string | null
     status: string
+    receiptStatus: string
     subtotal: number
     totalCgst: number
     totalSgst: number
@@ -1778,6 +2168,8 @@ export type $PurchaseBillPayload<ExtArgs extends runtime.Types.Extensions.Intern
     totalCess: number
     totalAmount: number
     paidAmount: number
+    lastReminderSentAt: Date | null
+    reminderCount: number
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["purchaseBill"]>
@@ -2176,6 +2568,7 @@ export interface Prisma__PurchaseBillClient<T, Null = never, ExtArgs extends run
   readonly [Symbol.toStringTag]: "PrismaPromise"
   business<T extends Prisma.BusinessDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.BusinessDefaultArgs<ExtArgs>>): Prisma.Prisma__BusinessClient<runtime.Types.Result.GetResult<Prisma.$BusinessPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   vendor<T extends Prisma.VendorDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.VendorDefaultArgs<ExtArgs>>): Prisma.Prisma__VendorClient<runtime.Types.Result.GetResult<Prisma.$VendorPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  sourceSalesInvoice<T extends Prisma.PurchaseBill$sourceSalesInvoiceArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.PurchaseBill$sourceSalesInvoiceArgs<ExtArgs>>): Prisma.Prisma__SalesInvoiceClient<runtime.Types.Result.GetResult<Prisma.$SalesInvoicePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   items<T extends Prisma.PurchaseBill$itemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.PurchaseBill$itemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PurchaseBillItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   payments<T extends Prisma.PurchaseBill$paymentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.PurchaseBill$paymentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PurchasePaymentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
@@ -2210,6 +2603,7 @@ export interface PurchaseBillFieldRefs {
   readonly id: Prisma.FieldRef<"PurchaseBill", 'String'>
   readonly businessId: Prisma.FieldRef<"PurchaseBill", 'String'>
   readonly vendorId: Prisma.FieldRef<"PurchaseBill", 'String'>
+  readonly sourceSalesInvoiceId: Prisma.FieldRef<"PurchaseBill", 'String'>
   readonly billNumber: Prisma.FieldRef<"PurchaseBill", 'String'>
   readonly billDate: Prisma.FieldRef<"PurchaseBill", 'DateTime'>
   readonly receivedDate: Prisma.FieldRef<"PurchaseBill", 'DateTime'>
@@ -2221,6 +2615,7 @@ export interface PurchaseBillFieldRefs {
   readonly isItcEligible: Prisma.FieldRef<"PurchaseBill", 'Boolean'>
   readonly itcIneligibilityReason: Prisma.FieldRef<"PurchaseBill", 'String'>
   readonly status: Prisma.FieldRef<"PurchaseBill", 'String'>
+  readonly receiptStatus: Prisma.FieldRef<"PurchaseBill", 'String'>
   readonly subtotal: Prisma.FieldRef<"PurchaseBill", 'Float'>
   readonly totalCgst: Prisma.FieldRef<"PurchaseBill", 'Float'>
   readonly totalSgst: Prisma.FieldRef<"PurchaseBill", 'Float'>
@@ -2228,6 +2623,8 @@ export interface PurchaseBillFieldRefs {
   readonly totalCess: Prisma.FieldRef<"PurchaseBill", 'Float'>
   readonly totalAmount: Prisma.FieldRef<"PurchaseBill", 'Float'>
   readonly paidAmount: Prisma.FieldRef<"PurchaseBill", 'Float'>
+  readonly lastReminderSentAt: Prisma.FieldRef<"PurchaseBill", 'DateTime'>
+  readonly reminderCount: Prisma.FieldRef<"PurchaseBill", 'Int'>
   readonly createdAt: Prisma.FieldRef<"PurchaseBill", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"PurchaseBill", 'DateTime'>
 }
@@ -2628,6 +3025,25 @@ export type PurchaseBillDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.
    * Limit how many PurchaseBills to delete.
    */
   limit?: number
+}
+
+/**
+ * PurchaseBill.sourceSalesInvoice
+ */
+export type PurchaseBill$sourceSalesInvoiceArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SalesInvoice
+   */
+  select?: Prisma.SalesInvoiceSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SalesInvoice
+   */
+  omit?: Prisma.SalesInvoiceOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SalesInvoiceInclude<ExtArgs> | null
+  where?: Prisma.SalesInvoiceWhereInput
 }
 
 /**

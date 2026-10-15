@@ -982,6 +982,7 @@ router.get("/me", authMiddleware, async (req: AuthenticatedRequest, res: Respons
           bankName: true,
           bankAccount: true,
           bankIfsc: true,
+          upiId: true,
           isOnboarded: true,
         },
       });
@@ -989,6 +990,7 @@ router.get("/me", authMiddleware, async (req: AuthenticatedRequest, res: Respons
 
     res.json({ user, business });
   } catch (error: any) {
+    console.error("/me error:", error);
     res.status(500).json({ error: "Failed to fetch user context." });
   }
 });
@@ -1056,6 +1058,36 @@ router.patch("/profile", authMiddleware, async (req: AuthenticatedRequest, res: 
 });
 
 // ==========================================
+// 9c. SAVE BUSINESS UPI ID
+// ==========================================
+const UPI_REGEX = /^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/;
+
+router.patch("/business/upi", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) {
+      return res.status(400).json({ error: "No active business associated with account." });
+    }
+
+    const upiId = String(req.body.upiId || "").trim().toLowerCase();
+    if (!UPI_REGEX.test(upiId)) {
+      return res.status(400).json({ error: "Invalid UPI ID. Example: name@oksbi" });
+    }
+
+    const business = await prisma.business.update({
+      where: { id: businessId },
+      data: { upiId },
+      select: { id: true, upiId: true },
+    });
+
+    res.json({ message: "UPI ID saved.", business });
+  } catch (error: any) {
+    console.error("Save UPI error:", error);
+    res.status(500).json({ error: "Failed to save UPI ID." });
+  }
+});
+
+// ==========================================
 // 10. ONBOARDING QUESTIONNAIRE
 // ==========================================
 router.post("/onboarding", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
@@ -1073,6 +1105,7 @@ router.post("/onboarding", authMiddleware, async (req: AuthenticatedRequest, res
       turnoverRange,
       filingFrequency,
       gstin,
+      upiId,
       address,
       pincode,
       phone,
@@ -1094,6 +1127,14 @@ router.post("/onboarding", authMiddleware, async (req: AuthenticatedRequest, res
       }
     }
 
+    if (upiId !== undefined && upiId !== null && typeof upiId !== "string") {
+      return res.status(400).json({ error: "UPI ID must be a string." });
+    }
+    const cleanUpiId = typeof upiId === "string" ? upiId.trim().toLowerCase() : "";
+    if (cleanUpiId && !UPI_REGEX.test(cleanUpiId)) {
+      return res.status(400).json({ error: "Invalid UPI ID. Example: name@oksbi" });
+    }
+
     const updatedBusiness = await prisma.business.update({
       where: { id: businessId },
       data: {
@@ -1105,6 +1146,7 @@ router.post("/onboarding", authMiddleware, async (req: AuthenticatedRequest, res
         turnoverRange: turnoverRange || "40L_TO_15CR",
         filingFrequency: filingFrequency || "MONTHLY",
         gstin: gstin ? gstin.trim().toUpperCase() : null,
+        upiId: cleanUpiId || undefined,
         registrationType,
         address: address || null,
         pincode: pincode || null,

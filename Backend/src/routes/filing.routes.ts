@@ -196,7 +196,7 @@ async function buildGstr3b(businessId: string, period: string) {
       include: { items: true },
     }),
     prisma.purchaseBill.findMany({
-      where: { businessId, billDate: { gte: startDate, lte: endDate } },
+      where: { businessId, receiptStatus: "ACCEPTED", billDate: { gte: startDate, lte: endDate } },
       include: { items: true },
     }),
     prisma.gstr3bAdjustment.findUnique({ where: { businessId_period: { businessId, period } } }),
@@ -452,8 +452,8 @@ router.get("/gstr1/summary", authMiddleware, async (req: AuthenticatedRequest, r
       include: { customer: true, items: true },
     });
 
-    const b2bInvoices = invoices.filter((i) => i.customer.registrationType === "REGULAR" && i.customer.gstin);
-    const b2cInvoices = invoices.filter((i) => !i.customer.gstin || i.customer.registrationType === "UNREGISTERED");
+    const b2bInvoices = invoices.filter((i) => Boolean(i.buyerGstin));
+    const b2cInvoices = invoices.filter((i) => !i.buyerGstin);
 
     let totalSales = 0;
     let totalTaxable = 0;
@@ -505,12 +505,18 @@ router.get("/gstr1/summary", authMiddleware, async (req: AuthenticatedRequest, r
       });
     });
 
+    const missingHsnCount = invoices.reduce(
+      (sum, inv) => sum + inv.items.filter((it) => !it.hsnSacCode).length,
+      0
+    );
+
     res.json({
       period,
       gstin: business?.gstin || "NOT_SET",
       b2bCount: b2bInvoices.length,
       b2cCount: b2cInvoices.length,
       totalInvoices: invoices.length,
+      missingHsnCount,
       totals: {
         totalSales,
         totalTaxable,
@@ -547,7 +553,26 @@ router.get("/gstr1/excel", authMiddleware, async (req: AuthenticatedRequest, res
     ]);
     if (!business) return res.status(404).json({ error: "Business profile not found." });
 
-    const invoices = allInvoices.filter((i) => i.customer.gstin); // B2B only
+    // Block export if any invoice item in this period is missing HSN
+    const missingHsnCount = await prisma.salesInvoiceItem.count({
+      where: {
+        salesInvoice: {
+          businessId,
+          invoiceDate: { gte: startDate, lte: endDate },
+          status: { not: "CANCELLED" },
+        },
+        hsnSacCode: "",  // non-optional String in schema — empty means unset
+      },
+    });
+    if (missingHsnCount > 0) {
+      return res.status(422).json({
+        error: `Fix ${missingHsnCount} item${missingHsnCount > 1 ? "s" : ""} with missing HSN before exporting GSTR-1. Go to Sales → Fix HSN.`,
+      });
+    }
+
+
+    const invoices = allInvoices.filter((i) => Boolean(i.buyerGstin)); // B2B only
+
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = "GSTMitra";
@@ -575,7 +600,7 @@ router.get("/gstr1/excel", authMiddleware, async (req: AuthenticatedRequest, res
 
     // Row 3: summary values
     const sumVals = sheet.getRow(3);
-    sumVals.getCell(1).value = new Set(invoices.map((i) => i.customer.gstin)).size;
+    sumVals.getCell(1).value = new Set(invoices.map((i) => i.buyerGstin)).size;
     sumVals.getCell(3).value = invoices.length;
     sumVals.getCell(5).value = invoices.reduce((s, i) => s + i.totalAmount, 0);
     sumVals.getCell(12).value = invoices.reduce((s, i) => s + i.subtotal, 0);
@@ -610,7 +635,7 @@ router.get("/gstr1/excel", authMiddleware, async (req: AuthenticatedRequest, res
     invoices.forEach((inv) => {
       groupByRate(inv.items).forEach((line, index) => {
         const row = sheet.addRow([
-          inv.customer.gstin,
+          inv.buyerGstin,
           inv.customer.name,
           inv.invoiceNumber,
           new Date(inv.invoiceDate),
@@ -652,10 +677,24 @@ router.get("/gstr1/json", authMiddleware, async (req: AuthenticatedRequest, res:
       include: { customer: true, items: true },
     });
 
+    if (!businessId) return res.status(400).json({ error: "No active business" });
+
+    // Block export if any invoice item in this period is missing HSN
+    const missingHsnCount = invoices.reduce(
+      (sum, inv) => sum + inv.items.filter((it) => !it.hsnSacCode).length,
+      0
+    );
+    if (missingHsnCount > 0) {
+      return res.status(422).json({
+        error: `Fix ${missingHsnCount} item${missingHsnCount > 1 ? "s" : ""} with missing HSN before exporting GSTR-1. Go to Sales → Fix HSN.`,
+      });
+    }
+
     const b2b = invoices
-      .filter((i) => i.customer.gstin)
+
+      .filter((i) => Boolean(i.buyerGstin))
       .map((i) => ({
-        ctin: i.customer.gstin,
+        ctin: i.buyerGstin,
         inv: [
           {
             inum: i.invoiceNumber,
@@ -726,7 +765,7 @@ router.get("/gstr3b/summary", authMiddleware, async (req: AuthenticatedRequest, 
 
     // Inward Supplies & ITC (Purchases)
     const purchases = await prisma.purchaseBill.findMany({
-      where: { businessId, billDate: { gte: startDate, lte: endDate } },
+      where: { businessId, receiptStatus: "ACCEPTED", billDate: { gte: startDate, lte: endDate } },
       include: { items: true },
     });
 
@@ -970,7 +1009,7 @@ router.get("/gstr2b-books/summary", authMiddleware, async (req: AuthenticatedReq
     const { period, startDate, endDate } = parsePeriod(req.query.period as string);
 
     const bills = await prisma.purchaseBill.findMany({
-      where: { businessId, billDate: { gte: startDate, lte: endDate } },
+      where: { businessId, receiptStatus: "ACCEPTED", billDate: { gte: startDate, lte: endDate } },
       include: { vendor: true, items: true },
     });
 
@@ -1084,7 +1123,7 @@ router.get("/gstr2b-books/excel", authMiddleware, async (req: AuthenticatedReque
     const [business, bills] = await Promise.all([
       prisma.business.findUnique({ where: { id: businessId } }),
       prisma.purchaseBill.findMany({
-        where: { businessId, billDate: { gte: startDate, lte: endDate } },
+        where: { businessId, receiptStatus: "ACCEPTED", billDate: { gte: startDate, lte: endDate } },
         include: { vendor: true, items: true },
         orderBy: [{ billDate: "asc" }, { billNumber: "asc" }],
       }),
@@ -1157,7 +1196,7 @@ router.get("/gstr2b-books/drilldown", authMiddleware, async (req: AuthenticatedR
     const rowKey = String(req.query.category || "");
 
     const bills = await prisma.purchaseBill.findMany({
-      where: { businessId, billDate: { gte: startDate, lte: endDate } },
+      where: { businessId, receiptStatus: "ACCEPTED", billDate: { gte: startDate, lte: endDate } },
       include: { vendor: true },
       orderBy: { billDate: "desc" },
     });
@@ -1259,7 +1298,7 @@ router.get("/gstr2b-books/json", authMiddleware, async (req: AuthenticatedReques
     const business = await prisma.business.findUnique({ where: { id: businessId } });
 
     const bills = await prisma.purchaseBill.findMany({
-      where: { businessId, billDate: { gte: startDate, lte: endDate } },
+      where: { businessId, receiptStatus: "ACCEPTED", billDate: { gte: startDate, lte: endDate } },
       include: { vendor: true, items: true },
     });
 
@@ -1409,6 +1448,7 @@ async function reconcileGstr2b(businessId: string, period: string, file: any) {
   const bills = await prisma.purchaseBill.findMany({
     where: {
       businessId,
+      receiptStatus: "ACCEPTED",
       OR: [
         { billDate: { gte: startDate, lte: endDate } },
         { vendor: { gstin: { in: portalGstins } } }, // bill dated an earlier month, supplier reported it now

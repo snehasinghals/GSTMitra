@@ -38,6 +38,87 @@ export function getEmailTransporter(): Transporter {
   return transporter;
 }
 
+export interface SendPaymentReminderEmailOptions {
+  to: string;
+  customerName: string;
+  sellerName: string;
+  billNumber: string;
+  billDate: string;
+  pendingAmount: number;
+  dueDate?: string | null;
+  upiId?: string | null;
+}
+
+export async function sendPaymentReminderEmail({
+  to,
+  customerName,
+  sellerName,
+  billNumber,
+  billDate,
+  pendingAmount,
+  dueDate,
+  upiId,
+}: SendPaymentReminderEmailOptions) {
+  const escapeHtml = (value: string) =>
+    value.replace(/[&<>"']/g, (character) => {
+      const entities: Record<string, string> = {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      };
+      return entities[character];
+    });
+
+  try {
+    const mailer = getEmailTransporter();
+    const safeCustomerName = escapeHtml(customerName);
+    const safeSellerName = escapeHtml(sellerName);
+    const safeBillNumber = escapeHtml(billNumber);
+    const safeBillDate = escapeHtml(billDate);
+    const safeDueDate = dueDate ? escapeHtml(dueDate) : null;
+    const safeUpiId = upiId ? escapeHtml(upiId) : null;
+    const amount = new Intl.NumberFormat("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(pendingAmount);
+    const html = `
+<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:32px 12px;background:#f8fafc;color:#1e293b;font-family:Arial,sans-serif">
+  <table role="presentation" style="max-width:600px;margin:auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:28px">
+    <tr><td>
+      <h1 style="margin:0 0 20px;color:#0f172a;font-size:22px">Payment reminder</h1>
+      <p>Hello ${safeCustomerName},</p>
+      <p>This is a reminder from <strong>${safeSellerName}</strong> about the pending amount on your bill.</p>
+      <table role="presentation" style="width:100%;background:#f8fafc;border-radius:8px;padding:16px">
+        <tr><td>Bill number</td><td style="text-align:right"><strong>${safeBillNumber}</strong></td></tr>
+        <tr><td>Bill date</td><td style="text-align:right">${safeBillDate}</td></tr>
+        ${safeDueDate ? `<tr><td>Due date</td><td style="text-align:right">${safeDueDate}</td></tr>` : ""}
+        <tr><td style="padding-top:12px">Amount due</td><td style="padding-top:12px;text-align:right;font-size:20px;color:#b45309"><strong>₹${amount}</strong></td></tr>
+      </table>
+      ${safeUpiId ? `<p>You can pay using UPI ID <strong>${safeUpiId}</strong>. Please contact the seller if you have already paid.</p>` : ""}
+      <p>Thank you,<br>${safeSellerName}</p>
+      <p style="color:#64748b;font-size:12px">This message was sent using GSTMitra.</p>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+    const info = await mailer.sendMail({
+      from: `"GSTMitra" <${emailFrom}>`,
+      to,
+      subject: `Payment reminder: bill ${billNumber} from ${sellerName}`,
+      text: `Hello ${customerName}, this is a payment reminder from ${sellerName}. Bill ${billNumber}, dated ${billDate}. Amount due: INR ${amount}.${dueDate ? ` Due date: ${dueDate}.` : ""}${upiId ? ` UPI ID: ${upiId}.` : ""}`,
+      html,
+    });
+    return { success: true as const, messageId: info.messageId };
+  } catch (err: any) {
+    console.error(`[Email] Failed to send payment reminder to ${to}:`, err.message || err);
+    return { success: false as const, error: err instanceof Error ? err.message : "Email delivery failed." };
+  }
+}
+
 export interface SendOtpEmailOptions {
   to: string;
   name?: string;
@@ -462,4 +543,3 @@ export async function sendPasswordChangedEmail({ to, name, ip }: SendPasswordCha
     return { success: false, error: err.message };
   }
 }
-

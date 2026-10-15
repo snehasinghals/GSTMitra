@@ -5,7 +5,8 @@ import { apiFetch, downloadFile } from "../../lib/api";
 import HealthCheckBanner, { type HealthCheckStatus } from "../../components/HealthCheckBanner";
 import HealthCheckGateDialog from "../../components/HealthCheckGateDialog";
 import { useHealthCheckGate } from "../../lib/useHealthCheckGate";
-import { Download, FileSpreadsheet } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, Download, FileSpreadsheet } from "lucide-react";
 
 const formatCurrency = (amount: number) =>
   `₹${amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -28,6 +29,7 @@ type Gstr1Summary = {
   gstin: string;
   totalInvoices: number;
   b2bCount: number;
+  missingHsnCount?: number;
   totals: { totalSales: number; totalTax: number };
   hsnSummary: HsnSummaryRow[];
 };
@@ -105,6 +107,28 @@ export default function Gstr1SectionPage() {
           }
         />
       </div>
+
+      {gstr1Summary && typeof gstr1Summary.missingHsnCount === "number" && gstr1Summary.missingHsnCount > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-900 shadow-xs">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
+            <div>
+              <p className="font-bold text-sm">
+                {gstr1Summary.missingHsnCount} item{gstr1Summary.missingHsnCount > 1 ? "s are" : " is"} missing HSN codes
+              </p>
+              <p className="text-xs text-amber-800 mt-0.5">
+                GSTR-1 export requires all items to have valid HSN/SAC codes. Fix them before generating export files.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/fix-hsn"
+            className="inline-flex items-center justify-center rounded-xl bg-amber-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-amber-700 whitespace-nowrap self-start sm:self-center"
+          >
+            Fix HSN Now →
+          </Link>
+        </div>
+      )}
 
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
         <div className="flex items-center justify-between border-b pb-3">
