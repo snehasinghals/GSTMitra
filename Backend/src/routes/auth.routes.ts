@@ -1088,6 +1088,132 @@ router.patch("/business/upi", authMiddleware, async (req: AuthenticatedRequest, 
 });
 
 // ==========================================
+// 9d. UPDATE BUSINESS SETTINGS
+// ==========================================
+const BUSINESS_TYPES = ["RETAIL", "SERVICES", "WHOLESALE", "FREELANCER", "MANUFACTURING"];
+const TURNOVER_RANGES = ["BELOW_15L", "15L_TO_40L", "40L_TO_15CR", "ABOVE_15CR"];
+const FILING_FREQUENCIES = ["MONTHLY", "QUARTERLY"];
+
+const BUSINESS_SELECT = {
+  id: true,
+  name: true,
+  tradeName: true,
+  gstin: true,
+  stateCode: true,
+  stateName: true,
+  businessType: true,
+  turnoverRange: true,
+  filingFrequency: true,
+  registrationType: true,
+  address: true,
+  pincode: true,
+  phone: true,
+  email: true,
+  bankName: true,
+  bankAccount: true,
+  bankIfsc: true,
+  upiId: true,
+  isOnboarded: true,
+} as const;
+
+router.patch("/business", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) {
+      return res.status(400).json({ error: "No active business associated with account." });
+    }
+
+    const b = req.body || {};
+    const data: Record<string, any> = {};
+
+    if ("businessName" in b) {
+      const name = String(b.businessName ?? "").trim();
+      if (!name) return res.status(400).json({ error: "Shop name is required." });
+      data.name = name;
+    }
+
+    if ("tradeName" in b) {
+      data.tradeName = b.tradeName ? String(b.tradeName).trim() : null;
+    }
+
+    if ("businessType" in b) {
+      if (!BUSINESS_TYPES.includes(b.businessType)) {
+        return res.status(400).json({ error: "Invalid business type." });
+      }
+      data.businessType = b.businessType;
+    }
+
+    let stateCode: string | undefined = "stateCode" in b ? String(b.stateCode) : undefined;
+
+    if ("gstin" in b) {
+      if (b.gstin === null || String(b.gstin).trim() === "") {
+        data.gstin = null;
+        data.registrationType = "UNREGISTERED";
+      } else {
+        const gstinVal = validateGstin(String(b.gstin));
+        if (!gstinVal.isValid) {
+          return res.status(400).json({ error: gstinVal.message });
+        }
+        data.gstin = String(b.gstin).trim().toUpperCase();
+        data.registrationType = "REGULAR";
+        if (gstinVal.stateCode) stateCode = gstinVal.stateCode;
+      }
+    }
+
+    if (stateCode !== undefined) {
+      const state = INDIAN_STATES.find((s) => s.code === stateCode);
+      if (!state) return res.status(400).json({ error: "Invalid state." });
+      data.stateCode = state.code;
+      data.stateName = state.name;
+    }
+
+    if ("turnoverRange" in b) {
+      if (!TURNOVER_RANGES.includes(b.turnoverRange)) {
+        return res.status(400).json({ error: "Invalid turnover range." });
+      }
+      data.turnoverRange = b.turnoverRange;
+    }
+
+    if ("filingFrequency" in b) {
+      if (!FILING_FREQUENCIES.includes(b.filingFrequency)) {
+        return res.status(400).json({ error: "Invalid filing frequency." });
+      }
+      data.filingFrequency = b.filingFrequency;
+    }
+
+    if ("upiId" in b) {
+      if (b.upiId === null || String(b.upiId).trim() === "") {
+        data.upiId = null;
+      } else {
+        const upi = String(b.upiId).trim().toLowerCase();
+        if (!UPI_REGEX.test(upi)) {
+          return res.status(400).json({ error: "Invalid UPI ID. Example: name@oksbi" });
+        }
+        data.upiId = upi;
+      }
+    }
+
+    if (Object.keys(data).length === 0) {
+      return res.status(400).json({ error: "Nothing to update." });
+    }
+
+    const business = await prisma.business.update({
+      where: { id: businessId },
+      data,
+      select: BUSINESS_SELECT,
+    });
+
+    res.json({ message: "Settings saved.", business });
+  } catch (error: any) {
+    if (error?.code === "P2002") {
+      return res.status(409).json({ error: "This GSTIN is already registered with another shop." });
+    }
+    console.error("Update business error:", error);
+    res.status(500).json({ error: "Could not save settings. Please try again." });
+  }
+});
+
+// ==========================================
 // 10. ONBOARDING QUESTIONNAIRE
 // ==========================================
 router.post("/onboarding", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
