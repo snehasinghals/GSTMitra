@@ -436,7 +436,9 @@ export async function syncLatestRulesAndAmendments(performedBy = "SYSTEM"): Prom
 
     let parsedVal: any = {};
     try {
-      parsedVal = typeof rule.valueJson === "string" ? JSON.parse(rule.valueJson) : { ...rule.valueJson };
+      parsedVal = typeof rule.valueJson === "string"
+      ? JSON.parse(rule.valueJson)
+      : { ...((rule.valueJson ?? {}) as Record<string, unknown>) };
     } catch {
       parsedVal = { raw: rule.valueJson };
     }
