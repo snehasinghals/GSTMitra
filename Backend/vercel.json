@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/rules/sync-amendments",
+      "schedule": "30 18 * * *"
+    }
+  ]
+}

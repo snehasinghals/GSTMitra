@@ -1,4 +1,4 @@
-import { Router, Response } from "express";
+import { Router, Request, Response } from "express";
 import { prisma } from "../lib/db.js";
 import { authMiddleware, AuthenticatedRequest } from "../middleware/auth.js";
 import { syncLatestRulesAndAmendments, ingestCustomAmendment } from "../lib/ruleUpdater.js";
@@ -127,6 +127,26 @@ router.post("/sync-amendments", authMiddleware, async (req: AuthenticatedRequest
   } catch (error: any) {
     console.error("Sync amendments error:", error);
     res.status(500).json({ error: "Failed to synchronize amendments." });
+  }
+});
+
+// Called automatically by Vercel Cron every midnight (GET + secret, no login)
+router.get("/sync-amendments", async (req: Request, res: Response) => {
+  const secret = process.env.CRON_SECRET;
+  if (!secret || req.headers.authorization !== `Bearer ${secret}`) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const result = await syncLatestRulesAndAmendments("VERCEL_CRON");
+    res.json({
+      success: true,
+      message: `Cron sync done. Inserted: ${result.inserted}, Updated: ${result.updated}, Total: ${result.total}`,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error("Cron sync error:", error);
+    res.status(500).json({ error: "Cron sync failed." });
   }
 });
 
