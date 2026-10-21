@@ -95,9 +95,9 @@ function SettingsContent() {
         <SettingsForm key={business.id} business={business} returnTo={returnTo} />
       ) : (
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-          <h1 className="text-xl font-bold text-slate-900">Settings</h1>
+          <h1 className="text-xl font-bold text-slate-900">Shop Settings</h1>
           <p className="mt-2 text-sm text-slate-500">
-            {loading ? "Loading your shop settings..." : "Complete shop setup to manage your settings."}
+            {loading ? "Loading your shop Shop Settings..." : "Complete shop setup to manage your Shop Settings."}
           </p>
         </section>
       )}
@@ -107,7 +107,7 @@ function SettingsContent() {
 
 export default function SettingsPage() {
   return (
-    <Suspense fallback={<div className="p-6 text-sm text-slate-500">Loading settings...</div>}>
+    <Suspense fallback={<div className="p-6 text-sm text-slate-500">Loading Shop Settings...</div>}>
       <SettingsContent />
     </Suspense>
   );
@@ -279,7 +279,7 @@ function SettingsForm({ business, returnTo }: { business: Business; returnTo: st
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       <div className="pb-1">
-        <h1 className="text-xl font-bold text-slate-900">Settings</h1>
+        <h1 className="text-xl font-bold text-slate-900">Shop Settings</h1>
         <p className="text-sm text-slate-500">Change your shop details anytime. Press Save when you are done.</p>
       </div>
 
@@ -414,7 +414,7 @@ function SettingsForm({ business, returnTo }: { business: Business; returnTo: st
           </p>
           {stateChanged && (
             <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900">
-              Old invoices will not change. Only new invoices will use the new state.
+              Old invoices will not change. Only new bills will use the new state.
             </p>
           )}
         </div>

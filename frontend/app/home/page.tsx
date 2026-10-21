@@ -137,7 +137,7 @@ export default function HomePage() {
           </div>
         </button>
 
-        {/* Tile 2: My Bills */}
+        {/* Tile 2: My Shopping Bills */}
         <Link
           href="/my-bills"
           className="group text-left p-5 sm:p-6 bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl shadow-xs hover:shadow-md transition-all transform hover:-translate-y-0.5 flex flex-col justify-between min-h-[140px]"
@@ -147,7 +147,7 @@ export default function HomePage() {
           </div>
           <div>
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-1.5">
-              <span>My Bills</span>
+              <span>My Shopping Bills</span>
               <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-slate-700 group-hover:translate-x-1 transition-all" />
             </h2>
             <p className="text-xs text-slate-500 mt-0.5 leading-snug">
@@ -176,7 +176,7 @@ export default function HomePage() {
                 </span>
               </div>
               <p className="text-xs text-amber-800 mt-0.5 leading-snug">
-                Create invoices & file GST easily
+                Make bills & file GST easily
               </p>
             </div>
           </Link>

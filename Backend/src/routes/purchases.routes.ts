@@ -15,6 +15,7 @@ import {
   UPLOADS_DIR,
 } from "../lib/billAttachments.js";
 import { INDIAN_STATES } from "../lib/constants.js";
+import { validatePurchaseBillAgainstRules } from "../lib/ruleEngine.js";
 
 const router = Router();
 
@@ -30,7 +31,7 @@ async function syncBillPayment(tx: Prisma.TransactionClient, billId: string) {
   const updatedBill = await tx.purchaseBill.update({
     where: { id: billId },
     data: { paidAmount, status },
-    include: { vendor: true, items: true, payments: true },
+    include: { vendor: true, Items: true, payments: true },
   });
 
   if (bill.sourceSalesInvoiceId) {
@@ -47,8 +48,8 @@ async function syncBillPayment(tx: Prisma.TransactionClient, billId: string) {
 }
 
 // List all purchase bills
-// GET /bills?view=list -> lean payload for the Purchases page table (no line items, max `limit` rows)
-// GET /bills           -> unchanged full payload (vendor + items) for any other caller
+// GET /bills?view=list -> lean payload for the Purchases page table (no line Items, max `limit` rows)
+// GET /bills           -> unchanged full payload (vendor + Items) for any other caller
 router.get("/bills", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const businessId = req.user?.businessId;
@@ -74,7 +75,7 @@ router.get("/bills", authMiddleware, async (req: AuthenticatedRequest, res: Resp
       where: whereClause,
       include: isListView
         ? { vendor: { select: { id: true, name: true, gstin: true, stateCode: true, stateName: true } } }
-        : { vendor: true, items: true },
+        : { vendor: true, Items: true },
       orderBy: [{ billDate: "desc" }, { createdAt: "desc" }],
       ...(isListView ? { take } : {}),
     });
@@ -98,7 +99,7 @@ router.get("/bills/:id", authMiddleware, async (req: AuthenticatedRequest, res: 
     if (!businessId) return res.status(400).json({ error: "No active business." });
     const bill = await prisma.purchaseBill.findFirst({
       where: { id: req.params.id as string, businessId },
-      include: { vendor: true, items: true },
+      include: { vendor: true, Items: true },
     });
     if (!bill) return res.status(404).json({ error: "Purchase bill not found." });
     const attachment = getBillAttachment(businessId, bill.id) || getBillAttachment(businessId, bill.billNumber);
@@ -139,7 +140,7 @@ router.patch("/bills/:id/review", authMiddleware, async (req: AuthenticatedReque
 
     const bill = await prisma.purchaseBill.findFirst({
       where: { id: req.params.id as string, businessId },
-      include: { vendor: true, items: true },
+      include: { vendor: true, Items: true },
     });
     if (!bill) return res.status(404).json({ error: "Received bill not found." });
     res.json(bill);
@@ -153,7 +154,7 @@ router.patch("/bills/:id/cess", authMiddleware, async (req: AuthenticatedRequest
   try {
     const businessId = req.user?.businessId;
     if (!businessId) return res.status(400).json({ error: "No active business." });
-    const requestedItems: unknown = req.body?.items;
+    const requestedItems: unknown = req.body?.Items;
     if (!Array.isArray(requestedItems) || requestedItems.length === 0) {
       return res.status(400).json({ error: "Provide at least one purchase line with its cess amount." });
     }
@@ -176,18 +177,18 @@ router.patch("/bills/:id/cess", authMiddleware, async (req: AuthenticatedRequest
     const updatedBill = await prisma.$transaction(async (tx) => {
       const bill = await tx.purchaseBill.findFirst({
         where: { id: req.params.id as string, businessId },
-        include: { vendor: true, items: true },
+        include: { vendor: true, Items: true },
       });
       if (!bill) return null;
       if (bill.receiptStatus !== "ACCEPTED") {
         throw new Error("Review this received bill before editing tax details.");
       }
-      if ([...changes.keys()].some((id) => !bill.items.some((line) => line.id === id))) {
+      if ([...changes.keys()].some((id) => !bill.Items.some((line) => line.id === id))) {
         throw new Error("Purchase line not found on this bill.");
       }
 
       let totalCess = 0;
-      for (const item of bill.items) {
+      for (const item of bill.Items) {
         const cessAmount = changes.get(item.id) ?? item.cessAmount;
         totalCess += cessAmount;
         if (changes.has(item.id)) {
@@ -213,7 +214,7 @@ router.patch("/bills/:id/cess", authMiddleware, async (req: AuthenticatedRequest
       return tx.purchaseBill.update({
         where: { id: bill.id },
         data: { totalCess, totalAmount, status },
-        include: { vendor: true, items: true, payments: true },
+        include: { vendor: true, Items: true, payments: true },
       });
     });
     if (!updatedBill) return res.status(404).json({ error: "Purchase bill not found." });
@@ -241,7 +242,7 @@ router.get("/bills/:id/pdf", authMiddleware, async (req: AuthenticatedRequest, r
     const id = req.params.id as string;
     const bill = await prisma.purchaseBill.findFirst({
       where: { id, businessId },
-      include: { vendor: true, items: true },
+      include: { vendor: true, Items: true },
     });
     if (!bill) return res.status(404).json({ error: "Purchase bill not found." });
 
@@ -419,7 +420,7 @@ router.get("/bills/:id/pdf", authMiddleware, async (req: AuthenticatedRequest, r
     drawTableHeader(tableTop);
     let itemY = tableTop + HEADER_H;
 
-    bill.items.forEach((item, index) => {
+    bill.Items.forEach((item, index) => {
       doc.font(regularFont).fontSize(8);
       const description = String(item.description || "");
       const rowHeight = Math.min(90, Math.max(ROW_MIN, doc.heightOfString(description, { width: 137 }) + 20));
@@ -462,7 +463,7 @@ router.get("/bills/:id/pdf", authMiddleware, async (req: AuthenticatedRequest, r
     const rows: SummaryRow[] = [{ label: "Sub Total", amount: bill.subtotal }];
 
     const taxSlabs = new Map<number, { cgst: number; sgst: number; igst: number }>();
-    bill.items.forEach((item) => {
+    bill.Items.forEach((item) => {
       const slab = taxSlabs.get(item.gstRate) ?? { cgst: 0, sgst: 0, igst: 0 };
       slab.cgst += item.cgstAmount;
       slab.sgst += item.sgstAmount;
@@ -588,7 +589,7 @@ router.get("/itc-payment-risk", authMiddleware, async (req: AuthenticatedRequest
         status: { not: "PAID" },
         billDate: { lte: threshold },
       },
-      include: { vendor: { select: { name: true } }, items: true },
+      include: { vendor: { select: { name: true } }, Items: true },
       orderBy: { billDate: "asc" },
     });
 
@@ -597,7 +598,7 @@ router.get("/itc-payment-risk", authMiddleware, async (req: AuthenticatedRequest
         const daysOld = Math.floor((now.getTime() - bill.billDate.getTime()) / (24 * 60 * 60 * 1000));
         const balanceDue = r2(bill.totalAmount - bill.paidAmount);
         const eligibleItc = r2(
-          bill.items.reduce(
+          bill.Items.reduce(
             (sum, item) =>
               sum + (item.isItcEligible ? item.cgstAmount + item.sgstAmount + item.igstAmount + item.cessAmount : 0),
             0
@@ -643,17 +644,17 @@ router.post("/bills", authMiddleware, async (req: AuthenticatedRequest, res: Res
       isReverseCharge,
       isItcEligible,
       itcIneligibilityReason,
-      items, // array of items: { description, hsnSacCode, quantity, unit, rate, gstRate, isItcEligible }
+      Items, // array of Items: { description, hsnSacCode, quantity, unit, rate, gstRate, isItcEligible }
     } = req.body;
 
     const cleanBillNumber = String(billNumber || "").trim();
 
-    if (!vendorId || !cleanBillNumber || !items || !Array.isArray(items) || items.length === 0) {
+    if (!vendorId || !cleanBillNumber || !Items || !Array.isArray(Items) || Items.length === 0) {
       return res.status(400).json({ error: "Vendor, bill number, and at least one item are required." });
     }
 
     // Same item checks as sales invoices - never store negative / NaN / out-of-range values.
-    for (const [i, it] of items.entries()) {
+    for (const [i, it] of Items.entries()) {
       const qty = Number(it.quantity ?? 1);
       const rate = Number(it.rate);
       const gst = Number(it.gstRate ?? 18);
@@ -692,7 +693,7 @@ router.post("/bills", authMiddleware, async (req: AuthenticatedRequest, res: Res
     if (
       vendor.vendorType !== "REGISTERED" &&
       !isReverseCharge &&
-      items.some((item: any) => Number(item.gstRate ?? 18) > 0)
+      Items.some((item: any) => Number(item.gstRate ?? 18) > 0)
     ) {
       return res.status(400).json({
         error: "An unregistered supplier should not charge GST. Use a 0% rate, or mark reverse charge when it legally applies.",
@@ -721,7 +722,7 @@ router.post("/bills", authMiddleware, async (req: AuthenticatedRequest, res: Res
     let totalIgst = 0;
     let totalCess = 0;
 
-    const formattedItems = items.map((item: any) => {
+    const formattedItems = Items.map((item: any) => {
       const qty = Number(item.quantity ?? 1);
       const rate = Number(item.rate);
       const taxableVal = r2(qty * rate);
@@ -775,6 +776,34 @@ router.post("/bills", authMiddleware, async (req: AuthenticatedRequest, res: Res
 
     const totalAmount = Math.round(subtotal + totalCgst + totalSgst + totalIgst + totalCess);
 
+    // Dynamic rule validation against active rules in DB (NO HARDCODING)
+    const ruleViolations = await validatePurchaseBillAgainstRules({
+      business,
+      bill: {
+        billNumber: cleanBillNumber,
+        billDate: parsedBillDate,
+        placeOfSupply: pos,
+        category: category || "STOCK",
+        isReverseCharge: Boolean(isReverseCharge),
+        isItcEligible: overallItcEligible,
+        totalAmount,
+        totalCgst,
+        totalSgst,
+        totalIgst,
+      },
+      Items: formattedItems,
+      vendor,
+    });
+
+    const errorViolations = ruleViolations.filter((v) => v.severity === "error");
+    if (errorViolations.length > 0) {
+      return res.status(422).json({
+        error: "GST Rule Validation Failed",
+        message: "Purchase bill me GST rules ke mutabik galtiyan hain. Kripya niche diye points ko check karein.",
+        ruleViolations,
+      });
+    }
+
     const bill = await prisma.purchaseBill.create({
       data: {
         businessId,
@@ -797,13 +826,13 @@ router.post("/bills", authMiddleware, async (req: AuthenticatedRequest, res: Res
         totalCess,
         totalAmount,
         paidAmount: 0,
-        items: {
+        Items: {
           create: formattedItems,
         },
       },
       include: {
         vendor: true,
-        items: true,
+        Items: true,
       },
     });
 
@@ -835,10 +864,10 @@ router.put("/bills/:id", authMiddleware, async (req: AuthenticatedRequest, res: 
 
     const {
       vendorId, billNumber, billDate, dueDate, category, isReverseCharge,
-      isItcEligible, itcIneligibilityReason, items,
+      isItcEligible, itcIneligibilityReason, Items,
     } = req.body;
     const cleanBillNumber = String(billNumber || "").trim();
-    if (!vendorId || !cleanBillNumber || !Array.isArray(items) || items.length === 0) {
+    if (!vendorId || !cleanBillNumber || !Array.isArray(Items) || Items.length === 0) {
       return res.status(400).json({ error: "Vendor, bill number, and at least one item are required." });
     }
     if (typeof isReverseCharge !== "boolean") {
@@ -847,7 +876,7 @@ router.put("/bills/:id", authMiddleware, async (req: AuthenticatedRequest, res: 
     if (typeof isItcEligible !== "boolean") {
       return res.status(400).json({ error: "ITC eligibility must be a boolean." });
     }
-    for (const [index, item] of items.entries()) {
+    for (const [index, item] of Items.entries()) {
       const quantity = Number(item.quantity ?? 1);
       const rate = Number(item.rate);
       const gstRate = Number(item.gstRate ?? 18);
@@ -869,7 +898,7 @@ router.put("/bills/:id", authMiddleware, async (req: AuthenticatedRequest, res: 
     ]);
     if (!vendor) return res.status(404).json({ error: "Vendor not found." });
     if (!business) return res.status(404).json({ error: "Business profile not found." });
-    if (vendor.vendorType !== "REGISTERED" && !isReverseCharge && items.some((item: any) => Number(item.gstRate ?? 18) > 0)) {
+    if (vendor.vendorType !== "REGISTERED" && !isReverseCharge && Items.some((item: any) => Number(item.gstRate ?? 18) > 0)) {
       return res.status(400).json({ error: "An unregistered supplier should not charge GST. Use a 0% rate, or mark reverse charge when it legally applies." });
     }
 
@@ -881,7 +910,7 @@ router.put("/bills/:id", authMiddleware, async (req: AuthenticatedRequest, res: 
       ? "Unregistered vendor - no GST charged, ITC not available"
       : String(itcIneligibilityReason || "Blocked credit under Sec 17(5)");
     let subtotal = 0, totalCgst = 0, totalSgst = 0, totalIgst = 0, totalCess = 0;
-    const formattedItems = items.map((item: any) => {
+    const formattedItems = Items.map((item: any) => {
       const quantity = Number(item.quantity ?? 1);
       const rate = Number(item.rate);
       const taxableValue = r2(quantity * rate);
@@ -943,15 +972,40 @@ router.put("/bills/:id", authMiddleware, async (req: AuthenticatedRequest, res: 
         totalCess,
         totalAmount,
         status,
-        items: { deleteMany: {}, create: formattedItems },
+        Items: { deleteMany: {}, create: formattedItems },
       },
-      include: { vendor: true, items: true, payments: true },
+      include: { vendor: true, Items: true, payments: true },
     });
     res.json(bill);
   } catch (error: any) {
     if (error?.code === "P2002") return res.status(409).json({ error: "A bill with this number already exists for this vendor." });
     console.error("Update purchase bill error:", error);
     res.status(500).json({ error: "Failed to update purchase bill." });
+  }
+});
+
+// Delete a purchase bill
+router.delete("/bills/:id", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) return res.status(400).json({ error: "No active business" });
+
+    const bill = await prisma.purchaseBill.findFirst({
+      where: { id: req.params.id as string, businessId },
+      select: { id: true, billNumber: true },
+    });
+    if (!bill) return res.status(404).json({ error: "Purchase bill not found." });
+
+    await prisma.$transaction(async (tx) => {
+      await tx.purchasePayment.deleteMany({ where: { purchaseBillId: bill.id } });
+      await tx.purchaseBillItem.deleteMany({ where: { purchaseBillId: bill.id } });
+      await tx.purchaseBill.delete({ where: { id: bill.id } });
+    });
+
+    res.json({ message: `Purchase bill ${bill.billNumber} deleted successfully.` });
+  } catch (error: any) {
+    console.error("Delete purchase bill error:", error);
+    res.status(500).json({ error: "Failed to delete purchase bill." });
   }
 });
 
@@ -1240,7 +1294,7 @@ router.post("/extract-bill", authMiddleware, async (req: AuthenticatedRequest, r
         totalIgst: extracted.totalIgst,
         totalCess: extracted.totalCess,
         totalAmount: extracted.totalAmount,
-        items: extracted.items,
+        Items: extracted.Items,
         confidence: extracted.confidence,
         extractionMethod: extracted.extractionMethod,
       });
@@ -1360,8 +1414,8 @@ router.post("/batch-save-bills", authMiddleware, async (req: AuthenticatedReques
             : billData.itcIneligibilityReason || "Blocked credit under Sec 17(5)"
           : null;
 
-        const rawItems = Array.isArray(billData.items) && billData.items.length > 0
-          ? billData.items
+        const rawItems = Array.isArray(billData.Items) && billData.Items.length > 0
+          ? billData.Items
           : [
               {
                 description: "Purchase Goods / Services",
@@ -1454,13 +1508,13 @@ router.post("/batch-save-bills", authMiddleware, async (req: AuthenticatedReques
             totalCess,
             totalAmount,
             paidAmount: 0,
-            items: {
+            Items: {
               create: formattedItems,
             },
           },
           include: {
             vendor: true,
-            items: true,
+            Items: true,
           },
         });
 

@@ -49,17 +49,58 @@ async function attachCustomerStats(
     });
   }
 
+  // Fetch linked user profiles by mitraId, phone, or email to populate missing emails & PANs
+  const mitraIds = customers.map((c) => c.mitraId).filter(Boolean) as string[];
+  const phones = customers.map((c) => c.phone).filter(Boolean) as string[];
+  const emails = customers.map((c) => c.email).filter(Boolean) as string[];
+
+  const userConditions: any[] = [];
+  if (mitraIds.length > 0) userConditions.push({ mitraId: { in: mitraIds } });
+  if (phones.length > 0) userConditions.push({ phone: { in: phones } });
+  if (emails.length > 0) userConditions.push({ email: { in: emails } });
+
+  let matchedUsers: Array<{
+    id: string;
+    email: string;
+    phone: string | null;
+    mitraId: string | null;
+    pan: string | null;
+    address: string | null;
+  }> = [];
+
+  if (userConditions.length > 0) {
+    matchedUsers = await prisma.user.findMany({
+      where: { OR: userConditions },
+      select: {
+        id: true,
+        email: true,
+        phone: true,
+        mitraId: true,
+        pan: true,
+        address: true,
+      },
+    });
+  }
+
   return customers.map((c) => {
     const st = statsMap.get(c.id);
+    const u = matchedUsers.find(
+      (usr) =>
+        (c.mitraId && usr.mitraId?.toLowerCase() === c.mitraId.toLowerCase()) ||
+        (c.phone && usr.phone === c.phone) ||
+        (c.email && usr.email?.toLowerCase() === c.email.toLowerCase())
+    );
+
     return {
       id: c.id,
       name: c.name,
-      phone: c.phone,
-      email: c.email,
+      phone: c.phone || u?.phone || null,
+      email: c.email || u?.email || null,
       gstin: c.gstin,
       stateCode: c.stateCode,
-      address: c.address,
-      mitraId: c.mitraId,
+      address: c.address || u?.address || null,
+      mitraId: c.mitraId || u?.mitraId || null,
+      pan: u?.pan || null,
       lastBilledAt: st?.lastBilledAt ?? null,
       pendingAmount: st?.pendingAmount ?? 0,
     };
@@ -207,6 +248,18 @@ router.get("/lookup-mitra", authMiddleware, async (req: AuthenticatedRequest, re
       });
 
       if (existingCustomer) {
+        // Look up linked User profile to retrieve their registered PAN and email
+        const linkedUser = await prisma.user.findFirst({
+          where: {
+            OR: [
+              ...(existingCustomer.phone ? [{ phone: existingCustomer.phone }] : []),
+              ...(existingCustomer.mitraId ? [{ mitraId: existingCustomer.mitraId }] : []),
+              ...(existingCustomer.email ? [{ email: existingCustomer.email }] : []),
+            ],
+          },
+          select: { pan: true, email: true, address: true, mitraId: true },
+        });
+
         const gstinsList: Array<{ shopName: string; gstin: string }> = [];
         if (existingCustomer.gstin && existingCustomer.gstin.trim()) {
           gstinsList.push({
@@ -220,10 +273,10 @@ router.get("/lookup-mitra", authMiddleware, async (req: AuthenticatedRequest, re
           source: "CUSTOMER",
           name: existingCustomer.name,
           phone: existingCustomer.phone || "",
-          email: existingCustomer.email || "",
-          mitraId: null,
-          address: existingCustomer.address || "",
-          pan: "",
+          email: existingCustomer.email || linkedUser?.email || "",
+          mitraId: existingCustomer.mitraId || linkedUser?.mitraId || null,
+          address: existingCustomer.address || linkedUser?.address || "",
+          pan: linkedUser?.pan || "",
           gstin: existingCustomer.gstin || "",
           gstins: gstinsList,
           customerId: existingCustomer.id,

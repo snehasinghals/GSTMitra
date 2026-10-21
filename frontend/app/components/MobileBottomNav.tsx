@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import Link from "next/link";
@@ -19,8 +19,10 @@ import {
   FileSpreadsheet,
   BookOpen,
   HelpCircle,
+  Settings,
   X,
 } from "lucide-react";
+
 
 export function MobileBottomNav() {
   const pathname = usePathname();
@@ -34,7 +36,7 @@ export function MobileBottomNav() {
   // Customer navigation (isOnboarded = false)
   const customerTabs = [
     { label: "Home", href: "/home", icon: Home, active: isExact("/home") },
-    { label: "My Bills", href: "/my-bills", icon: Receipt, active: isUnder("/my-bills") },
+    { label: "My Shopping Bills", href: "/my-bills", icon: Receipt, active: isUnder("/my-bills") },
     { label: "Start your shop", href: "/onboarding", icon: Store, active: isUnder("/onboarding") },
     { label: "Profile", href: "/profile", icon: User, active: isUnder("/profile") },
   ];
@@ -42,19 +44,21 @@ export function MobileBottomNav() {
   // Shop owner navigation (isOnboarded = true)
   const shopTabs = [
     { label: "Home", href: "/home", icon: Home, active: isExact("/home") },
-    { label: "New Invoice", href: "/new-bill/create", icon: PlusCircle, active: isUnder("/new-bill") },
+    { label: "Make Bill", href: "/new-bill/create", icon: PlusCircle, active: isUnder("/new-bill") },
     { label: "Sales", href: "/sales", icon: FileText, active: isExact("/sales") },
-    { label: "My Bills", href: "/my-bills", icon: Receipt, active: isUnder("/my-bills") },
+    { label: "My Shopping Bills", href: "/my-bills", icon: Receipt, active: isUnder("/my-bills") },
     { label: "More", href: "#more", icon: MoreHorizontal, active: false },
   ];
 
   // Items inside "More" bottom sheet for shop owners
+  // Items inside "More" bottom sheet for shop owners
   const moreItems = [
     { label: "Shop Dashboard", href: "/", icon: LayoutDashboard, active: isExact("/") },
     { label: "Purchases", href: "/purchases", icon: ShoppingBag, active: isUnder("/purchases") },
-    { label: "Items", href: "/items", icon: Package, active: isUnder("/items") },
-    { label: "GST Filing", href: "/gst-filing", icon: FileSpreadsheet, active: isUnder("/gst-filing") },
-    { label: "Rules & Rates", href: "/rules", icon: BookOpen, active: isUnder("/rules") },
+    { label: "My Product", href: "/items", icon: Package, active: isUnder("/items") },
+    { label: "Shop Settings", href: "/settings", icon: Settings, active: isExact("/settings") },
+    { label: "File GST", href: "/gst-filing", icon: FileSpreadsheet, active: isUnder("/gst-filing") },
+    { label: "GST Rates", href: "/rules", icon: BookOpen, active: isUnder("/rules") },
     { label: "Help", href: "/help", icon: HelpCircle, active: isUnder("/help") },
   ];
 

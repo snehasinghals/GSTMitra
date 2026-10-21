@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { apiFetch } from "../lib/api";
@@ -20,7 +20,7 @@ interface Item {
 }
 
 export default function ItemsPage() {
-  const [items, setItems] = useState<Item[]>([]);
+  const [Items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Search & Filter
@@ -55,7 +55,7 @@ export default function ItemsPage() {
 
   const loadItems = async (silent = false) => {
     if (!silent) setLoading(true);
-    const { data } = await apiFetch<Item[]>("/items");
+    const { data } = await apiFetch<Item[]>("/Items");
     if (data) setItems(data);
     if (!silent) setLoading(false);
   };
@@ -65,7 +65,7 @@ export default function ItemsPage() {
   }, []);
 
   const searchHsn = async (query: string) => {
-    const { data } = await apiFetch<any[]>(`/items/hsn-search?q=${encodeURIComponent(query)}`);
+    const { data } = await apiFetch<any[]>(`/Items/hsn-search?q=${encodeURIComponent(query)}`);
     if (data) setHsnSuggestions(data);
   };
 
@@ -130,8 +130,8 @@ export default function ItemsPage() {
 
     try {
       const { data, error } = editingId
-        ? await apiFetch<any>(`/items/${editingId}`, { method: "PUT", body: JSON.stringify(payload) })
-        : await apiFetch<any>("/items", { method: "POST", body: JSON.stringify(payload) });
+        ? await apiFetch<any>(`/Items/${editingId}`, { method: "PUT", body: JSON.stringify(payload) })
+        : await apiFetch<any>("/Items", { method: "POST", body: JSON.stringify(payload) });
 
       if (error) {
         setErrorMsg(error);
@@ -160,11 +160,11 @@ export default function ItemsPage() {
     if (!confirm("Are you sure you want to delete this item?")) return;
     setItems((prev) => prev.filter((i) => i.id !== id));
     showToast("Item deleted");
-    await apiFetch(`/items/${id}`, { method: "DELETE" });
+    await apiFetch(`/Items/${id}`, { method: "DELETE" });
     loadItems(true);
   };
 
-  const filteredItems = items.filter(
+  const filteredItems = Items.filter(
     (item) =>
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.hsnSacCode.includes(searchQuery)
@@ -177,7 +177,7 @@ export default function ItemsPage() {
         <div>
           <h1 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
             <Package className="w-5 h-5 text-blue-600" />
-            Items & Services Catalog
+            My Products & Services Catalog
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
             Manage your goods and services.
@@ -189,7 +189,7 @@ export default function ItemsPage() {
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md transition-all"
         >
           <Plus className="w-4 h-4" />
-          <span>Add New Item / Service</span>
+          <span>Add New Product / Service</span>
         </button>
       </div>
 
@@ -200,7 +200,7 @@ export default function ItemsPage() {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by item name or HSN code..."
+          placeholder="Search by product name or HSN code..."
           className="w-full text-xs focus:outline-none bg-transparent"
         />
       </div>
@@ -208,24 +208,24 @@ export default function ItemsPage() {
       {/* Items Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-xs text-slate-500">Loading items...</div>
+          <div className="p-8 text-center text-xs text-slate-500">Loading Products...</div>
         ) : filteredItems.length === 0 ? (
           <div className="p-12 text-center space-y-3">
             <Package className="w-12 h-12 text-slate-300 mx-auto" />
-            <p className="text-sm font-bold text-slate-700">No items found</p>
-            <p className="text-xs text-slate-500">Click "Add New Item" to add your first product or service.</p>
+            <p className="text-sm font-bold text-slate-700">No Products found</p>
+            <p className="text-xs text-slate-500">Click &quot;Add New Product&quot; to add your first product or service.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-3xs font-bold text-slate-500 uppercase tracking-wider">
-                  <th className="py-3 px-4">Item Name</th>
+                  <th className="py-3 px-4">Product Name</th>
                   <th className="py-3 px-4">Type</th>
                   <th className="py-3 px-4">
                     <Tooltip
                       term="HSN/SAC Code"
-                      text="HSN code (for Goods) and SAC code (for Services) are standard codes required by GST portal to classify items."
+                      text="HSN code (for Goods) and SAC code (for Services) are standard codes required by GST portal to classify Items."
                       example="998313 for IT services, 847130 for laptops."
                     />
                   </th>
@@ -256,20 +256,22 @@ export default function ItemsPage() {
                       )}
                     </td>
                     <td className="py-3 px-4 font-bold text-blue-700">{item.gstRate}%</td>
-                    <td className="py-3 px-4 text-right space-x-2">
+                    <td className="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
                       <button
                         onClick={() => handleOpenEditModal(item)}
-                        className="text-slate-600 hover:text-blue-600 p-1 rounded-md hover:bg-slate-100"
-                        title="Edit Item"
+                        className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                        title="Edit Product"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
+                        <span>Edit</span>
                       </button>
                       <button
                         onClick={() => handleDelete(item.id)}
-                        className="text-slate-600 hover:text-red-600 p-1 rounded-md hover:bg-slate-100"
-                        title="Delete Item"
+                        className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-100"
+                        title="Delete Product"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
                       </button>
                     </td>
                   </tr>
@@ -286,7 +288,7 @@ export default function ItemsPage() {
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg p-6 space-y-4 animate-fadeIn">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="font-bold text-base text-slate-900">
-                {editingId ? "Edit Item / Service" : "Add New Item / Service"}
+                {editingId ? "Edit Product / Service" : "Add New Product / Service"}
               </h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
@@ -321,7 +323,7 @@ export default function ItemsPage() {
                       setShowHsnDropdown(true);
                     }}
                     onFocus={() => setShowHsnDropdown(true)}
-                    placeholder="Search HSN code or item name..."
+                    placeholder="Search HSN code or product name..."
                     required
                     className="flex-1 px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   />
@@ -364,7 +366,7 @@ export default function ItemsPage() {
               {/* Item Name */}
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Item Name <span className="text-red-500">*</span>
+                  Product Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -427,21 +429,39 @@ export default function ItemsPage() {
                   {errorMsg}
                 </p>
               )}
-              <div className="pt-3 flex justify-end gap-2 border-t">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {isSaving ? "Saving..." : "Save Item"}
-              </button>
+              <div className="pt-3 flex flex-col gap-3 border-t">
+                {editingId && (
+                  <button
+                    type="button"
+                    disabled={isSaving}
+                    onClick={() => {
+                      if (editingId) {
+                        setShowModal(false);
+                        void handleDelete(editingId);
+                      }
+                    }}
+                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-red-200 bg-red-50 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete This Product</span>
+                  </button>
+                )}
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {isSaving ? "Saving..." : editingId ? "Save Changes" : "Save Item"}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -170,15 +170,12 @@ export default function HealthCheckBanner({
                 <h4 className="text-sm font-bold">{issue.title}</h4>
                 <p className="mt-1 text-sm">{issue.explanation}</p>
                 <p className="mt-1 text-sm"><span className="font-semibold">How to fix:</span> {issue.howToFix}</p>
-                <p className="mt-1 text-sm text-slate-700">
-                  {issue.recordType === "invoice" ? "Invoice" : "Bill"}: {issue.recordLabel}
-                </p>
-                <Link
-                  href={issue.fixUrl}
-                  className="mt-3 inline-flex min-h-10 items-center rounded-lg bg-blue-700 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-800"
-                >
-                  Fix this
-                </Link>
+                <div className="mt-2 flex items-center gap-2 text-xs text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-200">
+                  <span className="font-semibold text-slate-800">{issue.recordType === "invoice" ? "Sales Invoice" : "Purchase Bill"}:</span>
+                  <span className="font-mono font-bold text-blue-700">{issue.recordLabel}</span>
+                  <span className="text-slate-400">|</span>
+                  <span>Review the details above to correct this record.</span>
+                </div>
               </article>
             ))}
           </div>
@@ -187,7 +184,7 @@ export default function HealthCheckBanner({
       {omittedIssues > 0 && (
         <p className="text-sm font-semibold">
           and {omittedIssues} more {omittedIssues === 1 ? "issue" : "issues"}.{" "}
-          <Link href="/gst-filing" className="underline underline-offset-2">See all in GST Filing</Link>
+          <Link href="/gst-filing" className="underline underline-offset-2">See all in File GST</Link>
         </p>
       )}
     </div>

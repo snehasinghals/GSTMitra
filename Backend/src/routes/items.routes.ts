@@ -19,20 +19,20 @@ router.get("/hsn-search", authMiddleware, (req: AuthenticatedRequest, res: Respo
   res.json(results);
 });
 
-// List all items for active business
+// List all Items for active business
 router.get("/", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const businessId = req.user?.businessId;
     if (!businessId) return res.status(400).json({ error: "No active business" });
 
-    const items = await prisma.item.findMany({
+    const Items = await prisma.item.findMany({
       where: { businessId },
       orderBy: { name: "asc" },
     });
 
-    res.json(items);
+    res.json(Items);
   } catch (error: any) {
-    res.status(500).json({ error: "Failed to fetch items." });
+    res.status(500).json({ error: "Failed to fetch Items." });
   }
 });
 

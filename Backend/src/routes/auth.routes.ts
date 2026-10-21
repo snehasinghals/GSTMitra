@@ -1088,7 +1088,7 @@ router.patch("/business/upi", authMiddleware, async (req: AuthenticatedRequest, 
 });
 
 // ==========================================
-// 9d. UPDATE BUSINESS SETTINGS
+// 9d. UPDATE BUSINESS Shop Settings
 // ==========================================
 const BUSINESS_TYPES = ["RETAIL", "SERVICES", "WHOLESALE", "FREELANCER", "MANUFACTURING"];
 const TURNOVER_RANGES = ["BELOW_15L", "15L_TO_40L", "40L_TO_15CR", "ABOVE_15CR"];
@@ -1203,13 +1203,13 @@ router.patch("/business", authMiddleware, async (req: AuthenticatedRequest, res:
       select: BUSINESS_SELECT,
     });
 
-    res.json({ message: "Settings saved.", business });
+    res.json({ message: "Shop Settings saved.", business });
   } catch (error: any) {
     if (error?.code === "P2002") {
       return res.status(409).json({ error: "This GSTIN is already registered with another shop." });
     }
     console.error("Update business error:", error);
-    res.status(500).json({ error: "Could not save settings. Please try again." });
+    res.status(500).json({ error: "Could not save Shop Settings. Please try again." });
   }
 });
 

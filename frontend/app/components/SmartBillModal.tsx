@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useRef } from "react";
 import {
@@ -71,7 +71,7 @@ export interface ExtractedBill {
   totalIgst: number;
   totalCess: number;
   totalAmount: number;
-  items: ExtractedBillItem[];
+  Items: ExtractedBillItem[];
   confidence: "HIGH" | "MEDIUM" | "LOW";
   extractionMethod: string;
 }
@@ -228,12 +228,12 @@ export function SmartBillModal({
     });
   };
 
-  // Update item in line items of current bill
+  // Update item in line Items of current bill
   const updateCurrentBillItem = (itemIndex: number, field: string, value: any) => {
     setExtractedBills((prev) => {
       const copy = [...prev];
       const target = { ...copy[selectedBillIndex] };
-      const newItems = [...target.items];
+      const newItems = [...target.Items];
       const it = { ...newItems[itemIndex], [field]: value };
 
       // Recalculate
@@ -257,7 +257,7 @@ export function SmartBillModal({
       }
 
       newItems[itemIndex] = it;
-      target.items = newItems;
+      target.Items = newItems;
 
       // Update bill totals
       target.subtotal = Math.round(newItems.reduce((acc, i) => acc + i.taxableValue, 0) * 100) / 100;
@@ -338,7 +338,7 @@ export function SmartBillModal({
                 Smart Bill Scanner & Auto-Import
               </h2>
               <p className="text-xs text-slate-500">
-                Upload PDFs or photos of single/multiple bills, or snap photos with camera. We automatically extract vendor & line items!
+                Upload PDFs or photos of single/multiple bills, or snap photos with camera. We automatically extract vendor & line Items!
               </p>
             </div>
           </div>
@@ -380,7 +380,7 @@ export function SmartBillModal({
               </h3>
               <p className="text-xs text-slate-500 max-w-md mb-6">
                 Supports single or multiple PDF invoices, receipts, and photos (PNG, JPG, WebP).
-                You don't need to manually create vendors or type line items!
+                You don't need to manually create vendors or type line Items!
               </p>
 
               <div className="flex flex-wrap items-center justify-center gap-3">
@@ -419,7 +419,7 @@ export function SmartBillModal({
                 Extracting Details from Bill(s)...
               </h3>
               <p className="text-xs text-slate-500 max-w-sm">
-                Scanning invoice layout, detecting vendor legal name, GSTIN, invoice date, amounts, and GST line items.
+                Scanning invoice layout, detecting vendor legal name, GSTIN, invoice date, amounts, and GST line Items.
               </p>
             </div>
           ) : (
@@ -540,7 +540,7 @@ export function SmartBillModal({
                             </td>
                             <td className="py-2.5 px-3 text-slate-600">{b.billDate}</td>
                             <td className="py-2.5 px-3 text-right text-slate-700">
-                              {b.items.length}
+                              {b.Items.length}
                             </td>
                             <td className="py-2.5 px-3 text-right font-semibold text-slate-900">
                               ₹{b.totalAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
@@ -594,7 +594,7 @@ export function SmartBillModal({
                       </strong>
                     </span>
                     <span className="text-[11px] text-slate-400">
-                      Click any row to inspect line items or edit details before saving
+                      Click any row to inspect line Items or edit details before saving
                     </span>
                   </div>
                 </div>
@@ -771,7 +771,7 @@ export function SmartBillModal({
                   {/* Line Items Table */}
                   <div className="border border-slate-200 rounded-xl overflow-hidden">
                     <div className="bg-slate-100/70 px-4 py-2 border-b border-slate-200 text-xs font-bold text-slate-700 flex items-center justify-between">
-                      <span>Line Items & HSN ({currentBill.items.length})</span>
+                      <span>Line Items & HSN ({currentBill.Items.length})</span>
                     </div>
 
                     <div className="overflow-x-auto">
@@ -788,7 +788,7 @@ export function SmartBillModal({
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                          {currentBill.items.map((it, itemIdx) => (
+                          {currentBill.Items.map((it, itemIdx) => (
                             <tr key={itemIdx} className="hover:bg-slate-50/50">
                               <td className="py-2 px-3">
                                 <input

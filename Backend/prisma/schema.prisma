@@ -34,7 +34,7 @@ model Business {
   users            BusinessUser[]
   creditDebitNotes CreditDebitNote[]
   customers        Customer[]
-  items            Item[]
+  Items            Item[]
   purchaseBills    PurchaseBill[]
   gstr3bAdjustments Gstr3bAdjustment[]
   returnFilings    ReturnFilingHistory[]
@@ -197,7 +197,7 @@ model PurchaseBill {
   business               Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
   vendor                 Vendor             @relation(fields: [vendorId], references: [id])
   sourceSalesInvoice     SalesInvoice?      @relation(fields: [sourceSalesInvoiceId], references: [id], onDelete: SetNull)
-  items                  PurchaseBillItem[]
+  Items                  PurchaseBillItem[]
   payments               PurchasePayment[]
 
   @@unique([businessId, vendorId, billNumber])
@@ -286,7 +286,7 @@ model SalesInvoice {
   business         Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
   customer         Customer           @relation(fields: [customerId], references: [id])
   receivedPurchaseBill PurchaseBill?
-  items            SalesInvoiceItem[]
+  Items            SalesInvoiceItem[]
   payments         SalesPayment[]
 
   @@unique([businessId, invoiceNumber])

@@ -50,6 +50,7 @@ app.use("/api/my-bills", authMiddleware, myBillsRoutes);
 
 // Shop-only route groups (protected by authMiddleware and requireShop)
 app.use("/api/items", authMiddleware, requireShop, itemsRoutes);
+app.use("/api/Items", authMiddleware, requireShop, itemsRoutes);
 app.use("/api/customers", authMiddleware, requireShop, customersRoutes);
 app.use("/api/vendors", authMiddleware, requireShop, vendorsRoutes);
 app.use("/api/sales", authMiddleware, requireShop, salesRoutes);

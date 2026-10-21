@@ -543,3 +543,118 @@ export async function sendPasswordChangedEmail({ to, name, ip }: SendPasswordCha
     return { success: false, error: err.message };
   }
 }
+
+export interface AmendmentReviewEmailOptions {
+  to: string;
+  ruleCode: string;
+  ruleName: string;
+  category: string;
+  description: string;
+  officialSource?: string | null;
+  reasonForReview: string;
+  approveUrl: string;
+  rejectUrl: string;
+}
+
+export async function sendAmendmentReviewEmail({
+  to,
+  ruleCode,
+  ruleName,
+  category,
+  description,
+  officialSource,
+  reasonForReview,
+  approveUrl,
+  rejectUrl,
+}: AmendmentReviewEmailOptions) {
+  try {
+    const mailer = getEmailTransporter();
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>GST Rule Update Review</title>
+</head>
+<body style="margin:0;padding:24px 12px;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#1e293b;">
+  <table role="presentation" style="max-width:620px;margin:auto;background:#ffffff;border:1px solid #cbd5e1;border-radius:16px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.06);">
+    <!-- Header -->
+    <tr>
+      <td style="background:#0f172a;padding:24px 28px;color:#ffffff;">
+        <h2 style="margin:0;font-size:20px;font-weight:bold;">⚖️ GSTMitra Compliance Watcher</h2>
+        <p style="margin:4px 0 0;font-size:13px;color:#94a3b8;">New GST Amendment / Court Order Flagged for Human Review</p>
+      </td>
+    </tr>
+
+    <!-- Body -->
+    <tr>
+      <td style="padding:28px;">
+        <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:12px 16px;border-radius:8px;margin-bottom:20px;">
+          <strong style="color:#92400e;font-size:13px;display:block;">⚠️ Doubtful Update / Human Approval Required:</strong>
+          <p style="margin:4px 0 0;color:#78350f;font-size:13px;line-height:1.4;">${reasonForReview}</p>
+        </div>
+
+        <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+          <tr>
+            <td style="padding:8px 0;font-size:12px;color:#64748b;font-weight:bold;width:120px;">Rule Name</td>
+            <td style="padding:8px 0;font-size:14px;color:#0f172a;font-weight:bold;">${ruleName}</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0;font-size:12px;color:#64748b;font-weight:bold;">Category / Code</td>
+            <td style="padding:8px 0;font-size:13px;color:#0369a1;font-family:monospace;font-weight:bold;">${category} · ${ruleCode}</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0;font-size:12px;color:#64748b;font-weight:bold;vertical-align:top;">Description</td>
+            <td style="padding:8px 0;font-size:13px;color:#334155;line-height:1.5;">${description}</td>
+          </tr>
+          ${officialSource ? `
+          <tr>
+            <td style="padding:8px 0;font-size:12px;color:#64748b;font-weight:bold;">Official Source</td>
+            <td style="padding:8px 0;font-size:12px;color:#2563eb;"><a href="${officialSource}" style="color:#2563eb;text-decoration:underline;">${officialSource}</a></td>
+          </tr>` : ""}
+        </table>
+
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;text-align:center;">
+          <p style="margin:0 0 16px;font-size:13px;font-weight:bold;color:#1e293b;">
+            Do you want to activate this rule in GSTMitra? Click one option below:
+          </p>
+          <div style="display:flex;justify-content:center;gap:12px;">
+            <a href="${approveUrl}" style="display:inline-block;background:#16a34a;color:#ffffff;font-size:13px;font-weight:bold;padding:12px 24px;border-radius:10px;text-decoration:none;margin-right:12px;">
+              ✅ APPROVE &amp; ACTIVATE
+            </a>
+            <a href="${rejectUrl}" style="display:inline-block;background:#dc2626;color:#ffffff;font-size:13px;font-weight:bold;padding:12px 24px;border-radius:10px;text-decoration:none;">
+              ❌ REJECT UPDATE
+            </a>
+          </div>
+          <p style="margin:16px 0 0;font-size:11px;color:#94a3b8;">
+            *If rejected, this amendment will not affect invoice, bill, or return validations.
+          </p>
+        </div>
+      </td>
+    </tr>
+
+    <!-- Footer -->
+    <tr>
+      <td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px;text-align:center;font-size:11px;color:#94a3b8;">
+        GSTMitra Intelligent Legal &amp; Compliance Watcher · Auto-generated notification
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `;
+
+    const info = await mailer.sendMail({
+      from: `"GSTMitra Legal Watcher" <${emailFrom}>`,
+      to,
+      subject: `⚖️ [Review Required] New GST Amendment / Court Order: ${ruleName}`,
+      html,
+    });
+
+    return { success: true, messageId: info.messageId };
+  } catch (err: any) {
+    console.error(`[Email] Failed to send amendment review email to ${to}:`, err.message || err);
+    return { success: false, error: err.message };
+  }
+}
+

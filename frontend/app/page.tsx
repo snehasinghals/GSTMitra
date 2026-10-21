@@ -138,7 +138,7 @@ export default function DashboardPage() {
               className="bg-white text-emerald-800 hover:bg-emerald-50 font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs transition-all flex items-center gap-1.5"
             >
               <PlusCircle className="w-4 h-4" />
-              <span>New Invoice</span>
+              <span>Make Bill</span>
             </Link>
             <button
               onClick={() => setShowJustOnboarded(false)}
@@ -158,18 +158,18 @@ export default function DashboardPage() {
             {business.name} Overview
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            GST Filing Period: <strong className="text-blue-700">October 2026</strong> • State:{" "}
+            File GST Period: <strong className="text-blue-700">October 2026</strong> • State:{" "}
             <strong className="text-slate-800">{business.stateName} ({business.stateCode})</strong>
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <Link
-            href="/sales"
+            href="/new-bill/create"
             className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-sm transition-all"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>Create Invoice</span>
+            <span>Make Bill</span>
           </Link>
           <Link
             href="/purchases"
@@ -232,7 +232,7 @@ export default function DashboardPage() {
           <HealthCheckBanner scope="all" month={healthCheckMonth} variant="compact" />
         </div>
 
-        {/* GST Filing Return Launchpad */}
+        {/* File GST Return Launchpad */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">

@@ -5,6 +5,9 @@ export type ApiResult<T> = {
   error?: string;
   code?: string;
   attemptsLeft?: number;
+  ruleViolations?: any[];
+  violations?: any[];
+  details?: any;
   /** HTTP status. 0 = network failure / timeout (no response received). */
   status: number;
 };
@@ -18,10 +21,16 @@ export async function downloadFile(endpoint: string, filename: string): Promise<
 
   if (!response.ok) {
     const contentType = response.headers.get("content-type") || "";
-    const message = contentType.includes("application/json")
-      ? (await response.json()).error
-      : `Download failed (${response.status}).`;
-    throw new Error(message || `Download failed (${response.status}).`);
+    let message = `Download failed (${response.status}).`;
+    let details: any = null;
+    if (contentType.includes("application/json")) {
+      const errJson = await response.json();
+      message = errJson.message || errJson.error || message;
+      details = errJson;
+    }
+    const err = new Error(message);
+    (err as any).details = details;
+    throw err;
   }
 
   const blob = await response.blob();
@@ -118,6 +127,9 @@ export async function apiFetch<T>(
         error: json.error || json.message || `Request failed with status ${response.status}`,
         code: json.code,
         attemptsLeft: json.attemptsLeft,
+        ruleViolations: json.ruleViolations,
+        violations: json.violations,
+        details: json,
         status: response.status,
       };
     }

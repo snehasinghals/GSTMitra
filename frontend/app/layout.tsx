@@ -12,7 +12,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "GSTMitra — Simple GST Filing for Small Businesses",
+  title: "GSTMitra — Simple File GST for Small Businesses",
   description: "Prepare and file GST returns step-by-step in plain words without fear.",
 };
 

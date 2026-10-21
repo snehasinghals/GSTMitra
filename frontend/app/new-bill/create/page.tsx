@@ -151,7 +151,7 @@ function ItemRow({
 
   return (
     <div className="rounded-xl border border-slate-200 p-3 space-y-2.5">
-      {/* Pick from saved items */}
+      {/* Pick from saved Items */}
       <select
         value={line.itemId || ""}
         onChange={(e) => {
@@ -161,7 +161,7 @@ function ItemRow({
         }}
         className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
       >
-        <option value="">Pick from my items…</option>
+        <option value="">Pick from my Items…</option>
         {catalog.map((c) => (
           <option key={c.id} value={c.id}>
             {c.name} (₹{c.sellingPrice})
@@ -368,7 +368,7 @@ function ItemRow({
                 onChange={(e) => onChange({ saveToCatalog: e.target.checked })}
                 className="rounded border-slate-300"
               />
-              Save to my items (HSN and price are remembered next time)
+              Save to my Items (HSN and price are remembered next time)
             </label>
           )}
         </div>
@@ -700,6 +700,9 @@ export default function NewBillPage() {
   const [custState, setCustState] = useState("");
   const [custMitraId, setCustMitraId] = useState("");
   const [availableGstins, setAvailableGstins] = useState<{ shopName: string; gstin: string }[]>([]);
+  const [accountPan, setAccountPan] = useState("");
+  const [fetchingPan, setFetchingPan] = useState(false);
+  const [panNotice, setPanNotice] = useState<string | null>(null);
 
   const [invDate, setInvDate] = useState(todayStr());
   const [invDueDate, setInvDueDate] = useState("");
@@ -720,6 +723,9 @@ export default function NewBillPage() {
 
   // Submit
   const [submitting, setSubmitting] = useState(false);
+  const [checkingRules, setCheckingRules] = useState(false);
+  const [ruleViolations, setRuleViolations] = useState<any[]>([]);
+  const [ruleSuccessMsg, setRuleSuccessMsg] = useState("");
   const [formError, setFormError] = useState("");
   const [created, setCreated] = useState<{ invoice: any; customer: string; missingHsn: number } | null>(null);
 
@@ -835,7 +841,7 @@ export default function NewBillPage() {
   // ---------- data ----------
   useEffect(() => {
     (async () => {
-      const { data } = await apiFetch<CatalogItem[]>("/items");
+      const { data } = await apiFetch<CatalogItem[]>("/Items");
       if (Array.isArray(data)) setCatalog(data);
     })();
   }, []);
@@ -913,12 +919,45 @@ export default function NewBillPage() {
     setCustAddress(c.address || "");
     setCustGstin(c.gstin || "");
     setCustMitraId(c.mitraId || "");
-    setCustPan("");
     setAvailableGstins([]);
     if (c.stateCode) setCustState(c.stateCode);
     setCustFocused(false);
     setCustNotice(null);
+    setPanNotice(null);
     if (c.mitraId) loadGstinChips(c.mitraId);
+
+    // If customer has a registered PAN in profile, save it into accountPan
+    if (c.pan) {
+      setAccountPan(c.pan);
+      if (grandTotal >= 200000) {
+        setCustPan(c.pan);
+        setPanNotice(`✓ Customer PAN (${c.pan}) auto-applied from account for high-value sale.`);
+      }
+    } else {
+      setAccountPan("");
+    }
+
+    // If email or PAN is missing, do a background fetch using their phone or mitraId
+    const lookupKey = c.mitraId || c.phone;
+    if (lookupKey && (!c.email || !c.pan)) {
+      apiFetch<any>(`/customers/lookup-mitra?id=${encodeURIComponent(lookupKey)}`).then(({ data }) => {
+        if (data && data.found) {
+          if (!c.email && data.email) {
+            setCustEmail(data.email);
+          }
+          if (data.pan) {
+            setAccountPan(data.pan);
+            if (grandTotal >= 200000) {
+              setCustPan(data.pan);
+              setPanNotice(`✓ Customer PAN (${data.pan}) auto-applied from account for high-value sale.`);
+            }
+          }
+          if (!c.address && data.address) {
+            setCustAddress(data.address);
+          }
+        }
+      });
+    }
   };
 
   const lookupMitra = async (raw: string) => {
@@ -926,6 +965,7 @@ export default function NewBillPage() {
     if (!id) return;
     setLookingUp(true);
     setCustNotice(null);
+    setPanNotice(null);
     try {
       const { data } = await apiFetch<any>(`/customers/lookup-mitra?id=${encodeURIComponent(id)}`);
       if (data && data.found) {
@@ -934,7 +974,15 @@ export default function NewBillPage() {
         setCustEmail(data.email || "");
         setCustMitraId(data.source === "USER" ? data.mitraId || "" : "");
         setCustAddress(data.address || "");
-        setCustPan(data.pan || "");
+        if (data.pan) {
+          setAccountPan(data.pan);
+          if (grandTotal >= 200000) {
+            setCustPan(data.pan);
+            setPanNotice(`✓ Customer PAN (${data.pan}) auto-applied from account for high-value sale.`);
+          }
+        } else {
+          setAccountPan("");
+        }
         // Store gstins for chips — do NOT auto-fill
         if (Array.isArray(data.gstins) && data.gstins.length > 0) {
           setAvailableGstins(data.gstins.filter((g: any) => g.gstin));
@@ -953,6 +1001,35 @@ export default function NewBillPage() {
       setCustNotice("Lookup failed. Please enter the details manually.");
     } finally {
       setLookingUp(false);
+    }
+  };
+
+  const fetchPanFromAccount = async () => {
+    if (accountPan) {
+      setCustPan(accountPan);
+      setPanNotice(`✓ Customer PAN (${accountPan}) applied from personal account!`);
+      return;
+    }
+    const target = custMitraId || custPhone || custSearch.trim();
+    if (!target) {
+      setPanNotice("Please select or enter customer first to fetch PAN.");
+      return;
+    }
+    setFetchingPan(true);
+    setPanNotice(null);
+    try {
+      const { data } = await apiFetch<any>(`/customers/lookup-mitra?id=${encodeURIComponent(target)}`);
+      if (data?.found && data.pan) {
+        setAccountPan(data.pan);
+        setCustPan(data.pan);
+        setPanNotice(`✓ Customer PAN (${data.pan}) fetched from personal account!`);
+      } else {
+        setPanNotice("Customer has not added a PAN card to their personal profile.");
+      }
+    } catch {
+      setPanNotice("Could not fetch customer PAN. Please enter manually.");
+    } finally {
+      setFetchingPan(false);
     }
   };
 
@@ -978,10 +1055,15 @@ export default function NewBillPage() {
   const cessTotal = r2(calc.reduce((a, l) => a + l.cess, 0));
   const grandTotal = Math.round(subtotal + gstTotal + cessTotal);
 
-  const isPanRequired = grandTotal > 200000;
+  const isPanRequired = grandTotal >= 200000;
   useEffect(() => {
-    if (isPanRequired) setShowMore(true);
-  }, [isPanRequired]);
+    if (isPanRequired) {
+      if (accountPan && !custPan) {
+        setCustPan(accountPan);
+        setPanNotice(`✓ High-value sale (≥ ₹2 Lakh): Auto-applied PAN (${accountPan}) from customer's profile.`);
+      }
+    }
+  }, [isPanRequired, accountPan]);
 
   // ---------- UPI QR ----------
   const vpa = (business?.upiId || "").trim();
@@ -1016,9 +1098,71 @@ export default function NewBillPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const handleCheckRules = async () => {
+    setRuleViolations([]);
+    setRuleSuccessMsg("");
+    setFormError("");
+
+    const valid = lines.filter((l) => l.name.trim() && Number(l.qty) > 0 && Number(l.price) > 0);
+    if (valid.length === 0) {
+      return fail("Add at least one item before checking GST rules.");
+    }
+
+    setCheckingRules(true);
+    const gstin = custGstin.trim().toUpperCase();
+    const effectiveMode = paymentMode === "UPI" && upiReceived === true ? "CASH" : paymentMode;
+
+    try {
+      const res = await apiFetch<any>("/rules/validate-invoice", {
+        method: "POST",
+        body: JSON.stringify({
+          invoice: {
+            invoiceDate: invDate,
+            placeOfSupply: effectiveState || undefined,
+            isReverseCharge,
+            buyerGstin: gstin ? normalizeGstin(gstin) : null,
+            paymentMode: effectiveMode,
+          },
+          Items: valid.map((l) => ({
+            description: l.name.trim(),
+            hsnSacCode: l.hsn || null,
+            quantity: Number(l.qty),
+            rate: Number(l.price),
+            gstRate: l.gstRate,
+            cessRate: Number(l.cessRate) || 0,
+          })),
+          customer: {
+            name: custSearch.trim() || undefined,
+            gstin: gstin || null,
+            stateCode: effectiveState || undefined,
+            pan: custPan.trim() || null,
+          },
+        }),
+      });
+
+      if (res.data) {
+        if (res.data.violations && res.data.violations.length > 0) {
+          setRuleViolations(res.data.violations);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        } else {
+          setRuleSuccessMsg("All bill details match statutory GST rules! No compliance errors found.");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      } else if (res.error) {
+        fail(res.error);
+      }
+    } catch (e: any) {
+      fail(e?.message || "Failed to check rules");
+    } finally {
+      setCheckingRules(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError("");
+    setRuleViolations([]);
+    setRuleSuccessMsg("");
 
     const name = custSearch.trim();
     if (!name) return fail("Please enter the customer name.");
@@ -1069,11 +1213,11 @@ export default function NewBillPage() {
         if (error) return fail(error);
       }
 
-      // 2. optionally remember new items in the catalog (best effort)
+      // 2. optionally remember new Items in the catalog (best effort)
       const resolved = await Promise.all(
         valid.map(async (l) => {
           if (l.itemId || !l.saveToCatalog) return l;
-          const { data } = await apiFetch<CatalogItem>("/items", {
+          const { data } = await apiFetch<CatalogItem>("/Items", {
             method: "POST",
             body: JSON.stringify({
               name: l.name.trim(),
@@ -1092,7 +1236,7 @@ export default function NewBillPage() {
       const effectiveMode = paymentMode === "UPI" && upiReceived === true ? "CASH" : paymentMode;
       const notes = [invNotes.trim(), custMitraId ? `Mitra ID: ${custMitraId}` : ""].filter(Boolean).join(" | ");
 
-      const { data: inv, error } = await apiFetch<any>("/sales/invoices", {
+      const res = await apiFetch<any>("/sales/invoices", {
         method: "POST",
         body: JSON.stringify({
           customerId,
@@ -1105,7 +1249,7 @@ export default function NewBillPage() {
           isReverseCharge,
           applicablePercent: applicablePercent === "" ? null : Number(applicablePercent),
           ecomGstin: isEcommerceSale ? ecomGstin : "",
-          items: resolved.map((l) => ({
+          Items: resolved.map((l) => ({
             itemId: l.itemId || null,
             description: l.name.trim(),
             hsnSacCode: l.hsn || null,
@@ -1117,7 +1261,16 @@ export default function NewBillPage() {
           })),
         }),
       });
-      if (error || !inv) return fail(error || "Could not generate the invoice.");
+
+      if (res.ruleViolations && res.ruleViolations.length > 0) {
+        setRuleViolations(res.ruleViolations);
+        setFormError(res.error || "This bill has GST compliance errors. Please review and correct the highlighted issues below.");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
+      if (res.error || !res.data) return fail(res.error || "Could not create the bill.");
+      const inv = res.data;
 
       sessionStorage.removeItem("gstmitra_new_bill_draft");
       setHasDraftRestored(false);
@@ -1192,7 +1345,7 @@ export default function NewBillPage() {
             <Check className="h-6 w-6" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Invoice created</h2>
+            <h2 className="text-lg font-bold text-slate-900">Bill Created Successfully!</h2>
             <p className="font-mono text-xs text-slate-500">#{invoice.invoiceNumber}</p>
           </div>
           <div className="space-y-1.5 rounded-xl bg-slate-50 p-3 text-left text-sm">
@@ -1214,7 +1367,7 @@ export default function NewBillPage() {
 
           {invoice.recipientDelivery?.status === "MY_BILLS" && (
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-left text-xs text-emerald-800">
-              Personal B2C bill saved directly to customer&apos;s &ldquo;My Bills&rdquo; section. You can download or share the PDF.
+              Personal B2C bill saved directly to customer&apos;s &ldquo;My Shopping Bills&rdquo; section. You can download or share the PDF.
             </div>
           )}
           {invoice.recipientDelivery?.status === "PENDING_REVIEW" && (
@@ -1253,11 +1406,11 @@ export default function NewBillPage() {
               onClick={resetForm}
               className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-300 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
-              <Plus className="h-4 w-4" /> New Invoice
+              <Plus className="h-4 w-4" /> Make Another Bill
             </button>
           </div>
           <Link href="/sales" className="inline-block text-xs text-slate-500 hover:text-slate-800">
-            Back to Sales
+            Back to Sales Bills
           </Link>
         </div>
       </div>
@@ -1271,9 +1424,12 @@ export default function NewBillPage() {
   return (
     <div className="mx-auto max-w-2xl px-3 pb-6 sm:px-0">
       <div className="flex items-center justify-between py-4">
-        <h1 className="text-xl font-bold text-slate-900">New Invoice</h1>
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Make Bill</h1>
+          <p className="text-xs text-slate-500 mt-0.5">Create official GST Tax Invoice</p>
+        </div>
         <Link href="/sales" className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
-          <ArrowLeft className="h-4 w-4" /> Sales
+          <ArrowLeft className="h-4 w-4" /> Sales Bills
         </Link>
       </div>
 
@@ -1293,7 +1449,103 @@ export default function NewBillPage() {
         </div>
       )}
 
-      {formError && (
+      {ruleSuccessMsg && (
+        <div className="mb-4 flex items-center justify-between rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-xs font-semibold text-emerald-900 shadow-2xs">
+          <div className="flex items-center gap-2.5">
+            <Check className="h-5 w-5 text-emerald-600 shrink-0" />
+            <span>{ruleSuccessMsg}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setRuleSuccessMsg("")}
+            className="text-emerald-500 hover:text-emerald-800 p-1"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {ruleViolations.length > 0 && (
+        <div className="mb-6 rounded-2xl border-2 border-red-300 bg-red-50/70 p-5 shadow-xs animate-fadeIn">
+          <div className="flex items-start justify-between pb-3 border-b border-red-200">
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-600 text-white shadow-xs">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-red-950">
+                  GST Compliance Issues Found In This Bill ({ruleViolations.length})
+                </h3>
+                <p className="text-xs text-red-700 mt-0.5">
+                  This bill was checked against official GST statutory rules. The explanation and recommended fix are shown below:
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setRuleViolations([])}
+              className="text-red-400 hover:text-red-700 p-1 rounded-lg"
+              title="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="mt-4 space-y-3.5">
+            {ruleViolations.map((v, i) => (
+              <div
+                key={i}
+                className="rounded-xl border border-red-200 bg-white p-4 shadow-2xs space-y-2.5 text-xs"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`px-2 py-0.5 rounded-md font-bold uppercase text-2xs ${
+                        v.severity === "error"
+                          ? "bg-red-100 text-red-800 border border-red-200"
+                          : "bg-amber-100 text-amber-800 border border-amber-200"
+                      }`}
+                    >
+                      {v.severity === "error" ? "Rule Violation" : "Review Warning"}
+                    </span>
+                    <span className="font-bold text-slate-900 text-sm">{v.ruleName}</span>
+                  </div>
+                  <span className="font-mono text-3xs text-slate-400 font-semibold">{v.ruleCode}</span>
+                </div>
+
+                <div className="text-red-900 font-semibold text-xs leading-relaxed bg-red-50/50 p-2.5 rounded-lg border border-red-100">
+                  ⚠️ {v.message}
+                </div>
+
+                {v.why && (
+                  <div className="rounded-lg bg-slate-50 p-3 border border-slate-200 space-y-1">
+                    <span className="font-bold text-slate-800 block text-xs">Legal Reason & Explanation:</span>
+                    <p className="text-slate-700 leading-relaxed text-xs">{v.why}</p>
+                    {v.officialSource && (
+                      <p className="text-2xs text-slate-500 pt-1 border-t border-slate-200/60 mt-1">
+                        <span className="font-semibold text-slate-600">Official Reference:</span> {v.officialSource}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {v.howToFix && (
+                  <div className="rounded-lg bg-emerald-50 p-3 border border-emerald-200 space-y-0.5">
+                    <span className="font-bold text-emerald-950 block text-xs">How To Fix:</span>
+                    <p className="text-emerald-900 leading-relaxed font-medium text-xs">{v.howToFix}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 rounded-xl bg-slate-900 p-3 text-xs text-white flex items-center justify-between">
+            <span>Please correct the highlighted fields in the form above or below, then click &quot;Save &amp; Make Bill&quot; to continue.</span>
+          </div>
+        </div>
+      )}
+
+      {formError && ruleViolations.length === 0 && (
         <div className="mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>{formError}</span>
@@ -1439,7 +1691,7 @@ export default function NewBillPage() {
             />
           </div>
 
-          {/* GSTIN — visible here so B2B is set before adding items */}
+          {/* GSTIN — visible here so B2B is set before adding Items */}
           <div>
             <label className={label}>GSTIN (GST-registered customer only)</label>
             <div className="relative">
@@ -1504,12 +1756,77 @@ export default function NewBillPage() {
                 ))}
               </div>
             )}
+
+            {/* Dynamic PAN Card — Appears automatically when sale >= ₹2 Lakh OR if customer has PAN */}
+            {(isPanRequired || custPan) && (
+              <div className="mt-3 rounded-xl border border-indigo-200 bg-indigo-50/60 p-3.5 space-y-2 animate-fadeIn transition-all">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+                    <span>Customer PAN</span>
+                    {isPanRequired && (
+                      <span className="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full border border-red-200">
+                        Required (Sale ≥ ₹2 Lakh)
+                      </span>
+                    )}
+                  </label>
+
+                  {/* 1-Click Fetch Button */}
+                  <button
+                    type="button"
+                    onClick={fetchPanFromAccount}
+                    disabled={fetchingPan}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 bg-white hover:bg-indigo-100 border border-indigo-200 px-2.5 py-1 rounded-lg transition cursor-pointer shadow-2xs disabled:opacity-60"
+                    title="Fetch PAN from customer's personal GSTMitra profile"
+                  >
+                    <Sparkles className="h-3 w-3 text-indigo-600" />
+                    <span>
+                      {fetchingPan
+                        ? "Fetching..."
+                        : accountPan
+                        ? `Apply Account PAN (${accountPan})`
+                        : "1-Click Fetch PAN"}
+                    </span>
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={custPan}
+                    onChange={(e) => setCustPan(e.target.value.toUpperCase())}
+                    maxLength={10}
+                    placeholder="ABCDE1234F"
+                    className={`${field} font-mono uppercase bg-white ${
+                      isPanRequired && !custPan ? "border-red-400 focus:ring-red-400 ring-1 ring-red-400" : ""
+                    }`}
+                  />
+                  {custPan && (
+                    <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-emerald-600 font-medium flex items-center gap-1">
+                      <Check className="h-3.5 w-3.5" />
+                    </span>
+                  )}
+                </div>
+
+                {panNotice ? (
+                  <p className={`text-[11px] font-medium ${panNotice.startsWith("✓") ? "text-emerald-700" : "text-amber-700"}`}>
+                    {panNotice}
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-slate-500">
+                    {accountPan
+                      ? `Customer has registered PAN (${accountPan}) in personal details.`
+                      : "Quoting customer's PAN is mandatory for invoices ≥ ₹2,00,000 under Rule 114B."}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </section>
 
-        {/* Items */}
+        {/* Products */}
         <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
-          <h2 className="text-sm font-semibold text-slate-900">Items</h2>
+          <h2 className="text-sm font-semibold text-slate-900">Products</h2>
           {lines.map((l, i) => (
             <ItemRow
               key={l.uid}
@@ -1526,7 +1843,7 @@ export default function NewBillPage() {
             onClick={() => setLines((p) => [...p, newLine()])}
             className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 py-2.5 text-sm text-slate-600 hover:border-blue-400 hover:text-blue-700"
           >
-            <Plus className="h-4 w-4" /> Add item
+            <Plus className="h-4 w-4" /> Add product
           </button>
 
           <div className="space-y-1 border-t border-slate-100 pt-3 text-sm">
@@ -1601,7 +1918,7 @@ export default function NewBillPage() {
                       href="/settings?returnTo=/new-bill/create"
                       className="text-xs text-amber-800 underline font-medium hover:text-amber-950"
                     >
-                      Open in Settings
+                      Open in Shop Settings
                     </Link>
                   </div>
                 </div>
@@ -1612,7 +1929,7 @@ export default function NewBillPage() {
                   <p className="mt-1 text-xs text-slate-500">Scan to pay ₹{grandTotal.toFixed(2)}</p>
                 </div>
               ) : (
-                <p className="py-4 text-center text-xs text-slate-400">Add items to show the QR code.</p>
+                <p className="py-4 text-center text-xs text-slate-400">Add Items to show the QR code.</p>
               )}
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -1655,7 +1972,7 @@ export default function NewBillPage() {
             <span>
               <span className="block text-sm font-semibold text-slate-900">More options</span>
               <span className="block text-xs text-slate-500">
-                Date, due date, notes, PAN, state, reverse charge, e-commerce
+                Date, due date, notes, customer state, reverse charge, e-commerce
               </span>
             </span>
             <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform ${showMore ? "rotate-180" : ""}`} />
@@ -1690,35 +2007,20 @@ export default function NewBillPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <label className={label}>
-                    PAN{isPanRequired && <span className="ml-1 text-red-600">(required, above ₹2 lakh)</span>}
-                  </label>
-                  <input
-                    type="text"
-                    value={custPan}
-                    onChange={(e) => setCustPan(e.target.value.toUpperCase())}
-                    maxLength={10}
-                    placeholder="ABCDE1234F"
-                    className={`${field} font-mono uppercase ${isPanRequired && !custPan ? "border-red-400" : ""}`}
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className={label}>Customer state (decides CGST+SGST or IGST)</label>
-                  <select
-                    value={effectiveState}
-                    onChange={(e) => setCustState(e.target.value)}
-                    className={`${field} bg-white`}
-                  >
-                    {!effectiveState && <option value="">Same as my business</option>}
-                    {INDIAN_STATES.map((s) => (
-                      <option key={s.code} value={s.code}>
-                        {s.name} ({s.code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div>
+                <label className={label}>Customer state (decides CGST+SGST or IGST)</label>
+                <select
+                  value={effectiveState}
+                  onChange={(e) => setCustState(e.target.value)}
+                  className={`${field} bg-white`}
+                >
+                  {!effectiveState && <option value="">Same as my business</option>}
+                  {INDIAN_STATES.map((s) => (
+                    <option key={s.code} value={s.code}>
+                      {s.name} ({s.code})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="space-y-3 border-t border-slate-100 pt-3">
@@ -1773,22 +2075,40 @@ export default function NewBillPage() {
           )}
         </section>
 
+        
+
         {/* Action bar: sticks to the bottom of the form column only */}
         <div className="sticky bottom-3 z-30 flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-lg">
           <div>
             <p className="text-xs text-slate-500">Total</p>
             <p className="text-lg font-bold text-slate-900">₹{grandTotal.toFixed(2)}</p>
           </div>
-          <button
-            type="submit"
-            disabled={submitting || grandTotal <= 0}
-            className="flex min-w-[180px] items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {submitting && (
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-            )}
-            {submitting ? "Creating…" : "Generate invoice"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleCheckRules}
+              disabled={checkingRules || submitting || grandTotal <= 0}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-3 text-xs font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-50 transition"
+              title="Check bill details against statutory GST rules before saving"
+            >
+              {checkingRules ? (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-600 border-t-transparent" />
+              ) : (
+                <Check className="h-4 w-4 text-emerald-600" />
+              )}
+              {checkingRules ? "Checking Rules..." : "Pre-check Rules"}
+            </button>
+            <button
+              type="submit"
+              disabled={submitting || grandTotal <= 0}
+              className="flex min-w-[170px] items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {submitting && (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              )}
+              {submitting ? "Checking & Creating…" : "Save & Make Bill"}
+            </button>
+          </div>
         </div>
       </form>
 

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { apiFetch, downloadFile } from "../../lib/api";
@@ -179,7 +179,7 @@ export default function Gstr3bSectionPage() {
         <div>
           <h1 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
             <FileSpreadsheet className="w-5 h-5 text-indigo-600" />
-            GST Filing &gt; GSTR-3B Tax Summary
+            File GST &gt; GSTR-3B Tax Summary
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
             Review output tax and purchase ITC estimates for the selected period.

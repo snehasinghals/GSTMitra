@@ -63,12 +63,12 @@ export function Sidebar() {
 
             <Link href="/my-bills" className={itemClass(isUnder("/my-bills"))}>
               <Receipt className={`w-4 h-4 ${isUnder("/my-bills") ? "text-white" : "text-slate-400"}`} />
-              <span>My Bills</span>
+              <span>My Shopping Bills</span>
             </Link>
 
             <Link href="/rules" className={itemClass(isUnder("/rules"))}>
               <BookOpen className={`w-4 h-4 ${isUnder("/rules") ? "text-white" : "text-slate-400"}`} />
-              <span>Rules & Rates</span>
+              <span>GST Rates</span>
             </Link>
 
             <Link href="/help" className={itemClass(isUnder("/help"))}>
@@ -116,7 +116,7 @@ export function Sidebar() {
 
               <Link href="/new-bill" className={itemClass(isUnder("/new-bill"))}>
                 <PlusCircle className={`w-4 h-4 ${isUnder("/new-bill") ? "text-white" : "text-emerald-400"}`} />
-                <span className={isUnder("/new-bill") ? "text-white font-semibold" : "text-emerald-300 font-semibold"}>New Invoice</span>
+                <span className={isUnder("/new-bill") ? "text-white font-semibold" : "text-emerald-300 font-semibold"}>Make Bill</span>
               </Link>
 
               <Link href="/sales" className={itemClass(isExact("/sales"))}>
@@ -131,15 +131,15 @@ export function Sidebar() {
 
               <Link href="/items" className={itemClass(isUnder("/items"))}>
                 <Package className={`w-4 h-4 ${isUnder("/items") ? "text-white" : "text-slate-400"}`} />
-                <span>Items</span>
+                <span>My Product</span>
               </Link>
 
               <Link href="/settings" className={itemClass(isExact("/settings"))}>
                 <Settings className={`w-4 h-4 ${isExact("/settings") ? "text-white" : "text-slate-400"}`} />
-                <span>Settings</span>
+                <span>Shop Settings</span>
               </Link>
 
-              {/* GST Filing (collapsible) */}
+              {/* File GST (collapsible) */}
               <div>
                 <div className={`${itemClass(isExact("/gst-filing"))} justify-between`}>
                   <Link
@@ -150,12 +150,12 @@ export function Sidebar() {
                     <FileSpreadsheet
                       className={`w-4 h-4 ${isUnder("/gst-filing") ? "text-white" : "text-slate-400"}`}
                     />
-                    <span>GST Filing</span>
+                    <span>File GST</span>
                   </Link>
                   <button
                     type="button"
                     onClick={() => setFilingOpen(!filingOpen)}
-                    aria-label="Toggle GST Filing menu"
+                    aria-label="Toggle File GST menu"
                     className="p-1 -mr-1"
                   >
                     <ChevronDown

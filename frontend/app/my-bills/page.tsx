@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -25,6 +25,7 @@ import {
   IndianRupee,
   Bell,
   ExternalLink,
+  Trash2,
 } from "lucide-react";
 
 type BillItem = {
@@ -58,7 +59,7 @@ type MyBill = {
     gstin?: string | null;
     upiId?: string | null;
   };
-  items: BillItem[];
+  Items: BillItem[];
 };
 
 type Summary = {
@@ -151,6 +152,25 @@ export default function MyBillsPage() {
     }
   };
 
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const handleDeleteMyBill = async (billId: string, invoiceNumber: string) => {
+    if (!window.confirm(`Delete bill #${invoiceNumber} from your shopping bills?`)) return;
+    setDeletingId(billId);
+    try {
+      const { error: err } = await apiFetch(`/my-bills/${billId}`, { method: "DELETE" });
+      if (err) {
+        alert(err);
+        return;
+      }
+      setBills((prev) => prev.filter((b) => b.id !== billId));
+      fetchBills();
+    } catch {
+      alert("Failed to delete bill.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const formatDate = (isoStr: string) => {
     try {
       return new Date(isoStr).toLocaleDateString("en-IN", {
@@ -172,7 +192,7 @@ export default function MyBillsPage() {
             <Receipt className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900">My Bills</h1>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900">My Shopping Bills</h1>
             <p className="text-xs text-slate-500">
               Personal purchase receipts received on your Mitra ID or phone
             </p>
@@ -349,12 +369,12 @@ export default function MyBillsPage() {
                           #{bill.invoiceNumber}
                         </span>
                         <span
-                          className={`rounded-full px-2.5 py-0.5 text-3xs font-bold uppercase tracking-wide ${
+                          className={`inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-xs font-semibold shrink-0 border ${
                             isPaid
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                               : isPartial
-                              ? "bg-amber-50 text-amber-700 border border-amber-200"
-                              : "bg-rose-50 text-rose-700 border border-rose-200"
+                              ? "bg-amber-50 text-amber-700 border-amber-200"
+                              : "bg-rose-50 text-rose-700 border-rose-200"
                           }`}
                         >
                           {isPaid ? "Paid" : isPartial ? "Partially Paid" : "Unpaid"}
@@ -377,7 +397,7 @@ export default function MyBillsPage() {
                             {bill.seller.phone}
                           </span>
                         )}
-                        <span>{bill.items.length} {bill.items.length === 1 ? "item" : "items"}</span>
+                        <span>{bill.Items.length} {bill.Items.length === 1 ? "item" : "Items"}</span>
                       </div>
 
                       {bill.lastReminderSentAt && bill.pendingAmount > 0 && !isPaid && (
@@ -403,7 +423,7 @@ export default function MyBillsPage() {
                       </div>
 
                       <div className="flex items-center gap-2 flex-wrap">
-                        {bill.pendingAmount > 0 && !isPaid && bill.seller.upiId && (
+                        {bill.pendingAmount > 0 && !isPaid && !!bill.seller?.upiId?.trim() && (
                           <button
                             type="button"
                             onClick={() => setPayBill(bill)}
@@ -429,8 +449,19 @@ export default function MyBillsPage() {
                           onClick={() => setExpandedBillId(isExpanded ? null : bill.id)}
                           className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition"
                         >
-                          <span>{isExpanded ? "Hide items" : "View items"}</span>
+                          <span>{isExpanded ? "Hide Items" : "View Items"}</span>
                           {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteMyBill(bill.id, bill.invoiceNumber)}
+                          disabled={deletingId === bill.id}
+                          title="Delete this bill from your shopping bills"
+                          className="inline-flex items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 transition disabled:opacity-50"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span>{deletingId === bill.id ? "..." : "Delete"}</span>
                         </button>
                       </div>
                     </div>
@@ -441,10 +472,10 @@ export default function MyBillsPage() {
                 {isExpanded && (
                   <div className="border-t border-slate-100 bg-slate-50/70 p-4 sm:p-5">
                     <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-                      Purchased Items ({bill.items.length})
+                      Purchased Items ({bill.Items.length})
                     </h4>
                     <div className="space-y-2">
-                      {bill.items.map((item, idx) => (
+                      {bill.Items.map((item, idx) => (
                         <div
                           key={item.id || idx}
                           className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3 text-xs"
@@ -533,7 +564,7 @@ function CustomerQrModal({
         </div>
 
         <p className="text-xs text-slate-500">
-          Show this QR code at any shop checkout so your bill automatically saves to &ldquo;My Bills&rdquo;.
+          Show this QR code at any shop checkout so your bill automatically saves to &ldquo;My Shopping Bills&rdquo;.
         </p>
 
         {qrDataUrl ? (
@@ -581,22 +612,40 @@ function CustomerPayUpiModal({
   onClose: () => void;
 }) {
   const [qrUrl, setQrUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const upiId = bill.seller.upiId?.trim() || "";
   const shopName = bill.seller.name;
   const amount = bill.pendingAmount;
+  const isMobile = typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
-  const upiUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(shopName)}&am=${amount.toFixed(2)}&tn=${encodeURIComponent(`Bill ${bill.invoiceNumber}`)}`;
+  const upiUri = upiId ? `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(shopName)}&am=${amount.toFixed(2)}&tn=${encodeURIComponent(`Bill ${bill.invoiceNumber}`)}` : "";
 
   useEffect(() => {
-    if (!upiId) return;
+    if (!upiId || !upiUri) return;
     QRCode.toDataURL(upiUri, { width: 260, margin: 2 }, (err, url) => {
       if (!err && url) setQrUrl(url);
     });
   }, [upiId, upiUri]);
 
+  const handleCopyUpi = () => {
+    if (!upiId) return;
+    navigator.clipboard.writeText(upiId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleOpenUpiApp = () => {
+    if (isMobile) {
+      window.location.href = upiUri;
+    } else {
+      handleCopyUpi();
+      alert("To pay from a computer, please scan the QR code above with Google Pay, PhonePe, or Paytm on your phone, or use the copied UPI ID.");
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
-      <div className="w-full max-w-sm space-y-4 rounded-3xl bg-white p-6 shadow-2xl text-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+      <div className="w-full max-w-sm space-y-4 rounded-3xl bg-white p-6 shadow-2xl text-center animate-fadeIn">
         <div className="flex items-center justify-between">
           <h3 className="text-base font-bold text-slate-900">Pay via UPI</h3>
           <button type="button" onClick={onClose} aria-label="Close">
@@ -619,30 +668,71 @@ function CustomerPayUpiModal({
           </div>
         </div>
 
-        {qrUrl ? (
-          <div className="mx-auto w-fit rounded-2xl border-2 border-slate-100 bg-white p-3 shadow-inner">
-            <img src={qrUrl} alt="UPI Payment QR" className="h-48 w-48" />
-            <p className="mt-1 text-2xs text-slate-400">Scan with GPay, PhonePe, Paytm, BHIM</p>
+        {!upiId ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-center space-y-2">
+            <p className="text-xs font-semibold text-amber-800">
+              This shopkeeper has not added their UPI ID yet.
+            </p>
+            <p className="text-2xs text-slate-500">
+              Please pay in cash or ask the shopkeeper to provide their store UPI QR code.
+            </p>
           </div>
         ) : (
-          <div className="h-48 w-48 mx-auto flex items-center justify-center bg-slate-100 rounded-2xl text-xs text-slate-400">
-            Generating Payment QR...
-          </div>
+          <>
+            {qrUrl ? (
+              <div className="mx-auto w-fit rounded-2xl border-2 border-slate-100 bg-white p-3 shadow-inner">
+                <img src={qrUrl} alt="UPI Payment QR" className="h-48 w-48" />
+                <p className="mt-1 text-2xs text-slate-400">Scan with GPay, PhonePe, Paytm, BHIM</p>
+              </div>
+            ) : (
+              <div className="h-48 w-48 mx-auto flex items-center justify-center bg-slate-100 rounded-2xl text-xs text-slate-400">
+                Generating Payment QR...
+              </div>
+            )}
+
+            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs">
+              <div className="text-left overflow-hidden">
+                <span className="block text-3xs font-bold uppercase tracking-wider text-slate-400">UPI ID</span>
+                <span className="font-mono font-semibold text-slate-800 text-xs truncate block">{upiId}</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleCopyUpi}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-2xs font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs shrink-0"
+              >
+                {copied ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                <span>{copied ? "Copied" : "Copy"}</span>
+              </button>
+            </div>
+
+            <div className="space-y-2 pt-1">
+              {isMobile ? (
+                <button
+                  type="button"
+                  onClick={handleOpenUpiApp}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  <span>Open UPI App to Pay</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleCopyUpi}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800 transition"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  <span>{copied ? "UPI ID Copied to Clipboard" : "Copy UPI ID to Pay"}</span>
+                </button>
+              )}
+              <p className="text-3xs text-slate-400 leading-tight">
+                {isMobile
+                  ? "After completing payment in your UPI app, the shopkeeper confirms receipt and your bill marks as Paid."
+                  : "Scan the QR code with GPay, PhonePe, or Paytm on your phone to complete payment."}
+              </p>
+            </div>
+          </>
         )}
-
-        <div className="space-y-2 pt-1">
-          <a
-            href={upiUri}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-            <span>Open UPI App to Pay</span>
-          </a>
-
-          <p className="text-3xs text-slate-400 leading-tight">
-            After completing payment, the shopkeeper confirms receipt and your bill will mark as Paid.
-          </p>
-        </div>
 
         <button
           type="button"

@@ -3,6 +3,7 @@ import { prisma } from "../lib/db.js";
 import { authMiddleware, AuthenticatedRequest } from "../middleware/auth.js";
 import ExcelJS from "exceljs";
 import { INDIAN_STATES } from "../lib/constants.js";
+import { validateGstrFilingAgainstRules } from "../lib/ruleEngine.js";
 
 const router = Router();
 
@@ -61,9 +62,9 @@ async function sendReviewWorkbook(res: Response, workbook: ExcelJS.Workbook, fil
 type RateLine = { rate: number; taxable: number; cess: number; sgst: number; cgst: number; igst: number };
 
 // Splits one invoice/bill into one line per GST rate (like the portal does)
-function groupByRate(items: any[]): RateLine[] {
+function groupByRate(Items: any[]): RateLine[] {
   const map = new Map<number, RateLine>();
-  items.forEach((it) => {
+  Items.forEach((it) => {
     const r = map.get(it.gstRate) || { rate: it.gstRate, taxable: 0, cess: 0, sgst: 0, cgst: 0, igst: 0 };
     r.taxable += it.taxableValue || 0;
     r.cess += it.cessAmount || 0;
@@ -193,11 +194,11 @@ async function buildGstr3b(businessId: string, period: string) {
     prisma.business.findUnique({ where: { id: businessId } }),
     prisma.salesInvoice.findMany({
       where: { businessId, invoiceDate: { gte: startDate, lte: endDate }, status: { not: "CANCELLED" } },
-      include: { items: true },
+      include: { Items: true },
     }),
     prisma.purchaseBill.findMany({
       where: { businessId, receiptStatus: "ACCEPTED", billDate: { gte: startDate, lte: endDate } },
-      include: { items: true },
+      include: { Items: true },
     }),
     prisma.gstr3bAdjustment.findUnique({ where: { businessId_period: { businessId, period } } }),
   ]);
@@ -212,7 +213,7 @@ async function buildGstr3b(businessId: string, period: string) {
 
   let zeroRateSalesTaxable = 0;
   sales.forEach((inv) =>
-    inv.items.forEach((it) => {
+    inv.Items.forEach((it) => {
       if (it.gstRate > 0) add(osup_det, it.taxableValue, it.igstAmount, it.cgstAmount, it.sgstAmount, it.cessAmount);
       else zeroRateSalesTaxable += it.taxableValue;
     })
@@ -245,7 +246,7 @@ async function buildGstr3b(businessId: string, period: string) {
   const inward = { GST: { intra: 0, inter: 0 }, NONGST: { intra: 0, inter: 0 } };
 
   purchases.forEach((b) => {
-    const billTax = b.items.reduce(
+    const billTax = b.Items.reduce(
       (total, item) => ({
         taxable: total.taxable + item.taxableValue,
         igst: total.igst + item.igstAmount,
@@ -260,7 +261,7 @@ async function buildGstr3b(businessId: string, period: string) {
       add(isup_rev, billTax.taxable, billTax.igst, billTax.cgst, billTax.sgst, billTax.cess);
     }
 
-    b.items.forEach((item) => {
+    b.Items.forEach((item) => {
       if (!item.isItcEligible) {
         const blockedBySection175 = b.itcIneligibilityReason?.toLowerCase().includes("17(5)");
         add(
@@ -283,7 +284,7 @@ async function buildGstr3b(businessId: string, period: string) {
     });
 
     // ---- 5. Exempt / nil inward supplies ----
-    b.items.forEach((it) => {
+    b.Items.forEach((it) => {
       if (it.gstRate === 0) {
         if (b.supplyType === "INTRA_STATE") inward.GST.intra += it.taxableValue;
         else inward.GST.inter += it.taxableValue;
@@ -361,12 +362,12 @@ router.get("/gstr3b/adjustments", authMiddleware, async (req: AuthenticatedReque
       prisma.gstr3bAdjustment.findUnique({ where: { businessId_period: { businessId, period } } }),
       prisma.salesInvoice.findMany({
         where: { businessId, invoiceDate: { gte: startDate, lte: endDate }, status: { not: "CANCELLED" } },
-        include: { items: { select: { gstRate: true, taxableValue: true } } },
+        include: { Items: { select: { gstRate: true, taxableValue: true } } },
       }),
     ]);
     const zeroRateSalesTaxable = sales.reduce(
       (total, invoice) =>
-        total + invoice.items.reduce((invoiceTotal, item) => invoiceTotal + (item.gstRate === 0 ? item.taxableValue : 0), 0),
+        total + invoice.Items.reduce((invoiceTotal, item) => invoiceTotal + (item.gstRate === 0 ? item.taxableValue : 0), 0),
       0
     );
 
@@ -406,11 +407,11 @@ router.put("/gstr3b/adjustments", authMiddleware, async (req: AuthenticatedReque
     const { startDate, endDate } = parsePeriod(period);
     const sales = await prisma.salesInvoice.findMany({
       where: { businessId, invoiceDate: { gte: startDate, lte: endDate }, status: { not: "CANCELLED" } },
-      include: { items: { select: { gstRate: true, taxableValue: true } } },
+      include: { Items: { select: { gstRate: true, taxableValue: true } } },
     });
     const zeroRateSalesTaxable = sales.reduce(
       (total, invoice) =>
-        total + invoice.items.reduce((invoiceTotal, item) => invoiceTotal + (item.gstRate === 0 ? item.taxableValue : 0), 0),
+        total + invoice.Items.reduce((invoiceTotal, item) => invoiceTotal + (item.gstRate === 0 ? item.taxableValue : 0), 0),
       0
     );
     const classifiedZeroRateSales =
@@ -449,7 +450,7 @@ router.get("/gstr1/summary", authMiddleware, async (req: AuthenticatedRequest, r
         invoiceDate: { gte: startDate, lte: endDate },
         status: { not: "CANCELLED" },
       },
-      include: { customer: true, items: true },
+      include: { customer: true, Items: true },
     });
 
     const b2bInvoices = invoices.filter((i) => Boolean(i.buyerGstin));
@@ -478,7 +479,7 @@ router.get("/gstr1/summary", authMiddleware, async (req: AuthenticatedRequest, r
     > = {};
 
     invoices.forEach((inv) => {
-      inv.items.forEach((item) => {
+      inv.Items.forEach((item) => {
         const key = `${item.hsnSacCode}_${item.gstRate}`;
         if (!hsnMap[key]) {
           hsnMap[key] = {
@@ -506,7 +507,7 @@ router.get("/gstr1/summary", authMiddleware, async (req: AuthenticatedRequest, r
     });
 
     const missingHsnCount = invoices.reduce(
-      (sum, inv) => sum + inv.items.filter((it) => !it.hsnSacCode).length,
+      (sum, inv) => sum + inv.Items.filter((it) => !it.hsnSacCode).length,
       0
     );
 
@@ -547,26 +548,24 @@ router.get("/gstr1/excel", authMiddleware, async (req: AuthenticatedRequest, res
       prisma.business.findUnique({ where: { id: businessId } }),
       prisma.salesInvoice.findMany({
         where: { businessId, invoiceDate: { gte: startDate, lte: endDate }, status: { not: "CANCELLED" } },
-        include: { customer: true, items: true },
+        include: { customer: true, Items: true },
         orderBy: [{ invoiceDate: "asc" }, { invoiceNumber: "asc" }],
       }),
     ]);
     if (!business) return res.status(404).json({ error: "Business profile not found." });
 
-    // Block export if any invoice item in this period is missing HSN
-    const missingHsnCount = await prisma.salesInvoiceItem.count({
-      where: {
-        salesInvoice: {
-          businessId,
-          invoiceDate: { gte: startDate, lte: endDate },
-          status: { not: "CANCELLED" },
-        },
-        hsnSacCode: "",  // non-optional String in schema — empty means unset
-      },
+    // Validate all records for this period against dynamic DB rules (NO HARDCODING)
+    const ruleCheck = await validateGstrFilingAgainstRules({
+      businessId,
+      returnType: "GSTR1",
+      period,
     });
-    if (missingHsnCount > 0) {
+    if (!ruleCheck.canProceed && req.query.force !== "true") {
       return res.status(422).json({
-        error: `Fix ${missingHsnCount} item${missingHsnCount > 1 ? "s" : ""} with missing HSN before exporting GSTR-1. Go to Sales → Fix HSN.`,
+        error: "GSTR-1 Rule Check Failed",
+        message: "GSTR-1 workbook export karne se pehle GST rules check me galtiyan mili hain. Kripya inhe verify aur theek karein.",
+        ruleViolations: ruleCheck.violations,
+        counts: ruleCheck.counts,
       });
     }
 
@@ -633,7 +632,7 @@ router.get("/gstr1/excel", authMiddleware, async (req: AuthenticatedRequest, res
 
     // Row 5+: data (one row per invoice per GST rate)
     invoices.forEach((inv) => {
-      groupByRate(inv.items).forEach((line, index) => {
+      groupByRate(inv.Items).forEach((line, index) => {
         const row = sheet.addRow([
           inv.buyerGstin,
           inv.customer.name,
@@ -674,19 +673,23 @@ router.get("/gstr1/json", authMiddleware, async (req: AuthenticatedRequest, res:
         invoiceDate: { gte: startDate, lte: endDate },
         status: { not: "CANCELLED" },
       },
-      include: { customer: true, items: true },
+      include: { customer: true, Items: true },
     });
 
     if (!businessId) return res.status(400).json({ error: "No active business" });
 
-    // Block export if any invoice item in this period is missing HSN
-    const missingHsnCount = invoices.reduce(
-      (sum, inv) => sum + inv.items.filter((it) => !it.hsnSacCode).length,
-      0
-    );
-    if (missingHsnCount > 0) {
+    // Validate all records for this period against dynamic DB rules (NO HARDCODING)
+    const ruleCheck = await validateGstrFilingAgainstRules({
+      businessId,
+      returnType: "GSTR1",
+      period,
+    });
+    if (!ruleCheck.canProceed && req.query.force !== "true") {
       return res.status(422).json({
-        error: `Fix ${missingHsnCount} item${missingHsnCount > 1 ? "s" : ""} with missing HSN before exporting GSTR-1. Go to Sales → Fix HSN.`,
+        error: "GSTR-1 Rule Check Failed",
+        message: "GSTR-1 JSON export karne se pehle GST rules check me galtiyan mili hain. Kripya inhe verify aur theek karein.",
+        ruleViolations: ruleCheck.violations,
+        counts: ruleCheck.counts,
       });
     }
 
@@ -703,7 +706,7 @@ router.get("/gstr1/json", authMiddleware, async (req: AuthenticatedRequest, res:
             pos: i.placeOfSupply,
             rchrg: "N",
             inv_typ: "R",
-            itms: i.items.map((itm, idx) => ({
+            itms: i.Items.map((itm, idx) => ({
               num: idx + 1,
               itm_det: {
                 txval: itm.taxableValue,
@@ -766,7 +769,7 @@ router.get("/gstr3b/summary", authMiddleware, async (req: AuthenticatedRequest, 
     // Inward Supplies & ITC (Purchases)
     const purchases = await prisma.purchaseBill.findMany({
       where: { businessId, receiptStatus: "ACCEPTED", billDate: { gte: startDate, lte: endDate } },
-      include: { items: true },
+      include: { Items: true },
     });
 
     let itcEligibleTaxable = 0,
@@ -785,7 +788,7 @@ router.get("/gstr3b/summary", authMiddleware, async (req: AuthenticatedRequest, 
     purchases.forEach((p) => {
       let hasEligibleItem = false;
       let hasIneligibleItem = false;
-      p.items.forEach((item) => {
+      p.Items.forEach((item) => {
         if (item.isItcEligible) {
           hasEligibleItem = true;
           itcEligibleTaxable += item.taxableValue;
@@ -862,6 +865,22 @@ router.get("/gstr3b/excel", authMiddleware, async (req: AuthenticatedRequest, re
 
     const { business, json, adjustmentConfirmed, lateFee } = await buildGstr3b(businessId, period);
     if (!business) return res.status(404).json({ error: "Business profile not found." });
+
+    // Validate all records for this period against dynamic DB rules (NO HARDCODING)
+    const ruleCheck = await validateGstrFilingAgainstRules({
+      businessId,
+      returnType: "GSTR3B",
+      period,
+    });
+    if (!ruleCheck.canProceed && req.query.force !== "true") {
+      return res.status(422).json({
+        error: "GSTR-3B Rule Check Failed",
+        message: "GSTR-3B export karne se pehle GST rules check me galtiyan mili hain. Kripya inhe verify aur theek karein.",
+        ruleViolations: ruleCheck.violations,
+        counts: ruleCheck.counts,
+      });
+    }
+
     if (!adjustmentConfirmed) {
       return res.status(409).json({ error: "Review and confirm the GSTR-3B supplemental values for this period before exporting." });
     }
@@ -985,6 +1004,22 @@ router.get("/gstr3b/json", authMiddleware, async (req: AuthenticatedRequest, res
 
     const { business, json, adjustmentConfirmed } = await buildGstr3b(businessId, period);
     if (!business) return res.status(404).json({ error: "Business profile not found." });
+
+    // Validate all records for this period against dynamic DB rules (NO HARDCODING)
+    const ruleCheck = await validateGstrFilingAgainstRules({
+      businessId,
+      returnType: "GSTR3B",
+      period,
+    });
+    if (!ruleCheck.canProceed && req.query.force !== "true") {
+      return res.status(422).json({
+        error: "GSTR-3B Rule Check Failed",
+        message: "GSTR-3B JSON export karne se pehle GST rules check me galtiyan mili hain. Kripya inhe verify aur theek karein.",
+        ruleViolations: ruleCheck.violations,
+        counts: ruleCheck.counts,
+      });
+    }
+
     if (!adjustmentConfirmed) {
       return res.status(409).json({ error: "Review and confirm the GSTR-3B supplemental values for this period before exporting." });
     }
@@ -1010,7 +1045,7 @@ router.get("/gstr2b-books/summary", authMiddleware, async (req: AuthenticatedReq
 
     const bills = await prisma.purchaseBill.findMany({
       where: { businessId, receiptStatus: "ACCEPTED", billDate: { gte: startDate, lte: endDate } },
-      include: { vendor: true, items: true },
+      include: { vendor: true, Items: true },
     });
 
     const creditNotes = await prisma.creditDebitNote.findMany({
@@ -1037,7 +1072,7 @@ router.get("/gstr2b-books/summary", authMiddleware, async (req: AuthenticatedReq
     let totalItcBlocked = 0;
 
     bills.forEach((b) => {
-      b.items.forEach((item) => {
+      b.Items.forEach((item) => {
         const taxTotal = item.cgstAmount + item.sgstAmount + item.igstAmount + item.cessAmount;
         if (item.isItcEligible) totalItcClaimable += taxTotal;
         else totalItcBlocked += taxTotal;
@@ -1124,7 +1159,7 @@ router.get("/gstr2b-books/excel", authMiddleware, async (req: AuthenticatedReque
       prisma.business.findUnique({ where: { id: businessId } }),
       prisma.purchaseBill.findMany({
         where: { businessId, receiptStatus: "ACCEPTED", billDate: { gte: startDate, lte: endDate } },
-        include: { vendor: true, items: true },
+        include: { vendor: true, Items: true },
         orderBy: [{ billDate: "asc" }, { billNumber: "asc" }],
       }),
     ]);
@@ -1160,7 +1195,7 @@ router.get("/gstr2b-books/excel", authMiddleware, async (req: AuthenticatedReque
     });
 
     bills.forEach((bill) => {
-      groupByRate(bill.items).forEach((line, index) => {
+      groupByRate(bill.Items).forEach((line, index) => {
         const row = sheet.addRow([
           bill.vendor.gstin || "",
           bill.vendor.name,
@@ -1299,7 +1334,7 @@ router.get("/gstr2b-books/json", authMiddleware, async (req: AuthenticatedReques
 
     const bills = await prisma.purchaseBill.findMany({
       where: { businessId, receiptStatus: "ACCEPTED", billDate: { gte: startDate, lte: endDate } },
-      include: { vendor: true, items: true },
+      include: { vendor: true, Items: true },
     });
 
     const jsonPayload = {
@@ -1382,7 +1417,7 @@ function readPortalInvoices(b2b: any[]) {
     for (const inv of supplier?.inv || []) {
       const key = `${gstin}|${cleanInvoiceNo(inv?.inum)}`;
       if (map.has(key)) continue;
-      const lines: any[] = Array.isArray(inv?.items) && inv.items.length ? inv.items : [inv];
+      const lines: any[] = Array.isArray(inv?.Items) && inv.Items.length ? inv.Items : [inv];
       let taxable = 0;
       let tax = 0;
       for (const line of lines) {
@@ -1454,12 +1489,12 @@ async function reconcileGstr2b(businessId: string, period: string, file: any) {
         { vendor: { gstin: { in: portalGstins } } }, // bill dated an earlier month, supplier reported it now
       ],
     },
-    include: { vendor: true, items: true },
+    include: { vendor: true, Items: true },
     orderBy: { createdAt: "asc" },
   });
   type Bill = (typeof bills)[number];
   const isInPeriod = (b: Bill) => b.billDate >= startDate && b.billDate <= endDate;
-  const taxOf = (b: Bill) => b.items.reduce((s, i) => s + i.igstAmount + i.cgstAmount + i.sgstAmount + i.cessAmount, 0);
+  const taxOf = (b: Bill) => b.Items.reduce((s, i) => s + i.igstAmount + i.cgstAmount + i.sgstAmount + i.cessAmount, 0);
 
   // Group the same invoice (same supplier + same cleaned number) together
   const groups = new Map<string, Bill[]>();
@@ -1531,9 +1566,9 @@ async function reconcileGstr2b(businessId: string, period: string, file: any) {
     }
 
     const bill = entry.bill;
-    const booksTaxable = bill.items.reduce((s, i) => s + i.taxableValue, 0);
+    const booksTaxable = bill.Items.reduce((s, i) => s + i.taxableValue, 0);
     const booksTax = taxOf(bill);
-    const eligibleTax = bill.items
+    const eligibleTax = bill.Items
       .filter((i) => i.isItcEligible)
       .reduce((s, i) => s + i.igstAmount + i.cgstAmount + i.sgstAmount + i.cessAmount, 0);
 
@@ -1761,6 +1796,27 @@ router.post("/gstr2b/report", authMiddleware, async (req: AuthenticatedRequest, 
     if (error instanceof ReconError) return res.status(400).json({ error: error.message });
     console.error("GSTR-2B report error:", error);
     res.status(500).json({ error: "Could not create the Excel report. Please try again." });
+  }
+});
+
+// Pre-validate return compliance against dynamic DB rules
+router.get("/validate-return", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) return res.status(400).json({ error: "No active business" });
+    const period = String(req.query.period || "");
+    if (!isValidPeriod(period)) return res.status(400).json({ error: "Invalid filing period." });
+    const returnType = String(req.query.returnType || "GSTR1").toUpperCase() as "GSTR1" | "GSTR3B";
+
+    const result = await validateGstrFilingAgainstRules({
+      businessId,
+      returnType,
+      period,
+    });
+    res.json(result);
+  } catch (error: any) {
+    console.error("Validate return error:", error);
+    res.status(500).json({ error: "Failed to validate return against GST rules." });
   }
 });
 

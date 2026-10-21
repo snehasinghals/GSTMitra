@@ -42,7 +42,7 @@ export interface ExtractedBillResult {
   totalIgst: number;
   totalCess: number;
   totalAmount: number;
-  items: ExtractedBillItem[];
+  Items: ExtractedBillItem[];
   confidence: "HIGH" | "MEDIUM" | "LOW";
   extractionMethod: "GEMINI_AI" | "PDF_PARSER" | "HEURISTIC";
   rawTextSnippet?: string;
@@ -407,7 +407,7 @@ export function parseInvoiceTextHeuristically(
     }
   }
 
-  const items: ExtractedBillItem[] = [
+  const Items: ExtractedBillItem[] = [
     {
       description: "Goods / Services as per Tax Invoice",
       hsnSacCode: primaryHsn,
@@ -449,7 +449,7 @@ export function parseInvoiceTextHeuristically(
     totalIgst: r2(totalIgst),
     totalCess: r2(totalCess),
     totalAmount: r2(totalAmount),
-    items,
+    Items,
     confidence: vendorGstin && billNumber ? "HIGH" : "MEDIUM",
     extractionMethod: "HEURISTIC",
     rawTextSnippet: text.slice(0, 500),
@@ -491,7 +491,7 @@ Return ONLY a JSON object with this exact structure (no markdown formatting, no 
   "totalIgst": 0.0,
   "totalCess": 0.0,
   "totalAmount": 1180.0,
-  "items": [
+  "Items": [
     {
       "description": "Item or service name",
       "hsnSacCode": "HSN/SAC code (4 to 8 digits)",
@@ -554,7 +554,7 @@ Return ONLY a JSON object with this exact structure (no markdown formatting, no 
     const isIntraState = vendorStateCode === businessState;
     const supplyType: "INTRA_STATE" | "INTER_STATE" = isIntraState ? "INTRA_STATE" : "INTER_STATE";
 
-    const items: ExtractedBillItem[] = (parsed.items || []).map((it: any) => ({
+    const Items: ExtractedBillItem[] = (parsed.Items || []).map((it: any) => ({
       description: it.description || "Purchase Item",
       hsnSacCode: it.hsnSacCode || "998313",
       quantity: Number(it.quantity) || 1,
@@ -594,7 +594,7 @@ Return ONLY a JSON object with this exact structure (no markdown formatting, no 
       totalIgst: r2(Number(parsed.totalIgst) || 0),
       totalCess: r2(Number(parsed.totalCess) || 0),
       totalAmount: r2(Number(parsed.totalAmount) || 0),
-      items: items.length > 0 ? items : [
+      Items: Items.length > 0 ? Items : [
         {
           description: "Purchase Goods / Services",
           hsnSacCode: "998313",

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -27,7 +27,7 @@ type MissingItem = {
 };
 
 export default function FixHsnPage() {
-  const [items, setItems] = useState<MissingItem[]>([]);
+  const [Items, setItems] = useState<MissingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState("");
   const [acceptingAll, setAcceptingAll] = useState(false);
@@ -36,13 +36,13 @@ export default function FixHsnPage() {
   const load = useCallback(async () => {
     setLoading(true);
     setFetchError("");
-    const { data, error } = await apiFetch<{ count: number; items: MissingItem[] }>(
+    const { data, error } = await apiFetch<{ count: number; Items: MissingItem[] }>(
       "/sales/invoices/missing-hsn"
     );
     if (error || !data) {
-      setFetchError(error || "Could not load items.");
+      setFetchError(error || "Could not load Items.");
     } else {
-      setItems(data.items.map((i) => ({ ...i, pending: undefined, saved: false, saving: false, error: "" })));
+      setItems(data.Items.map((i) => ({ ...i, pending: undefined, saved: false, saving: false, error: "" })));
     }
     setLoading(false);
   }, []);
@@ -76,7 +76,7 @@ export default function FixHsnPage() {
 
   const acceptAll = async () => {
     // For each unsaved item that has a pending pick or at least one suggestion, accept the top suggestion
-    const candidates = items.filter(
+    const candidates = Items.filter(
       (i) => !i.saved && (i.pending || i.suggestions.length > 0)
     );
     if (candidates.length === 0) return;
@@ -102,12 +102,12 @@ export default function FixHsnPage() {
       );
       setAllDoneMsg(`All ${fixes.length} item${fixes.length > 1 ? "s" : ""} updated successfully!`);
     } else {
-      setFetchError(error || "Failed to update items in bulk.");
+      setFetchError(error || "Failed to update Items in bulk.");
     }
   };
 
-  const unsaved = items.filter((i) => !i.saved);
-  const saved = items.filter((i) => i.saved);
+  const unsaved = Items.filter((i) => !i.saved);
+  const saved = Items.filter((i) => i.saved);
 
   return (
     <div className="mx-auto max-w-2xl px-3 pb-10 sm:px-0">
@@ -143,7 +143,7 @@ export default function FixHsnPage() {
             <Check className="h-6 w-6" />
           </div>
           <p className="text-sm font-semibold text-emerald-800">
-            No items with missing HSN — you can export GSTR-1.
+            No Items with missing HSN — you can export GSTR-1.
           </p>
           <Link href="/filing" className="text-sm text-emerald-700 underline">
             Go to Filing

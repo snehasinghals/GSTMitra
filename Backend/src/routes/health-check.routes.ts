@@ -426,7 +426,7 @@ router.get("/", authMiddleware, async (req: AuthenticatedRequest, res: Response)
         ...billWhere,
         category: { in: blockedCategories },
         isItcEligible: true,
-        items: { some: { isItcEligible: true } },
+        Items: { some: { isItcEligible: true } },
       } satisfies Prisma.PurchaseBillWhereInput;
 
       const [

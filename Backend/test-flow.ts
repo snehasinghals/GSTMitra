@@ -41,7 +41,7 @@ async function runTests() {
   console.log("2. Onboarding Result:", onboardRes.status, onboardData.business?.gstin);
 
   // 3. Add Item
-  const itemRes = await fetch(`${API_BASE}/items`, {
+  const itemRes = await fetch(`${API_BASE}/Items`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -84,7 +84,7 @@ async function runTests() {
     body: JSON.stringify({
       customerId: custData.id,
       invoiceDate: "2026-10-02",
-      items: [
+      Items: [
         {
           itemId: itemData.id,
           description: itemData.name,
@@ -132,7 +132,7 @@ async function runTests() {
       billDate: "2026-10-01",
       category: "STOCK",
       isItcEligible: true,
-      items: [
+      Items: [
         {
           description: "Laptops Stock Wholesale",
           hsnSacCode: "847130",

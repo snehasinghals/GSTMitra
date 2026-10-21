@@ -1,4 +1,4 @@
-import { Router, Response } from "express";
+﻿import { Router, Response } from "express";
 import { prisma } from "../lib/db.js";
 import { authMiddleware, AuthenticatedRequest } from "../middleware/auth.js";
 import { renderInvoicePdfStream } from "./sales.routes.js";
@@ -19,7 +19,7 @@ router.get("/", authMiddleware, async (req: AuthenticatedRequest, res: Response)
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, name: true, mitraId: true, phone: true },
+      select: { id: true, name: true, mitraId: true, phone: true, email: true },
     });
 
     if (!user) return res.status(404).json({ error: "User not found" });
@@ -30,6 +30,9 @@ router.get("/", authMiddleware, async (req: AuthenticatedRequest, res: Response)
     }
     if (user.phone) {
       customerConditions.push({ phone: user.phone });
+    }
+    if (user.email) {
+      customerConditions.push({ email: user.email });
     }
 
     if (customerConditions.length === 0) {
@@ -91,7 +94,7 @@ router.get("/", authMiddleware, async (req: AuthenticatedRequest, res: Response)
             upiId: true,
           },
         },
-        items: true,
+        Items: true,
         payments: {
           orderBy: { paidOn: "desc" },
           take: 5,
@@ -134,7 +137,7 @@ router.get("/", authMiddleware, async (req: AuthenticatedRequest, res: Response)
           gstin: b.business.gstin,
           upiId: b.business.upiId,
         },
-        items: b.items.map((it) => ({
+        Items: b.Items.map((it) => ({
           id: it.id,
           description: it.description,
           hsnSacCode: it.hsnSacCode,
@@ -158,7 +161,7 @@ router.get("/", authMiddleware, async (req: AuthenticatedRequest, res: Response)
       },
     });
   } catch (error: any) {
-    console.error("My bills error:", error);
+    console.error("My Shopping Bills error:", error);
     res.status(500).json({ error: "Failed to fetch bills." });
   }
 });
@@ -308,7 +311,7 @@ function drawMyBillPdf(res: Response, bill: any, business: any) {
   drawTableHeader(tableTop);
   let itemY = tableTop + HEADER_H;
 
-  bill.items.forEach((item: any, index: number) => {
+  bill.Items.forEach((item: any, index: number) => {
     doc.font(regularFont).fontSize(8);
     const description = String(item.description || "");
     const rowHeight = Math.min(90, Math.max(ROW_MIN, doc.heightOfString(description, { width: 137 }) + 20));
@@ -351,7 +354,7 @@ function drawMyBillPdf(res: Response, bill: any, business: any) {
   const rows: SummaryRow[] = [{ label: "Sub Total", amount: bill.subtotal }];
 
   const taxSlabs = new Map<number, { cgst: number; sgst: number; igst: number }>();
-  bill.items.forEach((item: any) => {
+  bill.Items.forEach((item: any) => {
     const slab = taxSlabs.get(item.gstRate) ?? { cgst: 0, sgst: 0, igst: 0 };
     slab.cgst += item.cgstAmount;
     slab.sgst += item.sgstAmount;
@@ -413,7 +416,7 @@ router.get("/:id/pdf", authMiddleware, async (req: AuthenticatedRequest, res: Re
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, name: true, mitraId: true, phone: true },
+      select: { id: true, name: true, mitraId: true, phone: true, email: true },
     });
 
     const customerConditions: any[] = [];
@@ -423,7 +426,7 @@ router.get("/:id/pdf", authMiddleware, async (req: AuthenticatedRequest, res: Re
 
     const invoice: any = await prisma.salesInvoice.findFirst({
       where: { id: req.params.id as string, customer: { OR: customerConditions } },
-      include: { customer: true, items: true },
+      include: { customer: true, Items: true },
     });
     if (!invoice) return res.status(404).json({ error: "Bill not found." });
 
@@ -455,7 +458,7 @@ router.get("/:id/pdf", authMiddleware, async (req: AuthenticatedRequest, res: Re
         phone: seller.phone,
         email: seller.email,
       },
-      items: invoice.items.map((it: any) => ({
+      Items: invoice.Items.map((it: any) => ({
         description: it.description,
         hsnSacCode: it.hsnSacCode,
         quantity: it.quantity,
@@ -487,6 +490,83 @@ router.get("/:id/pdf", authMiddleware, async (req: AuthenticatedRequest, res: Re
       return;
     }
     res.status(500).json({ error: "Failed to generate PDF." });
+  }
+});
+
+// DELETE /api/my-bills/:id
+// Removes a bill from the authenticated customer's shopping bills
+router.delete("/:id", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, mitraId: true, phone: true, email: true },
+    });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const customerConditions: any[] = [];
+    if (user.mitraId) {
+      customerConditions.push({ mitraId: { equals: user.mitraId, mode: "insensitive" } });
+    }
+    if (user.phone) {
+      customerConditions.push({ phone: user.phone });
+    }
+    if (user.email) {
+      customerConditions.push({ email: user.email });
+    }
+
+    if (customerConditions.length === 0) {
+      return res.status(404).json({ error: "No matching shopping bills found." });
+    }
+
+    const billId = req.params.id as string;
+    const invoice = await prisma.salesInvoice.findFirst({
+      where: {
+        id: billId,
+        customer: { OR: customerConditions },
+      },
+      include: { customer: true },
+    });
+
+    if (!invoice) {
+      return res.status(404).json({ error: "Bill not found in your shopping bills." });
+    }
+
+    // Reassign invoice to an unlinked customer profile under the seller's shop
+    // to safely remove it from customer's personal bills without altering the seller's tax records
+    let unlinkedCustomer = await prisma.customer.findFirst({
+      where: {
+        businessId: invoice.businessId,
+        name: invoice.customer.name,
+        mitraId: null,
+        phone: null,
+        email: null,
+      },
+    });
+
+    if (!unlinkedCustomer) {
+      unlinkedCustomer = await prisma.customer.create({
+        data: {
+          businessId: invoice.businessId,
+          name: invoice.customer.name || "Customer",
+          stateCode: invoice.customer.stateCode,
+          stateName: invoice.customer.stateName,
+          address: invoice.customer.address,
+        },
+      });
+    }
+
+    await prisma.salesInvoice.update({
+      where: { id: invoice.id },
+      data: { customerId: unlinkedCustomer.id },
+    });
+
+    res.json({ message: "Bill removed from your shopping bills successfully." });
+  } catch (error: any) {
+    console.error("Delete my-bill error:", error);
+    res.status(500).json({ error: "Failed to remove bill from your shopping bills." });
   }
 });
 

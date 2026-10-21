@@ -124,15 +124,15 @@ export default function NewBillHomePage() {
       {/* Header + main action */}
       <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">New Invoice</h1>
-          <p className="mt-0.5 text-sm text-slate-500">Create a GST invoice in a few taps.</p>
+          <h1 className="text-xl font-bold text-slate-900">Make Bill</h1>
+          <p className="mt-0.5 text-sm text-slate-500">Create official GST tax invoices for your customers in a few taps.</p>
         </div>
         <Link
           href="/new-bill/create"
           className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700"
         >
           <Plus className="h-4 w-4" />
-          Generate invoice
+          Make Bill
         </Link>
       </div>
 
@@ -140,7 +140,7 @@ export default function NewBillHomePage() {
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-3 md:flex-row md:items-center md:justify-between">
           <h2 className="text-sm font-semibold text-slate-900">
-            {isSearching ? `Search results (${recent.length})` : "Recent invoices"}
+            {isSearching ? `Search results (${recent.length})` : "Recent Sales Bills"}
           </h2>
 
           <div className="relative w-full md:max-w-md">
@@ -149,7 +149,7 @@ export default function NewBillHomePage() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by Mitra ID, name or invoice number"
+              placeholder="Search by Mitra ID, customer name or bill number..."
               className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-9 text-sm"
             />
             {query && (
@@ -226,12 +226,12 @@ export default function NewBillHomePage() {
                     </div>
 
                     <span
-                      className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+                      className={`inline-flex items-center justify-center rounded-full border px-2.5 py-0.5 text-xs font-semibold self-center shrink-0 ${
                         status === "PAID"
                           ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                           : status === "PARTIAL"
                           ? "border-amber-200 bg-amber-50 text-amber-700"
-                          : "border-red-200 bg-red-50 text-red-700"
+                          : "border-rose-200 bg-rose-50 text-rose-700"
                       }`}
                     >
                       {status === "PAID" ? "Paid" : status === "PARTIAL" ? "Part paid" : "Unpaid"}

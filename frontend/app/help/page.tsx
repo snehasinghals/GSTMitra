@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
@@ -90,7 +90,7 @@ const GLOSSARY_DATA: GlossaryItem[] = [
     shortForm: "Section 17(5)",
     category: "credit",
     meaning:
-      "For some purchases, the government does not allow ITC, even though you paid GST. These are mostly things that look personal, like restaurant food, club memberships or personal items.",
+      "For some purchases, the government does not allow ITC, even though you paid GST. These are mostly things that look personal, like restaurant food, club memberships or personal Items.",
     example:
       "You pay a restaurant bill of ₹3,000 and ₹150 of it is GST. You cannot subtract this ₹150 from the GST you pay. It stays as your cost.",
     linkHref: "/purchases",
@@ -166,7 +166,7 @@ const GLOSSARY_DATA: GlossaryItem[] = [
     example:
       "A shop in Mumbai sells to a customer in Pune for ₹1,000 with 18% GST. The customer pays ₹90 CGST + ₹90 SGST, so ₹180 GST in total.",
     linkHref: "/sales",
-    linkLabel: "Create invoice",
+    linkLabel: "Make Bill",
   },
   {
     id: "inter-state",
@@ -178,7 +178,7 @@ const GLOSSARY_DATA: GlossaryItem[] = [
     example:
       "A shop in Delhi sells to a customer in Bengaluru for ₹1,000 with 18% GST. The customer pays one tax of ₹180 as IGST.",
     linkHref: "/sales",
-    linkLabel: "Create invoice",
+    linkLabel: "Make Bill",
   },
   {
     id: "pos",
@@ -293,10 +293,10 @@ const SPECIAL_STATES: Record<string, LimitGroup> = {
 };
 const OTHER_STATE = "Any other state or UT";
 
-const DOCS: Record<EntityId, { label: string; items: string[] }> = {
+const DOCS: Record<EntityId, { label: string; Items: string[] }> = {
   proprietor: {
     label: "Individual / Proprietor",
-    items: [
+    Items: [
       "PAN and Aadhaar (mobile linked)",
       "Your photo",
       "Business address proof (electricity bill, or rent agreement + owner NOC)",
@@ -305,7 +305,7 @@ const DOCS: Record<EntityId, { label: string; items: string[] }> = {
   },
   partnership: {
     label: "Partnership",
-    items: [
+    Items: [
       "Firm PAN and partnership deed",
       "PAN, Aadhaar and photo of all partners",
       "Address proof (electricity bill, or rent agreement + NOC)",
@@ -314,7 +314,7 @@ const DOCS: Record<EntityId, { label: string; items: string[] }> = {
   },
   company: {
     label: "LLP / Company",
-    items: [
+    Items: [
       "PAN and incorporation certificate",
       "PAN, Aadhaar and photo of directors or partners",
       "Authorised signatory proof (board resolution or authorisation letter)",
@@ -338,7 +338,7 @@ const FAQS = [
   { q: "What does registration cost?", a: "The government charges nothing on gst.gov.in. Beware of agents who charge a fee." },
   { q: "No sales this month. Must I file?", a: "Yes. Once registered, file a Nil return before the due date." },
   { q: "Can I charge GST before I get my GSTIN?", a: "No. Only a registered person can collect GST from customers." },
-  { q: "What are the GST rates now?", a: "The GST Council's September 2025 FAQ describes the revised rate structure effective 22 September 2025. Broad rate slabs do not determine an item's rate: check its HSN/SAC entry and the applicable CBIC notification. See GST Rules & Rates for source-linked references." },
+  { q: "What are the GST rates now?", a: "The GST Council's September 2025 FAQ describes the revised rate structure effective 22 September 2025. Broad rate slabs do not determine an item's rate: check its HSN/SAC entry and the applicable CBIC notification. See GST GST Rates for source-linked references." },
 ];
 
 const RATES = [0, 5, 18, 40];
@@ -513,11 +513,11 @@ function BeginnerGuideView() {
                 <p className="text-slate-700 mt-0.5">IGST only</p>
               </div>
             </div>
-            <Heading title="GST rates today" sub="The old 12% and 28% slabs were removed from 22 September 2025. A few items have special rates (for example gold at 3%)." />
+            <Heading title="GST rates today" sub="The old 12% and 28% slabs were removed from 22 September 2025. A few Items have special rates (for example gold at 3%)." />
             <div className="grid grid-cols-4 gap-2 text-center">
               {[
-                { r: "0%", d: "Nil-rated items", c: "bg-slate-50 border-slate-200 text-slate-800" },
-                { r: "5%", d: "Everyday items", c: "bg-blue-50 border-blue-200 text-blue-800" },
+                { r: "0%", d: "Nil-rated Items", c: "bg-slate-50 border-slate-200 text-slate-800" },
+                { r: "5%", d: "Everyday Items", c: "bg-blue-50 border-blue-200 text-blue-800" },
                 { r: "18%", d: "Most things", c: "bg-purple-50 border-purple-200 text-purple-800" },
                 { r: "40%", d: "Luxury / sin goods", c: "bg-red-50 border-red-200 text-red-800" },
               ].map((x) => (
@@ -699,7 +699,7 @@ function BeginnerGuideView() {
               ))}
             </div>
             <div className="space-y-2">
-              {DOCS[entity].items.map((item, i) => {
+              {DOCS[entity].Items.map((item, i) => {
                 const key = `${entity}-${i}`;
                 const done = !!docChecked[key];
                 return (
@@ -758,12 +758,41 @@ function BeginnerGuideView() {
       {tab === "file" && (
         <div className="space-y-4 animate-fadeIn">
           <Card>
-            <Heading title="After you get your GSTIN" sub="Do these in GSTMitra." />
-            <div className="flex flex-wrap gap-2">
-              <QuickLink href="/items" label="1. Add items" />
-              <QuickLink href="/sales" label="2. Create invoices" />
+            <Heading title="After you get your GSTIN" sub="Follow these 5 steps in GSTMitra to keep your business fully compliant." />
+            <div className="flex flex-wrap gap-2 mb-4">
+              <QuickLink href="/items" label="1. Add Products" />
+              <QuickLink href="/new-bill/create" label="2. Make customer bills" />
               <QuickLink href="/purchases" label="3. Record purchases" />
               <QuickLink href="/gst-filing" label="4. Health check" />
+              <QuickLink href="/gst-filing" label="5. File GST Returns" />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 pt-3 border-t border-slate-100">
+              <div className="rounded-xl bg-slate-50 p-2.5 border border-slate-200 text-xs">
+                <span className="font-bold block text-3xs uppercase tracking-wider text-blue-600 mb-1">Step 1</span>
+                <span className="font-semibold text-slate-900 block">Add Products</span>
+                <p className="text-3xs text-slate-500 mt-0.5">Save your items with correct HSN code and GST rate.</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-2.5 border border-slate-200 text-xs">
+                <span className="font-bold block text-3xs uppercase tracking-wider text-blue-600 mb-1">Step 2</span>
+                <span className="font-semibold text-slate-900 block">Make Bills</span>
+                <p className="text-3xs text-slate-500 mt-0.5">Create compliant GST invoices for customers and collect payment.</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-2.5 border border-slate-200 text-xs">
+                <span className="font-bold block text-3xs uppercase tracking-wider text-blue-600 mb-1">Step 3</span>
+                <span className="font-semibold text-slate-900 block">Record Purchases</span>
+                <p className="text-3xs text-slate-500 mt-0.5">Save vendor bills to track Input Tax Credit (ITC) and reduce your tax.</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-2.5 border border-slate-200 text-xs">
+                <span className="font-bold block text-3xs uppercase tracking-wider text-blue-600 mb-1">Step 4</span>
+                <span className="font-semibold text-slate-900 block">Health Check</span>
+                <p className="text-3xs text-slate-500 mt-0.5">Spot missing HSN, invalid GSTIN, or mismatched taxes automatically.</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-2.5 border border-slate-200 text-xs">
+                <span className="font-bold block text-3xs uppercase tracking-wider text-blue-600 mb-1">Step 5</span>
+                <span className="font-semibold text-slate-900 block">File Returns</span>
+                <p className="text-3xs text-slate-500 mt-0.5">Download GSTR-1 &amp; GSTR-3B files and upload to the official portal.</p>
+              </div>
             </div>
           </Card>
 
@@ -771,9 +800,9 @@ function BeginnerGuideView() {
             <Heading title="Your 3 monthly jobs" sub="Always in this order. Dates are for monthly filers." />
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
-                { s: "GSTR-1", due: "By 11th", d: "Declare your sales.", href: "/gst-filing/gstr1", box: "border-blue-200 bg-blue-50/60", badge: "bg-blue-600" },
+                { s: "GSTR-1", due: "By 11th", d: "Declare your sales to the government.", href: "/gst-filing/gstr1", box: "border-blue-200 bg-blue-50/60", badge: "bg-blue-600" },
                 { s: "GSTR-2B", due: "Ready by 14th", d: "Check your ITC. The portal creates it for you. Just view it.", href: "/gst-filing/gstr2b", box: "border-emerald-200 bg-emerald-50/60", badge: "bg-emerald-600" },
-                { s: "GSTR-3B", due: "By 20th", d: "Pay your net tax.", href: "/gst-filing/gstr3b", box: "border-indigo-200 bg-indigo-50/60", badge: "bg-indigo-600" },
+                { s: "GSTR-3B", due: "By 20th", d: "Pay your net tax (Sales GST minus Purchase ITC).", href: "/gst-filing/gstr3b", box: "border-indigo-200 bg-indigo-50/60", badge: "bg-indigo-600" },
               ].map((x, i) => (
                 <div key={x.s} className={`p-4 rounded-2xl border space-y-1.5 ${x.box}`}>
                   <div className="flex items-center justify-between">
@@ -790,15 +819,47 @@ function BeginnerGuideView() {
             </div>
           </Card>
 
-          <More title="How to file on the portal (5 steps)">
-            <ol className="list-decimal pl-4 space-y-1">
-              <li>Download your GSTR-1 file from GSTMitra.</li>
-              <li>Log in to gst.gov.in, open Returns Dashboard and pick the month.</li>
-              <li>Upload the file, check the summary, then file with OTP (EVC) or DSC.</li>
-              <li>Open GSTR-3B, check the numbers, and pay the tax online.</li>
-              <li>File GSTR-3B.</li>
-            </ol>
-          </More>
+          <Card>
+            <Heading title="How to file on the GST portal (5 easy steps)" sub="Take your generated return files and upload them to gst.gov.in." />
+            <div className="space-y-2.5 text-xs text-slate-700">
+              <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-3xs font-bold text-white">1</span>
+                <div>
+                  <strong className="text-slate-900 block font-semibold">Download from GSTMitra:</strong>
+                  <span className="text-slate-600">Open File GST &gt; GSTR-1, click &ldquo;Download GSTR-1 JSON&rdquo; to save your monthly sales data and then also recheck once gstr1 file before uploading to official portal.</span>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-3xs font-bold text-white">2</span>
+                <div>
+                  <strong className="text-slate-900 block font-semibold">Log in to official portal:</strong>
+                  <span className="text-slate-600">Go to <a href="https://www.gst.gov.in" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-semibold underline">gst.gov.in</a>, open Returns Dashboard and pick the financial year and return period.</span>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-3xs font-bold text-white">3</span>
+                <div>
+                  <strong className="text-slate-900 block font-semibold">Upload GSTR-1 file:</strong>
+                  <span className="text-slate-600">Click &ldquo;Prepare Offline&rdquo; on GSTR-1 tile, upload your downloaded JSON file, verify the summary, and file using Aadhaar OTP (EVC).</span>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-3xs font-bold text-white">4</span>
+                <div>
+                  <strong className="text-slate-900 block font-semibold">Verify ITC in GSTR-2B &amp; Check GSTR-3B:</strong>
+                  <span className="text-slate-600">Check auto-drafted ITC in GSTR-2B (available by 14th). Open GSTR-3B to verify your net tax payable.</span>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-3xs font-bold text-white">5</span>
+                <div>
+                  <strong className="text-slate-900 block font-semibold">Pay tax online &amp; File GSTR-3B:</strong>
+                  <span className="text-slate-600">Create a Challan to pay net tax via Net Banking or UPI, then click &ldquo;Proceed to File&rdquo; and confirm with OTP.</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+
           <More title="What must a GST invoice show?">
             <p>Your name, address and GSTIN, a unique invoice number and date, customer details, description of goods or services with HSN or SAC code, quantity, value, tax rate and amount (CGST/SGST or IGST), place of supply, and your signature. GSTMitra fills most of this.</p>
             <p>The number of HSN digits required depends on your yearly turnover. Check the current rule on the portal.</p>
@@ -837,7 +898,7 @@ function BeginnerGuideView() {
             <Heading title="4 mistakes to avoid" />
             <ul className="space-y-2 text-xs text-slate-700">
               {[
-                "Claiming ITC on blocked items such as food and beverages, or personal use.",
+                "Claiming ITC on blocked Items such as food and beverages, or personal use.",
                 "Charging the wrong tax (same state vs other state).",
                 "Claiming ITC that is not showing in GSTR-2B.",
                 "Using an old GST rate. Check the rate for each item.",
@@ -919,7 +980,7 @@ function BeginnerGuideView() {
                 {excessItc > 0 && `. Extra ITC of ${inr(excessItc)} carries forward to next month.`}
               </p>
             </div>
-            <p className="text-3xs text-slate-400">Assumes all purchases are eligible for ITC and shown in GSTR-2B. Blocked items give no ITC.</p>
+            <p className="text-3xs text-slate-400">Assumes all purchases are eligible for ITC and shown in GSTR-2B. Blocked Items give no ITC.</p>
           </Card>
 
           <Card>
@@ -987,7 +1048,7 @@ function GstWordsView() {
   const [category, setCategory] = useState<"all" | GlossaryCategory>("all");
 
   const q = search.trim().toLowerCase();
-  const items = GLOSSARY_DATA.filter((item) => {
+  const Items = GLOSSARY_DATA.filter((item) => {
     const inCategory = category === "all" || item.category === category;
     const inSearch =
       !q ||
@@ -1031,7 +1092,7 @@ function GstWordsView() {
 
       {/* Words List */}
       <ul className="space-y-4">
-        {items.map((item) => (
+        {Items.map((item) => (
           <li
             key={item.id}
             className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-3"
@@ -1067,7 +1128,7 @@ function GstWordsView() {
         ))}
       </ul>
 
-      {items.length === 0 && (
+      {Items.length === 0 && (
         <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-sm text-slate-500">
           Nothing found for &quot;{search}&quot;. Try a simpler word.
         </div>

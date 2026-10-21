@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import { apiFetch, API_BASE_URL } from "../lib/api";
@@ -18,6 +18,7 @@ import {
   Wallet,
   AlertTriangle,
   Pencil,
+  Trash2,
   Camera,
   Upload,
   Paperclip,
@@ -85,7 +86,7 @@ type FocusedBill = {
   paidAmount: number;
   status: string;
   dueDate?: string | null;
-  items: Array<{
+  Items: Array<{
     id?: string;
     itemId?: string | null;
     description: string;
@@ -394,7 +395,7 @@ export default function PurchasesPage() {
           isReverseCharge,
           isItcEligible: itcClaimable,
           itcIneligibilityReason: itcClaimable ? "" : vendorRegistered ? itcReason : "Unregistered vendor",
-          items: billItems,
+          Items: billItems,
         }),
         }
       );
@@ -439,6 +440,23 @@ export default function PurchasesPage() {
     } finally {
       billLock.current = false;
       setSavingBill(false);
+    }
+  };
+
+  // ---------- Delete purchase bill ----------
+  const [deletingBillId, setDeletingBillId] = useState<string | null>(null);
+  const handleDeleteBill = async (billId: string, billNumber: string) => {
+    if (!window.confirm(`Delete purchase bill #${billNumber}?\n\nThis will permanently remove this bill from your records. This cannot be undone.`)) return;
+    setDeletingBillId(billId);
+    try {
+      const { error } = await apiFetch(`/purchases/bills/${billId}`, { method: "DELETE" });
+      if (error) { alert(error); return; }
+      billsQ.mutate((prev) => prev?.filter((b) => b.id !== billId), { revalidate: false });
+      setShowBillModal(false);
+      setEditingBillId(null);
+      showToast("Purchase bill deleted successfully.");
+    } finally {
+      setDeletingBillId(null);
     }
   };
 
@@ -506,7 +524,7 @@ export default function PurchasesPage() {
     setIsReverseCharge(Boolean(data.isReverseCharge));
     setIsItcEligible(Boolean(data.isItcEligible));
     setItcReason(data.itcIneligibilityReason || "");
-    setBillItems(data.items.map((item) => ({
+    setBillItems(data.Items.map((item) => ({
       id: item.id,
       itemId: item.itemId || "",
       description: item.description,
@@ -612,7 +630,7 @@ export default function PurchasesPage() {
             className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus className="w-4 h-4" />
-            <span>Manual Entry</span>
+            <span>Add Purchase Bill</span>
           </button>
         </div>
       </div>
@@ -621,14 +639,14 @@ export default function PurchasesPage() {
       <div className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-teal-50/40 to-white p-5 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
-            <div className="p-2.5 bg-emerald-500/15 text-emerald-700 rounded-xl mt-0.5">
+            <div className="p-2.5 bg-emerald-500/15 text-emerald-700 rounded-xl mt-0.5 shrink-0">
               <Sparkles className="w-5 h-5 text-emerald-600" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <span>AI & OCR Smart Bill Import</span>
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 flex-wrap">
+                <span>AI &amp; OCR Smart Bill Import</span>
                 <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-300">
-                  Auto-Detects Vendor & Line Items
+                  Auto-Detects Vendor &amp; Line Items
                 </span>
               </h3>
               <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
@@ -637,19 +655,19 @@ export default function PurchasesPage() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2.5 flex-shrink-0">
+          <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-center">
             <button
               onClick={() => setShowSmartBillModal(true)}
-              className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm transition"
+              className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold text-xs px-4 py-2.5 rounded-xl shadow-xs transition-colors shrink-0"
             >
               <Upload className="w-4 h-4" />
               <span>Upload Bill(s)</span>
             </button>
             <button
               onClick={() => setShowCameraScanner(true)}
-              className="flex items-center gap-1.5 bg-slate-900 hover:bg-black text-white font-semibold text-xs px-3.5 py-2.5 rounded-xl shadow-sm transition"
+              className="inline-flex items-center gap-2 bg-white hover:bg-emerald-50/80 active:bg-emerald-100 text-slate-800 border border-slate-300 hover:border-emerald-300 font-semibold text-xs px-3.5 py-2.5 rounded-xl shadow-2xs transition-colors shrink-0"
             >
-              <Camera className="w-4 h-4 text-emerald-400" />
+              <Camera className="w-4 h-4 text-emerald-600" />
               <span>Scan / Take Photo</span>
             </button>
           </div>
@@ -876,6 +894,15 @@ export default function PurchasesPage() {
                                   <Pencil className="h-3.5 w-3.5" />
                                   <span>Edit details</span>
                                 </button>
+                                 <button
+                                   onClick={() => void handleDeleteBill(bill.id, bill.billNumber)}
+                                   disabled={deletingBillId === bill.id}
+                                   title="Delete this purchase bill"
+                                   className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                                 >
+                                   <Trash2 className="w-3.5 h-3.5" />
+                                   <span>{deletingBillId === bill.id ? "..." : "Delete"}</span>
+                                 </button>
                                 {bill.status !== "PAID" && (
                                   <button
                                     onClick={() => {
@@ -1426,26 +1453,39 @@ export default function PurchasesPage() {
                 )}
               </section>
 
-              <div className="pt-2 flex justify-end gap-2 border-t">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowBillModal(false);
-                    setEditingBillId(null);
-                  }}
-                  disabled={savingBill}
-                  className="px-4 py-2 font-semibold disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingBill}
-                  className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow-md flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {savingBill && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {savingBill ? "Saving..." : editingBillId ? "Save Bill Changes" : "Save Purchase Bill"}
-                </button>
+              <div className="pt-3 flex flex-col gap-3 border-t">
+                {editingBillId && (
+                  <button
+                    type="button"
+                    disabled={deletingBillId === editingBillId || savingBill}
+                    onClick={() => { if (editingBillId) void handleDeleteBill(editingBillId, "this bill"); }}
+                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-red-200 bg-red-50 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{deletingBillId === editingBillId ? "Deleting..." : "Delete This Purchase Bill Permanently"}</span>
+                  </button>
+                )}
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowBillModal(false);
+                      setEditingBillId(null);
+                    }}
+                    disabled={savingBill}
+                    className="px-4 py-2 font-semibold disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingBill}
+                    className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow-md flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {savingBill && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {savingBill ? "Saving..." : editingBillId ? "Save Bill Changes" : "Save Purchase Bill"}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

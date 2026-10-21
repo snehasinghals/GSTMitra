@@ -16,7 +16,7 @@ export function FilingSubNav() {
   return (
     <div className="flex flex-wrap gap-2 bg-white px-4 py-3 rounded-2xl border border-slate-200 shadow-xs">
       <span className="text-3xs font-bold uppercase tracking-wider text-slate-400 self-center mr-1">
-        GST Filing
+        File GST
       </span>
       {SECTIONS.map((section) => {
         const active =

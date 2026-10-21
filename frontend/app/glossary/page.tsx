@@ -49,7 +49,7 @@ const GLOSSARY_DATA: GlossaryItem[] = [
       "The GST you add to your customer's bill. This money is not yours. You collect it for the government and pass it on, after subtracting your ITC.",
     example:
       "You sell goods for ₹1,00,000 and add 18% GST. The customer pays ₹1,18,000. The extra ₹18,000 is the GST you collected for the government.",
-    linkHref: "/sales",
+    linkHref: "/new-bill/create",
     linkLabel: "View sales",
   },
   {
@@ -70,7 +70,7 @@ const GLOSSARY_DATA: GlossaryItem[] = [
     shortForm: "Section 17(5)",
     category: "credit",
     meaning:
-      "For some purchases, the government does not allow ITC, even though you paid GST. These are mostly things that look personal, like restaurant food, club memberships or personal items.",
+      "For some purchases, the government does not allow ITC, even though you paid GST. These are mostly things that look personal, like restaurant food, club memberships or personal Items.",
     example:
       "You pay a restaurant bill of ₹3,000 and ₹150 of it is GST. You cannot subtract this ₹150 from the GST you pay. It stays as your cost.",
     linkHref: "/purchases",
@@ -145,8 +145,8 @@ const GLOSSARY_DATA: GlossaryItem[] = [
       "When you sell to a customer in the same state as you, the GST is split into two equal halves. One half (CGST) goes to the central government and the other half (SGST) goes to the state government.",
     example:
       "A shop in Mumbai sells to a customer in Pune for ₹1,000 with 18% GST. The customer pays ₹90 CGST + ₹90 SGST, so ₹180 GST in total.",
-    linkHref: "/sales",
-    linkLabel: "Create invoice",
+    linkHref: "/new-bill/create",
+    linkLabel: "Make Bill",
   },
   {
     id: "inter-state",
@@ -157,8 +157,8 @@ const GLOSSARY_DATA: GlossaryItem[] = [
       "When you sell to a customer in a different state, there is no split. You charge one single tax called IGST.",
     example:
       "A shop in Delhi sells to a customer in Bengaluru for ₹1,000 with 18% GST. The customer pays one tax of ₹180 as IGST.",
-    linkHref: "/sales",
-    linkLabel: "Create invoice",
+    linkHref: "/new-bill/create",
+    linkLabel: "Make Bill",
   },
   {
     id: "pos",
@@ -169,7 +169,7 @@ const GLOSSARY_DATA: GlossaryItem[] = [
       "The state where the sale is treated as happening. For goods, it is usually the state where the goods are delivered. It decides whether you charge CGST + SGST or IGST.",
     example:
       "You are in Delhi but deliver goods to Pune. The place of supply is Maharashtra, so you charge IGST.",
-    linkHref: "/sales",
+    linkHref: "/new-bill/create",
     linkLabel: "Invoice details",
   },
   {
@@ -204,7 +204,7 @@ const GLOSSARY_DATA: GlossaryItem[] = [
       "A bill in reverse. You give it to a customer when they return goods or when you reduce the price after billing. It reduces the GST you have to pay.",
     example:
       "A customer returns damaged goods worth ₹5,000 plus ₹900 GST. You issue a credit note and the GST you have to pay goes down by ₹900.",
-    linkHref: "/sales",
+    linkHref: "/new-bill/create",
     linkLabel: "Sales invoices",
   },
   {
@@ -228,7 +228,7 @@ const GLOSSARY_DATA: GlossaryItem[] = [
       "An online permit you must make before moving goods worth more than ₹50,000. The driver must carry it in case someone checks the vehicle.",
     example:
       "You send ₹80,000 worth of goods by truck. Make an e-way bill first, or the vehicle can be stopped and you can be fined.",
-    linkHref: "/sales",
+    linkHref: "/new-bill/create",
     linkLabel: "Sales invoices",
   },
 ];
@@ -243,7 +243,7 @@ export default function GlossaryPage() {
   const [category, setCategory] = useState<"all" | Category>("all");
 
   const q = search.trim().toLowerCase();
-  const items = GLOSSARY_DATA.filter((item) => {
+  const Items = GLOSSARY_DATA.filter((item) => {
     const inCategory = category === "all" || item.category === category;
     const inSearch =
       !q ||
@@ -304,7 +304,7 @@ export default function GlossaryPage() {
 
       {/* Terms */}
       <ul className="space-y-4">
-        {items.map((item) => (
+        {Items.map((item) => (
           <li
             key={item.id}
             className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-3"
@@ -336,7 +336,7 @@ export default function GlossaryPage() {
         ))}
       </ul>
 
-      {items.length === 0 && (
+      {Items.length === 0 && (
         <p className="text-center text-sm text-slate-500 py-10">
           Nothing found for &quot;{search}&quot;. Try a shorter word.
         </p>

@@ -1,4 +1,4 @@
-import { Router, Response } from "express";
+﻿import { Router, Response } from "express";
 import * as path from "path";
 import * as fs from "fs";
 import { prisma } from "../lib/db.js";
@@ -8,6 +8,7 @@ import { allocateUniqueInvoiceNumber } from "../lib/invoiceNumbers.js";
 import { r2 } from "../lib/money.js";
 import { normalizeGstin, isValidGstin } from "../lib/gstin.js";
 import { sendPaymentReminderEmail } from "../lib/email.js";
+import { validateSalesInvoiceAgainstRules } from "../lib/ruleEngine.js";
 
 const router = Router();
 
@@ -16,14 +17,10 @@ function getPaymentStatus(totalAmount: number, paidAmount: number) {
   return paidAmount >= totalAmount - 0.01 ? "PAID" : "PARTIAL";
 }
 
-// Safety limits so one typo can't break GST returns or the PDF layout.
-const MAX_RATE = 10_000_000; // 1 crore per unit
-const MAX_QTY = 1_000_000; // 10 lakh units
-const MAX_INVOICE_TOTAL = 999_999_999; // numberToWords supports up to 9 digits
 
 // List all sales invoices
-// GET /invoices?view=list  -> lean payload for the Sales page table (no line items, max `limit` rows)
-// GET /invoices            -> unchanged full payload (customer + items) for any other caller
+// GET /invoices?view=list  -> lean payload for the Sales page table (no line Items, max `limit` rows)
+// GET /invoices            -> unchanged full payload (customer + Items) for any other caller
 router.get("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const businessId = req.user?.businessId;
@@ -57,7 +54,7 @@ router.get("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: R
       where: whereClause,
       include: isListView
         ? { customer: { select: { id: true, name: true, gstin: true, stateCode: true, stateName: true } } }
-        : { customer: true, items: true, payments: { orderBy: { paidOn: "desc" } } },
+        : { customer: true, Items: true, payments: { orderBy: { paidOn: "desc" } } },
       orderBy: [{ invoiceDate: "desc" }, { createdAt: "desc" }],
       ...(isListView ? { take } : {}),
     });
@@ -134,7 +131,7 @@ router.get("/invoices/missing-hsn", authMiddleware, async (req: AuthenticatedReq
       if (to) whereInvoice.invoiceDate.lte = new Date(String(to));
     }
 
-    const items = await prisma.salesInvoiceItem.findMany({
+    const Items = await prisma.salesInvoiceItem.findMany({
       where: {
         salesInvoice: whereInvoice,
         hsnSacCode: "",   // schema has String (non-optional) — empty string means unset
@@ -155,7 +152,7 @@ router.get("/invoices/missing-hsn", authMiddleware, async (req: AuthenticatedReq
 
     // For each item get top HSN suggestions (best effort, up to 3)
     const withSuggestions = await Promise.all(
-      items.map(async (item) => {
+      Items.map(async (item) => {
         const words = item.description
           .toLowerCase()
           .split(/\s+/)
@@ -190,10 +187,10 @@ router.get("/invoices/missing-hsn", authMiddleware, async (req: AuthenticatedReq
       })
     );
 
-    res.json({ count: withSuggestions.length, items: withSuggestions });
+    res.json({ count: withSuggestions.length, Items: withSuggestions });
   } catch (error: any) {
     console.error("Missing HSN error:", error);
-    res.status(500).json({ error: "Failed to fetch items with missing HSN." });
+    res.status(500).json({ error: "Failed to fetch Items with missing HSN." });
   }
 });
 
@@ -233,7 +230,7 @@ const handleFixHsn = async (req: AuthenticatedRequest, res: Response) => {
       fixes.push({ invoiceItemId: id, hsnSacCode: code });
     }
 
-    // Verify all items belong to this business
+    // Verify all Items belong to this business
     const ids = fixes.map((f) => f.invoiceItemId);
     const existing = await prisma.salesInvoiceItem.findMany({
       where: { id: { in: ids }, salesInvoice: { businessId } },
@@ -277,7 +274,7 @@ router.get("/invoices/:id", authMiddleware, async (req: AuthenticatedRequest, re
 
     const invoice = await prisma.salesInvoice.findFirst({
       where: { id: req.params.id as string, businessId },
-      include: { customer: true, items: true, payments: { orderBy: { paidOn: "desc" } } },
+      include: { customer: true, Items: true, payments: { orderBy: { paidOn: "desc" } } },
     });
     if (!invoice) return res.status(404).json({ error: "Sales invoice not found." });
     res.json(invoice);
@@ -302,7 +299,7 @@ router.post("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: 
       dueDate,
       placeOfSupply,
       notes,
-      items,
+      Items,
       status,
       paymentMode,
       buyerGstin: rawBuyerGstin,
@@ -346,11 +343,11 @@ router.post("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: 
       }
     }
 
-    if (!customerId || !items || !Array.isArray(items) || items.length === 0) {
+    if (!customerId || !Items || !Array.isArray(Items) || Items.length === 0) {
       return res.status(400).json({ error: "Customer and at least one item are required." });
     }
 
-    for (const [i, it] of items.entries()) {
+    for (const [i, it] of Items.entries()) {
       const qty = Number(it.quantity);
       const rate = Number(it.rate);
       const discount = Number(it.discount || 0);
@@ -359,20 +356,13 @@ router.post("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: 
       if (!it.description || !String(it.description).trim()) {
         return res.status(400).json({ error: `Item ${i + 1}: description is required.` });
       }
-      if (!(qty > 0)) {
-        return res.status(400).json({ error: `Item ${i + 1}: quantity must be greater than 0.` });
+      if (!Number.isFinite(qty) || !(qty > 0)) {
+        return res.status(400).json({ error: `Item ${i + 1}: quantity must be a valid number greater than 0.` });
       }
-      if (!(rate > 0)) {
-        return res.status(400).json({ error: `Item ${i + 1}: rate must be greater than 0.` });
+      if (!Number.isFinite(rate) || !(rate > 0)) {
+        return res.status(400).json({ error: `Item ${i + 1}: rate must be a valid number greater than 0.` });
       }
-      if (qty > MAX_QTY) {
-        return res.status(400).json({ error: `Item ${i + 1}: quantity is too large (max ${MAX_QTY}).` });
-      }
-      if (rate > MAX_RATE) {
-        return res.status(400).json({ error: `Item ${i + 1}: rate is too large (max ${MAX_RATE}).` });
-      }
-      if (discount < 0 || discount > qty * rate) {
-        return res.status(400).json({ error: `Item ${i + 1}: invalid discount.` });
+      if (!Number.isFinite(discount) || discount < 0 || discount > qty * rate) {        return res.status(400).json({ error: `Item ${i + 1}: invalid discount.` });
       }
       if (!(gst >= 0 && gst <= 40)) {
         return res.status(400).json({ error: `Item ${i + 1}: invalid GST rate.` });
@@ -406,8 +396,8 @@ router.post("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: 
       // For PurchaseBill creation: create it only when buyerGstin matches an existing Business.gstin
       const matchedShop = await prisma.business.findFirst({
         where: {
-          gstin: buyerGstin,
-          isOnboarded: true,
+          gstin: { equals: buyerGstin, mode: "insensitive" },
+          // match any shop with this GSTIN
         },
         select: { id: true, users: { select: { userId: true } } },
       });
@@ -426,7 +416,7 @@ router.post("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: 
     } else {
       // B2C sale: No buyer GSTIN provided.
       // B2C sales cannot claim ITC and must NEVER enter the buyer's business Purchases table.
-      // Instead, they are delivered to the customer's personal "My Bills" section.
+      // Instead, they are delivered to the customer's personal "My Shopping Bills" section.
       const recipientMitraId = customer.mitraId?.trim().toLowerCase();
       if (recipientMitraId) {
         const recipient = await prisma.user.findUnique({
@@ -437,12 +427,12 @@ router.post("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: 
           if (recipient.id === req.user?.userId) {
             recipientDelivery = {
               status: "SELF",
-              message: "The customer account belongs to this seller, so the invoice was not delivered to My Bills.",
+              message: "The customer account belongs to this seller, so the invoice was not delivered to My Shopping Bills.",
             };
           } else {
             recipientDelivery = {
               status: "MY_BILLS",
-              message: "Invoice delivered to customer's My Bills section.",
+              message: "Invoice delivered to customer's My Shopping Bills section.",
             };
           }
         }
@@ -464,7 +454,7 @@ router.post("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: 
     let totalIgst = 0;
     let totalCess = 0;
 
-    const formattedItems = items.map((item: any) => {
+    const formattedItems = Items.map((item: any) => {
       const qty = Number(item.quantity || 1);
       const rate = Number(item.rate || 0);
       const discount = Number(item.discount || 0);
@@ -521,8 +511,39 @@ router.post("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: 
     const grandTotal = Math.round(totalBeforeRound);
     const roundOff = r2(grandTotal - totalBeforeRound);
 
-    if (grandTotal > MAX_INVOICE_TOTAL) {
-      return res.status(400).json({ error: "Invoice total is too large. Please check the rates and quantities." });
+    if (!Number.isSafeInteger(grandTotal)) {
+      return res.status(400).json({ error: "Invoice total is too large to calculate accurately." });
+    }
+
+    // Dynamic rule validation against active rules in DB (NO HARDCODING)
+    const ruleViolations = await validateSalesInvoiceAgainstRules({
+      business,
+      invoice: {
+        invoiceNumber: String(invNum),
+        invoiceDate: invDate,
+        placeOfSupply: String(pos),
+        supplyType,
+        subtotal,
+        totalAmount: grandTotal,
+        totalCgst,
+        totalSgst,
+        totalIgst,
+        totalCess,
+        isReverseCharge,
+        buyerGstin,
+        paymentMode,
+      },
+      Items: formattedItems,
+      customer,
+    });
+
+    const errorViolations = ruleViolations.filter((v) => v.severity === "error");
+    if (errorViolations.length > 0) {
+      return res.status(422).json({
+        error: "GST Rule Validation Failed",
+        message: "Invoice me GST rules ke anusar galtiyan hain. Kripya niche diye points ko theek karein.",
+        ruleViolations,
+      });
     }
 
     const isCash = paymentMode === "CASH";
@@ -554,7 +575,7 @@ router.post("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: 
           roundOff,
           totalAmount: grandTotal,
           paidAmount: initialPaidAmount,
-          items: {
+          Items: {
             create: formattedItems,
           },
           ...(isCash
@@ -575,7 +596,7 @@ router.post("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: 
         },
         include: {
           customer: true,
-          items: true,
+          Items: true,
           payments: { orderBy: { paidOn: "desc" } },
         },
       });
@@ -585,7 +606,7 @@ router.post("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: 
           where: {
             businessId: recipientBusiness.id,
             ...(business.gstin
-              ? { gstin: business.gstin }
+              ? { gstin: { equals: business.gstin, mode: "insensitive" } }
               : { name: { equals: business.tradeName || business.name, mode: "insensitive" } }),
           },
         });
@@ -652,8 +673,8 @@ router.post("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: 
                   notes: "Payment recorded at invoice issuance",
                 },
               } : undefined,
-              items: {
-                create: createdInvoice.items.map((item) => ({
+              Items: {
+                create: createdInvoice.Items.map((item) => ({
                   itemId: null,
                   description: item.description,
                   hsnSacCode: item.hsnSacCode,
@@ -680,7 +701,8 @@ router.post("/invoices", authMiddleware, async (req: AuthenticatedRequest, res: 
       return createdInvoice;
     });
 
-    res.json({ ...invoice, ...(recipientDelivery ? { recipientDelivery } : {}) });
+    const warnings = ruleViolations.filter((v) => v.severity === "warning");
+    res.json({ ...invoice, ...(warnings.length > 0 ? { ruleWarnings: warnings } : {}), ...(recipientDelivery ? { recipientDelivery } : {}) });
   } catch (error: any) {
     console.error("Create invoice error:", error);
     res.status(500).json({ error: "Failed to create sales invoice." });
@@ -694,7 +716,7 @@ router.put("/invoices/:id", authMiddleware, async (req: AuthenticatedRequest, re
 
     const existing = await prisma.salesInvoice.findFirst({
       where: { id: req.params.id as string, businessId },
-      include: { items: true },
+      include: { Items: true },
     });
     if (!existing) return res.status(404).json({ error: "Sales invoice not found." });
     const receivedBill = await prisma.purchaseBill.findUnique({
@@ -713,12 +735,12 @@ router.put("/invoices/:id", authMiddleware, async (req: AuthenticatedRequest, re
       dueDate,
       placeOfSupply,
       notes,
-      items,
+      Items,
       isReverseCharge = false,
       applicablePercent: rawApplicablePercent,
       ecomGstin: rawEcomGstin,
     } = req.body;
-    if (!customerId || !Array.isArray(items) || items.length === 0) {
+    if (!customerId || !Array.isArray(Items) || Items.length === 0) {
       return res.status(400).json({ error: "Customer and at least one item are required." });
     }
     if (typeof isReverseCharge !== "boolean") {
@@ -740,13 +762,15 @@ router.put("/invoices/:id", authMiddleware, async (req: AuthenticatedRequest, re
       ecomGstin = rawEcomGstin.toUpperCase();
     }
 
-    for (const [index, item] of items.entries()) {
+    for (const [index, item] of Items.entries()) {
       const quantity = Number(item.quantity);
       const rate = Number(item.rate);
       const gstRate = Number(item.gstRate ?? 18);
       const discount = Number(item.discount ?? 0);
-      if (!item.description || !String(item.description).trim() || !(quantity > 0) || !(rate > 0) ||
-          quantity > MAX_QTY || rate > MAX_RATE || discount < 0 || discount > quantity * rate ||
+      if (!item.description || !String(item.description).trim() ||
+          !Number.isFinite(quantity) || !(quantity > 0) ||
+          !Number.isFinite(rate) || !(rate > 0) ||
+          !Number.isFinite(discount) || discount < 0 || discount > quantity * rate ||
           !(gstRate >= 0 && gstRate <= 40)) {
         return res.status(400).json({ error: `Item ${index + 1}: enter a valid description, quantity, rate, discount, and GST rate.` });
       }
@@ -771,7 +795,7 @@ router.put("/invoices/:id", authMiddleware, async (req: AuthenticatedRequest, re
     const pos = String(placeOfSupply || customer.stateCode || business.stateCode);
     const intraState = business.stateCode === pos;
     let subtotal = 0, totalCgst = 0, totalSgst = 0, totalIgst = 0, totalCess = 0;
-    const formattedItems = items.map((item: any) => {
+    const formattedItems = Items.map((item: any) => {
       const quantity = Number(item.quantity);
       const rate = Number(item.rate);
       const discount = Number(item.discount ?? 0);
@@ -812,7 +836,7 @@ router.put("/invoices/:id", authMiddleware, async (req: AuthenticatedRequest, re
     totalCess = r2(totalCess);
     const beforeRound = subtotal + totalCgst + totalSgst + totalIgst + totalCess;
     const totalAmount = Math.round(beforeRound);
-    if (totalAmount > MAX_INVOICE_TOTAL) return res.status(400).json({ error: "Invoice total is too large." });
+    if (!Number.isSafeInteger(totalAmount)) return res.status(400).json({ error: "Invoice total is too large." });
     if (totalAmount < r2(existing.paidAmount)) {
       return res.status(400).json({ error: "Updated total cannot be lower than the payments already recorded." });
     }
@@ -838,12 +862,12 @@ router.put("/invoices/:id", authMiddleware, async (req: AuthenticatedRequest, re
           roundOff: r2(totalAmount - beforeRound),
           totalAmount,
           paymentStatus: getPaymentStatus(totalAmount, existing.paidAmount),
-          items: {
+          Items: {
             deleteMany: {},
             create: formattedItems,
           },
         },
-        include: { customer: true, items: true },
+        include: { customer: true, Items: true },
       });
 
       if (receivedBill?.receiptStatus === "PENDING_REVIEW") {
@@ -863,9 +887,9 @@ router.put("/invoices/:id", authMiddleware, async (req: AuthenticatedRequest, re
             totalAmount: updatedInvoice.totalAmount,
             paidAmount: updatedInvoice.paidAmount,
             status: getPaymentStatus(updatedInvoice.totalAmount, updatedInvoice.paidAmount),
-            items: {
+            Items: {
               deleteMany: {},
-              create: updatedInvoice.items.map((item) => ({
+              create: updatedInvoice.Items.map((item) => ({
                 itemId: null,
                 description: item.description,
                 hsnSacCode: item.hsnSacCode,
@@ -977,6 +1001,36 @@ router.patch("/invoices/:id/payment", authMiddleware, async (req: AuthenticatedR
   }
 });
 
+// Delete a sales invoice (and cascade to linked purchaseBill if any)
+router.delete("/invoices/:id", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) return res.status(400).json({ error: "No active business" });
+
+    const invoice = await prisma.salesInvoice.findFirst({
+      where: { id: req.params.id as string, businessId },
+      select: { id: true, invoiceNumber: true },
+    });
+    if (!invoice) return res.status(404).json({ error: "Invoice not found." });
+
+    await prisma.$transaction(async (tx) => {
+      // Delete linked purchase bill (auto-delivered B2B copy)
+      await tx.purchaseBill.deleteMany({
+        where: { sourceSalesInvoiceId: invoice.id },
+      });
+      // Delete payments and items (cascade in DB but explicit here for safety)
+      await tx.salesPayment.deleteMany({ where: { salesInvoiceId: invoice.id } });
+      await tx.salesInvoiceItem.deleteMany({ where: { salesInvoiceId: invoice.id } });
+      await tx.salesInvoice.delete({ where: { id: invoice.id } });
+    });
+
+    res.json({ message: `Invoice ${invoice.invoiceNumber} deleted successfully.` });
+  } catch (error: any) {
+    console.error("Delete invoice error:", error);
+    res.status(500).json({ error: "Failed to delete invoice." });
+  }
+});
+
 // Record a payment for a sales invoice
 router.post("/invoices/:id/payments", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -1061,7 +1115,7 @@ router.post("/invoices/:id/payments", authMiddleware, async (req: AuthenticatedR
         },
         include: {
           customer: true,
-          items: true,
+          Items: true,
           payments: { orderBy: { paidOn: "desc" } },
         },
       });
@@ -1211,33 +1265,32 @@ router.get("/invoices/:id/payments", authMiddleware, async (req: AuthenticatedRe
 
 // Helper to convert number to words (Indian Currency Format)
 function numberToWords(num: number): string {
-  const a = [
-    "", "One ", "Two ", "Three ", "Four ", "Five ", "Six ", "Seven ", "Eight ", "Nine ", "Ten ",
-    "Eleven ", "Twelve ", "Thirteen ", "Fourteen ", "Fifteen ", "Sixteen ", "Seventeen ", "Eighteen ", "Nineteen "
-  ];
+  const a = ["", "One ", "Two ", "Three ", "Four ", "Five ", "Six ", "Seven ", "Eight ", "Nine ", "Ten ",
+    "Eleven ", "Twelve ", "Thirteen ", "Fourteen ", "Fifteen ", "Sixteen ", "Seventeen ", "Eighteen ", "Nineteen "];
   const b = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
 
+  const twoDigits = (n: number) => (n < 20 ? a[n] : b[Math.floor(n / 10)] + " " + a[n % 10]);
+
   function inWords(n: number): string {
-    if (n < 0) return "";
-    const strNum = Math.floor(n).toString().padStart(9, "0");
-    const n_arr = strNum.match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
-    if (!n_arr) return "";
+    n = Math.floor(n);
+    if (n <= 0) return "";
     let str = "";
-    str += Number(n_arr[1]) !== 0 ? (a[Number(n_arr[1])] || b[Number(n_arr[1][0])] + " " + a[Number(n_arr[1][1])]) + "Crore " : "";
-    str += Number(n_arr[2]) !== 0 ? (a[Number(n_arr[2])] || b[Number(n_arr[2][0])] + " " + a[Number(n_arr[2][1])]) + "Lakh " : "";
-    str += Number(n_arr[3]) !== 0 ? (a[Number(n_arr[3])] || b[Number(n_arr[3][0])] + " " + a[Number(n_arr[3][1])]) + "Thousand " : "";
-    str += Number(n_arr[4]) !== 0 ? (a[Number(n_arr[4])] || b[Number(n_arr[4][0])] + " " + a[Number(n_arr[4][1])]) + "Hundred " : "";
-    str += Number(n_arr[5]) !== 0 ? (str !== "" ? "and " : "") + (a[Number(n_arr[5])] || b[Number(n_arr[5][0])] + " " + a[Number(n_arr[5][1])]) : "";
+    const crore = Math.floor(n / 1e7); n %= 1e7;
+    if (crore) str += inWords(crore) + "Crore ";
+    const lakh = Math.floor(n / 1e5); n %= 1e5;
+    if (lakh) str += twoDigits(lakh) + "Lakh ";
+    const thousand = Math.floor(n / 1e3); n %= 1e3;
+    if (thousand) str += twoDigits(thousand) + "Thousand ";
+    const hundred = Math.floor(n / 100); n %= 100;
+    if (hundred) str += a[hundred] + "Hundred ";
+    if (n) str += (str ? "and " : "") + twoDigits(n);
     return str;
   }
 
   const whole = Math.floor(num);
   const fraction = Math.round((num - whole) * 100);
-
   let result = "Indian Rupee " + (whole === 0 ? "Zero " : inWords(whole));
-  if (fraction > 0) {
-    result += "and " + inWords(fraction) + "Paise ";
-  }
+  if (fraction > 0) result += "and " + inWords(fraction) + "Paise ";
   return result.trim() + " Only";
 }
 
@@ -1302,7 +1355,7 @@ router.get("/invoices/:id/pdf", authMiddleware, async (req: AuthenticatedRequest
 
     const invoice = await prisma.salesInvoice.findFirst({
       where: { id, businessId },
-      include: { customer: true, items: true },
+      include: { customer: true, Items: true },
     });
     if (!invoice) return res.status(404).json({ error: "Invoice not found." });
 
@@ -1510,10 +1563,10 @@ export function renderInvoicePdfStream(
     drawParty(40, "#2F7DE1"); // Zoho shows the Bill To name in blue
     drawParty(305, "#222222");
 
-    // This line closes the party block and is the top border of the items table (no gap).
+    // This line closes the party block and is the top border of the Items table (no gap).
     line(LEFT, partyBottom, RIGHT, partyBottom);
 
-    // ==================== 4. ITEMS TABLE (with page breaks) ====================
+    // ==================== 4. Items TABLE (with page breaks) ====================
     let tableTop = partyBottom;
     drawTableHeader(tableTop);
     let itemY = tableTop + HEAD_H + 6;
@@ -1521,7 +1574,7 @@ export function renderInvoicePdfStream(
     const descCol = colByKey("desc");
     const qtyCol = colByKey("qty");
 
-    invoice.items.forEach((item: any, idx: number) => {
+    invoice.Items.forEach((item: any, idx: number) => {
       doc.font(F.reg).fontSize(8);
       const descHeight = doc.heightOfString(String(item.description), { width: descCol.w - 6 });
       const rowHeight = Math.max(24, descHeight + 8); // 24 = room for the unit under qty
@@ -1601,7 +1654,7 @@ export function renderInvoicePdfStream(
 
     // Tax lines grouped by GST rate (mixed-rate invoices show correct labels)
     const slabs = new Map<number, { cgst: number; sgst: number; igst: number }>();
-    invoice.items.forEach((it: any) => {
+    invoice.Items.forEach((it: any) => {
       const s = slabs.get(it.gstRate) ?? { cgst: 0, sgst: 0, igst: 0 };
       s.cgst += it.cgstAmount;
       s.sgst += it.sgstAmount;

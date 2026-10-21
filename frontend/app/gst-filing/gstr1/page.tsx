@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { apiFetch, downloadFile } from "../../lib/api";
@@ -65,7 +65,7 @@ export default function Gstr1SectionPage() {
         <div>
           <h1 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
             <FileSpreadsheet className="w-5 h-5 text-blue-600" />
-            GST Filing &gt; GSTR-1 Sales Return
+            File GST &gt; GSTR-1 Sales Return
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
             Review outward supplies and invoice figures for the selected period.
@@ -117,7 +117,7 @@ export default function Gstr1SectionPage() {
                 {gstr1Summary.missingHsnCount} item{gstr1Summary.missingHsnCount > 1 ? "s are" : " is"} missing HSN codes
               </p>
               <p className="text-xs text-amber-800 mt-0.5">
-                GSTR-1 export requires all items to have valid HSN/SAC codes. Fix them before generating export files.
+                GSTR-1 export requires all Items to have valid HSN/SAC codes. Fix them before generating export files.
               </p>
             </div>
           </div>
@@ -170,7 +170,7 @@ export default function Gstr1SectionPage() {
                 </p>
               </div>
               {gstr1Summary.hsnSummary.length === 0 ? (
-                <p className="p-6 text-center text-xs text-slate-500">No sales items to summarize for this period.</p>
+                <p className="p-6 text-center text-xs text-slate-500">No sales Items to summarize for this period.</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[1050px] text-left text-xs">

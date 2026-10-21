@@ -1,4 +1,4 @@
-// "use client";
+﻿// "use client";
 
 // import React, { useState, useEffect } from "react";
 // import { useRouter } from "next/navigation";
@@ -418,7 +418,7 @@
 //                     }`}
 //                   />
 //                   <p id="upi-id-help" className="text-xs text-slate-500 mt-1">
-//                     Add a UPI ID to show customers a payment QR on bills. You can add or change it later in Settings.
+//                     Add a UPI ID to show customers a payment QR on bills. You can add or change it later in Shop Settings.
 //                   </p>
 //                   {upiIdError && <p className="text-xs text-red-600 font-medium mt-1">{upiIdError}</p>}
 //                 </div>
@@ -644,7 +644,7 @@ export default function OnboardingPage() {
         stateCode: effectiveStateCode,
         gstin: gstin.trim() || undefined,
         upiId: upiId.trim() || undefined,
-        // Sensible defaults. Users can change these later in Settings.
+        // Sensible defaults. Users can change these later in Shop Settings.
         businessType: business?.businessType || "RETAIL",
         turnoverRange: business?.turnoverRange || "40L_TO_15CR",
         filingFrequency: business?.filingFrequency || "MONTHLY",
@@ -816,7 +816,7 @@ export default function OnboardingPage() {
               className={`${inputBase} ${showUpiError ? inputBad : inputOk}`}
             />
             <p id="upi-help" className={`text-xs mt-1 ${showUpiError ? "text-red-600 font-medium" : "text-slate-500"}`}>
-              {showUpiError ? upiError : "Shows a payment QR on your bills. You can add it later in Settings."}
+              {showUpiError ? upiError : "Shows a payment QR on your bills. You can add it later in Shop Settings."}
             </p>
           </div>
 
@@ -851,7 +851,7 @@ export default function OnboardingPage() {
           </div>
 
           <p className="text-xs text-slate-400 text-center">
-            Business type, turnover and filing frequency can be set later in Settings.
+            Business type, turnover and filing frequency can be set later in Shop Settings.
           </p>
         </form>
       </div>

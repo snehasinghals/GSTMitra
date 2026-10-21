@@ -11,7 +11,7 @@ GSTMitra is a GST bookkeeping and return-preparation web app for Indian business
 - Sales invoice creation with automatic intra-state CGST/SGST and inter-state IGST calculations
 - Invoice PDF downloads
 - Purchase bill recording, payment tracking, and input tax credit summaries
-- GST filing workspace with GSTR-1, GSTR-3B, and books-to-GSTR-2B reconciliation summaries and exports
+- File GST workspace with GSTR-1, GSTR-3B, and books-to-GSTR-2B reconciliation summaries and exports
 - GST rules and rates reference, filing checks, and GST glossary/guidance
 
 ## Tech stack
@@ -132,7 +132,7 @@ The backend mounts its API under `/api`:
 | Prefix | Purpose |
 | --- | --- |
 | `/api/auth` | Sign-up, login, user profile, and business onboarding |
-| `/api/items` | Goods and services catalog |
+| `/api/Items` | Goods and services catalog |
 | `/api/customers` | Customer records |
 | `/api/vendors` | Vendor records |
 | `/api/sales` | Sales invoices, invoice PDFs, and credit/debit notes |
