@@ -101,14 +101,14 @@ export default function SignupPage() {
     setScreen("OTP");
     setCountdown(60);
     setCanResend(false);
-    setSuccessMsg("Code sent! Check your inbox or spam folder.");
+    setSuccessMsg("OTP sent! Check your inbox or spam folder.");
   };
 
   // ---- SCREEN 2: OTP verify ----
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (otpCode.length !== 6) {
-      setErrorMsg("Please enter the 6-digit code.");
+      setErrorMsg("Please enter the 6-digit OTP.");
       return;
     }
     clearFeedback();
@@ -142,7 +142,7 @@ export default function SignupPage() {
         setCanResend(false);
       }
     } else {
-      setSuccessMsg("New code sent!");
+      setSuccessMsg("New OTP sent!");
       setCountdown(60);
       setCanResend(false);
       setOtpCode("");
@@ -289,7 +289,7 @@ export default function SignupPage() {
                 />
               </div>
               <p className="text-3xs text-slate-400 mt-1">
-                We'll send a 6-digit code to verify your email.
+                We'll send a 6-digit OTP to verify your email.
               </p>
             </div>
 
@@ -298,7 +298,7 @@ export default function SignupPage() {
               disabled={emailLoading || !email}
               className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md transition-all text-sm disabled:opacity-50"
             >
-              {emailLoading ? "Sending code..." : "Send Verification Code"}
+              {emailLoading ? "Sending OTP..." : "Send Verification OTP"}
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
@@ -308,11 +308,11 @@ export default function SignupPage() {
         {screen === "OTP" && (
           <form onSubmit={handleVerifyOtp} className="space-y-5">
             <p className="text-xs text-slate-600 text-center">
-              We sent a 6-digit code to <span className="font-semibold text-slate-800">{email}</span>
+              We sent a 6-digit OTP to <span className="font-semibold text-slate-800">{email}</span>
             </p>
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-2 text-center">
-                Enter 6-Digit Code
+                Enter 6-Digit OTP
               </label>
               <input
                 type="text"
@@ -331,7 +331,7 @@ export default function SignupPage() {
                 className="w-full text-center tracking-[12px] font-mono text-2xl font-bold py-3 border-2 border-blue-500/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-600 focus:outline-none bg-blue-50/20"
               />
               <p className="text-3xs text-slate-400 text-center mt-1.5">
-                Code expires in 10 minutes. Check spam if not found.
+                OTP expires in 10 minutes. Check spam if not found.
               </p>
             </div>
 
@@ -340,7 +340,7 @@ export default function SignupPage() {
               disabled={otpLoading || otpCode.length !== 6}
               className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md transition-all text-sm disabled:opacity-50"
             >
-              {otpLoading ? "Verifying..." : "Verify Code"}
+              {otpLoading ? "Verifying..." : "Verify OTP"}
               <ArrowRight className="w-4 h-4" />
             </button>
 
@@ -352,7 +352,7 @@ export default function SignupPage() {
                 className="flex items-center gap-1.5 text-blue-600 hover:text-blue-800 font-semibold disabled:text-slate-400 disabled:cursor-not-allowed transition-colors"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${resending ? "animate-spin" : ""}`} />
-                {canResend ? "Resend code" : `Resend code (${countdown}s)`}
+                {canResend ? "Resend OTP" : `Resend OTP (${countdown}s)`}
               </button>
 
               <button

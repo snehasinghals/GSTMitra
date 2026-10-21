@@ -105,7 +105,7 @@ export default function LoginPage() {
       setCountdown(60);
       setCanResend(false);
       setOtpCode("");
-      setSuccessMessage(res.message || "A 6-digit code has been sent to your email.");
+      setSuccessMessage(res.message || "A 6-digit OTP has been sent to your email.");
     }
   };
 
@@ -113,7 +113,7 @@ export default function LoginPage() {
   const handleVerifyOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!otpCode || otpCode.trim().length !== 6) {
-      setErrorMessage("Please enter the complete 6-digit code.");
+      setErrorMessage("Please enter the complete 6-digit OTP.");
       return;
     }
 
@@ -148,7 +148,7 @@ export default function LoginPage() {
         setCanResend(false);
       }
     } else {
-      setSuccessMessage("A new verification code has been sent to your email!");
+      setSuccessMessage("A new verification OTP has been sent to your email!");
       setCountdown(60);
       setCanResend(false);
       setOtpCode("");
@@ -185,7 +185,7 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold text-slate-900">Sign In to GSTMitra</h1>
           <p className="text-xs text-slate-500">
             {mode === "OTP" && otpStep === "VERIFY_CODE"
-              ? `Enter the 6-digit code sent to ${email}`
+              ? `Enter the 6-digit OTP sent to ${email}`
               : "Access your account in simple, plain words."}
           </p>
         </div>
@@ -301,7 +301,7 @@ export default function LoginPage() {
                 />
               </div>
               <p className="text-3xs text-slate-400 mt-1">
-                We will email you a 6-digit login code. No password needed.
+                We will email you a 6-digit login OTP. No password needed.
               </p>
             </div>
 
@@ -310,7 +310,7 @@ export default function LoginPage() {
               disabled={loading || !email.trim()}
               className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md transition-all text-sm disabled:opacity-50"
             >
-              {loading ? "Sending code..." : "Send Login Code"}
+              {loading ? "Sending OTP..." : "Send Login OTP"}
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
@@ -321,7 +321,7 @@ export default function LoginPage() {
           <form onSubmit={handleVerifyOtpSubmit} className="space-y-5">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-2 text-center">
-                Enter 6-Digit Code
+                Enter 6-Digit OTP
               </label>
               <div className="relative">
                 <input
@@ -342,7 +342,7 @@ export default function LoginPage() {
                 />
               </div>
               <p className="text-3xs text-slate-400 text-center mt-1.5">
-                Code expires in 10 minutes. Check your inbox or spam folder.
+                OTP expires in 10 minutes. Check your inbox or spam folder.
               </p>
             </div>
 
@@ -363,7 +363,7 @@ export default function LoginPage() {
                 className="flex items-center gap-1.5 text-blue-600 hover:text-blue-800 font-semibold disabled:text-slate-400 disabled:cursor-not-allowed transition-colors"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${resending ? "animate-spin" : ""}`} />
-                <span>{canResend ? "Resend code" : `Resend code (${countdown}s)`}</span>
+                <span>{canResend ? "Resend OTP" : `Resend OTP (${countdown}s)`}</span>
               </button>
 
               <button
