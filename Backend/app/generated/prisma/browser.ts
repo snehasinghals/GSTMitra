@@ -117,3 +117,8 @@ export type SalesPayment = Prisma.SalesPaymentModel
  * 
  */
 export type HsnCode = Prisma.HsnCodeModel
+/**
+ * Model PersonalBill
+ * 
+ */
+export type PersonalBill = Prisma.PersonalBillModel

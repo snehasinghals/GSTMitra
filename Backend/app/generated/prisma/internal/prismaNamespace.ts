@@ -416,7 +416,8 @@ export const ModelName = {
   ResetToken: 'ResetToken',
   Vendor: 'Vendor',
   SalesPayment: 'SalesPayment',
-  HsnCode: 'HsnCode'
+  HsnCode: 'HsnCode',
+  PersonalBill: 'PersonalBill'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -432,7 +433,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "business" | "gstr3bAdjustment" | "businessUser" | "creditDebitNote" | "customer" | "gstRule" | "gstRuleAudit" | "item" | "purchaseBill" | "purchasePayment" | "purchaseBillItem" | "returnFilingHistory" | "salesInvoice" | "salesInvoiceItem" | "user" | "otpCode" | "resetToken" | "vendor" | "salesPayment" | "hsnCode"
+    modelProps: "business" | "gstr3bAdjustment" | "businessUser" | "creditDebitNote" | "customer" | "gstRule" | "gstRuleAudit" | "item" | "purchaseBill" | "purchasePayment" | "purchaseBillItem" | "returnFilingHistory" | "salesInvoice" | "salesInvoiceItem" | "user" | "otpCode" | "resetToken" | "vendor" | "salesPayment" | "hsnCode" | "personalBill"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1916,6 +1917,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    PersonalBill: {
+      payload: Prisma.$PersonalBillPayload<ExtArgs>
+      fields: Prisma.PersonalBillFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PersonalBillFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PersonalBillPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PersonalBillFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PersonalBillPayload>
+        }
+        findFirst: {
+          args: Prisma.PersonalBillFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PersonalBillPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PersonalBillFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PersonalBillPayload>
+        }
+        findMany: {
+          args: Prisma.PersonalBillFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PersonalBillPayload>[]
+        }
+        create: {
+          args: Prisma.PersonalBillCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PersonalBillPayload>
+        }
+        createMany: {
+          args: Prisma.PersonalBillCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PersonalBillCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PersonalBillPayload>[]
+        }
+        delete: {
+          args: Prisma.PersonalBillDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PersonalBillPayload>
+        }
+        update: {
+          args: Prisma.PersonalBillUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PersonalBillPayload>
+        }
+        deleteMany: {
+          args: Prisma.PersonalBillDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PersonalBillUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PersonalBillUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PersonalBillPayload>[]
+        }
+        upsert: {
+          args: Prisma.PersonalBillUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PersonalBillPayload>
+        }
+        aggregate: {
+          args: Prisma.PersonalBillAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePersonalBill>
+        }
+        groupBy: {
+          args: Prisma.PersonalBillGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PersonalBillGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PersonalBillCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PersonalBillCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -2337,12 +2412,41 @@ export const HsnCodeScalarFieldEnum = {
 export type HsnCodeScalarFieldEnum = (typeof HsnCodeScalarFieldEnum)[keyof typeof HsnCodeScalarFieldEnum]
 
 
+export const PersonalBillScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  shopName: 'shopName',
+  billDate: 'billDate',
+  billNumber: 'billNumber',
+  notes: 'notes',
+  totalAmount: 'totalAmount',
+  subtotal: 'subtotal',
+  totalTax: 'totalTax',
+  paidAmount: 'paidAmount',
+  paymentStatus: 'paymentStatus',
+  paymentMode: 'paymentMode',
+  receiptUrl: 'receiptUrl',
+  items: 'items',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PersonalBillScalarFieldEnum = (typeof PersonalBillScalarFieldEnum)[keyof typeof PersonalBillScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
 } as const
 
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
 export const QueryMode = {
@@ -2359,6 +2463,15 @@ export const NullsOrder = {
 } as const
 
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+export const JsonNullValueFilter = {
+  DbNull: DbNull,
+  JsonNull: JsonNull,
+  AnyNull: AnyNull
+} as const
+
+export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 
 
 
@@ -2427,6 +2540,20 @@ export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'In
  * Reference to a field of type 'Int[]'
  */
 export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Json'
+ */
+export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
+    
+
+
+/**
+ * Reference to a field of type 'QueryMode'
+ */
+export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
     
 
 /**
@@ -2600,6 +2727,7 @@ export type GlobalOmitConfig = {
   vendor?: Prisma.VendorOmit
   salesPayment?: Prisma.SalesPaymentOmit
   hsnCode?: Prisma.HsnCodeOmit
+  personalBill?: Prisma.PersonalBillOmit
 }
 
 /* Types for Logging */

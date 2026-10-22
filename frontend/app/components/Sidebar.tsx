@@ -68,7 +68,7 @@ export function Sidebar() {
 
             <Link href="/rules" className={itemClass(isUnder("/rules"))}>
               <BookOpen className={`w-4 h-4 ${isUnder("/rules") ? "text-white" : "text-slate-400"}`} />
-              <span>GST Rates</span>
+              <span>GST Rules</span>
             </Link>
 
             <Link href="/help" className={itemClass(isUnder("/help"))}>

@@ -332,6 +332,7 @@ model User {
   businesses              BusinessUser[]
   otpCodes                OtpCode[]
   resetTokens             ResetToken[]
+  personalBills           PersonalBill[]
 }
 
 model OtpCode {
@@ -407,4 +408,26 @@ model HsnCode {
 
   @@unique([type, code])
   @@index([code])
+}
+
+model PersonalBill {
+  id            String   @id @default(uuid())
+  userId        String
+  shopName      String
+  billDate      DateTime
+  billNumber    String?
+  notes         String?
+  totalAmount   Float    @default(0)
+  subtotal      Float    @default(0)
+  totalTax      Float    @default(0)
+  paidAmount    Float    @default(0)
+  paymentStatus String   @default("PAID")
+  paymentMode   String   @default("CASH")
+  receiptUrl    String?
+  items         Json     @default("[]")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

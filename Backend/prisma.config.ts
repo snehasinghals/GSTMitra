@@ -10,5 +10,5 @@ dotenv.config({ path: path.resolve(configDirectory, "../.env") });
 export default defineConfig({
   schema: path.resolve(configDirectory, "prisma/schema.prisma"),
   migrations: { path: path.resolve(configDirectory, "prisma/migrations") },
-  datasource: { url: env("DATABASE_URL") },
+  datasource: { url: process.env.DATABASE_URL_POOLED || env("DATABASE_URL") },
 });

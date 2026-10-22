@@ -291,6 +291,7 @@ export type UserWhereInput = {
   businesses?: Prisma.BusinessUserListRelationFilter
   otpCodes?: Prisma.OtpCodeListRelationFilter
   resetTokens?: Prisma.ResetTokenListRelationFilter
+  personalBills?: Prisma.PersonalBillListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -311,6 +312,7 @@ export type UserOrderByWithRelationInput = {
   businesses?: Prisma.BusinessUserOrderByRelationAggregateInput
   otpCodes?: Prisma.OtpCodeOrderByRelationAggregateInput
   resetTokens?: Prisma.ResetTokenOrderByRelationAggregateInput
+  personalBills?: Prisma.PersonalBillOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -334,6 +336,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   businesses?: Prisma.BusinessUserListRelationFilter
   otpCodes?: Prisma.OtpCodeListRelationFilter
   resetTokens?: Prisma.ResetTokenListRelationFilter
+  personalBills?: Prisma.PersonalBillListRelationFilter
 }, "id" | "email" | "mitraId">
 
 export type UserOrderByWithAggregationInput = {
@@ -396,6 +399,7 @@ export type UserCreateInput = {
   businesses?: Prisma.BusinessUserCreateNestedManyWithoutUserInput
   otpCodes?: Prisma.OtpCodeCreateNestedManyWithoutUserInput
   resetTokens?: Prisma.ResetTokenCreateNestedManyWithoutUserInput
+  personalBills?: Prisma.PersonalBillCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -416,6 +420,7 @@ export type UserUncheckedCreateInput = {
   businesses?: Prisma.BusinessUserUncheckedCreateNestedManyWithoutUserInput
   otpCodes?: Prisma.OtpCodeUncheckedCreateNestedManyWithoutUserInput
   resetTokens?: Prisma.ResetTokenUncheckedCreateNestedManyWithoutUserInput
+  personalBills?: Prisma.PersonalBillUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserUpdateInput = {
@@ -436,6 +441,7 @@ export type UserUpdateInput = {
   businesses?: Prisma.BusinessUserUpdateManyWithoutUserNestedInput
   otpCodes?: Prisma.OtpCodeUpdateManyWithoutUserNestedInput
   resetTokens?: Prisma.ResetTokenUpdateManyWithoutUserNestedInput
+  personalBills?: Prisma.PersonalBillUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -456,6 +462,7 @@ export type UserUncheckedUpdateInput = {
   businesses?: Prisma.BusinessUserUncheckedUpdateManyWithoutUserNestedInput
   otpCodes?: Prisma.OtpCodeUncheckedUpdateManyWithoutUserNestedInput
   resetTokens?: Prisma.ResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  personalBills?: Prisma.PersonalBillUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -615,6 +622,20 @@ export type UserUpdateOneRequiredWithoutResetTokensNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutResetTokensInput, Prisma.UserUpdateWithoutResetTokensInput>, Prisma.UserUncheckedUpdateWithoutResetTokensInput>
 }
 
+export type UserCreateNestedOneWithoutPersonalBillsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutPersonalBillsInput, Prisma.UserUncheckedCreateWithoutPersonalBillsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutPersonalBillsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutPersonalBillsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutPersonalBillsInput, Prisma.UserUncheckedCreateWithoutPersonalBillsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutPersonalBillsInput
+  upsert?: Prisma.UserUpsertWithoutPersonalBillsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutPersonalBillsInput, Prisma.UserUpdateWithoutPersonalBillsInput>, Prisma.UserUncheckedUpdateWithoutPersonalBillsInput>
+}
+
 export type UserCreateWithoutBusinessesInput = {
   id?: string
   email: string
@@ -632,6 +653,7 @@ export type UserCreateWithoutBusinessesInput = {
   updatedAt?: Date | string
   otpCodes?: Prisma.OtpCodeCreateNestedManyWithoutUserInput
   resetTokens?: Prisma.ResetTokenCreateNestedManyWithoutUserInput
+  personalBills?: Prisma.PersonalBillCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutBusinessesInput = {
@@ -651,6 +673,7 @@ export type UserUncheckedCreateWithoutBusinessesInput = {
   updatedAt?: Date | string
   otpCodes?: Prisma.OtpCodeUncheckedCreateNestedManyWithoutUserInput
   resetTokens?: Prisma.ResetTokenUncheckedCreateNestedManyWithoutUserInput
+  personalBills?: Prisma.PersonalBillUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutBusinessesInput = {
@@ -686,6 +709,7 @@ export type UserUpdateWithoutBusinessesInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   otpCodes?: Prisma.OtpCodeUpdateManyWithoutUserNestedInput
   resetTokens?: Prisma.ResetTokenUpdateManyWithoutUserNestedInput
+  personalBills?: Prisma.PersonalBillUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutBusinessesInput = {
@@ -705,6 +729,7 @@ export type UserUncheckedUpdateWithoutBusinessesInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   otpCodes?: Prisma.OtpCodeUncheckedUpdateManyWithoutUserNestedInput
   resetTokens?: Prisma.ResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  personalBills?: Prisma.PersonalBillUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutOtpCodesInput = {
@@ -724,6 +749,7 @@ export type UserCreateWithoutOtpCodesInput = {
   updatedAt?: Date | string
   businesses?: Prisma.BusinessUserCreateNestedManyWithoutUserInput
   resetTokens?: Prisma.ResetTokenCreateNestedManyWithoutUserInput
+  personalBills?: Prisma.PersonalBillCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutOtpCodesInput = {
@@ -743,6 +769,7 @@ export type UserUncheckedCreateWithoutOtpCodesInput = {
   updatedAt?: Date | string
   businesses?: Prisma.BusinessUserUncheckedCreateNestedManyWithoutUserInput
   resetTokens?: Prisma.ResetTokenUncheckedCreateNestedManyWithoutUserInput
+  personalBills?: Prisma.PersonalBillUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutOtpCodesInput = {
@@ -778,6 +805,7 @@ export type UserUpdateWithoutOtpCodesInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   businesses?: Prisma.BusinessUserUpdateManyWithoutUserNestedInput
   resetTokens?: Prisma.ResetTokenUpdateManyWithoutUserNestedInput
+  personalBills?: Prisma.PersonalBillUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutOtpCodesInput = {
@@ -797,6 +825,7 @@ export type UserUncheckedUpdateWithoutOtpCodesInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   businesses?: Prisma.BusinessUserUncheckedUpdateManyWithoutUserNestedInput
   resetTokens?: Prisma.ResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  personalBills?: Prisma.PersonalBillUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutResetTokensInput = {
@@ -816,6 +845,7 @@ export type UserCreateWithoutResetTokensInput = {
   updatedAt?: Date | string
   businesses?: Prisma.BusinessUserCreateNestedManyWithoutUserInput
   otpCodes?: Prisma.OtpCodeCreateNestedManyWithoutUserInput
+  personalBills?: Prisma.PersonalBillCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutResetTokensInput = {
@@ -835,6 +865,7 @@ export type UserUncheckedCreateWithoutResetTokensInput = {
   updatedAt?: Date | string
   businesses?: Prisma.BusinessUserUncheckedCreateNestedManyWithoutUserInput
   otpCodes?: Prisma.OtpCodeUncheckedCreateNestedManyWithoutUserInput
+  personalBills?: Prisma.PersonalBillUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutResetTokensInput = {
@@ -870,6 +901,7 @@ export type UserUpdateWithoutResetTokensInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   businesses?: Prisma.BusinessUserUpdateManyWithoutUserNestedInput
   otpCodes?: Prisma.OtpCodeUpdateManyWithoutUserNestedInput
+  personalBills?: Prisma.PersonalBillUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutResetTokensInput = {
@@ -889,6 +921,103 @@ export type UserUncheckedUpdateWithoutResetTokensInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   businesses?: Prisma.BusinessUserUncheckedUpdateManyWithoutUserNestedInput
   otpCodes?: Prisma.OtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  personalBills?: Prisma.PersonalBillUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutPersonalBillsInput = {
+  id?: string
+  email: string
+  password?: string | null
+  name: string
+  phone?: string | null
+  mitraId?: string | null
+  address?: string | null
+  pan?: string | null
+  emailVerified?: Date | string | null
+  passwordChangedAt?: Date | string | null
+  failedPasswordAttempts?: number
+  passwordLockedUntil?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  businesses?: Prisma.BusinessUserCreateNestedManyWithoutUserInput
+  otpCodes?: Prisma.OtpCodeCreateNestedManyWithoutUserInput
+  resetTokens?: Prisma.ResetTokenCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutPersonalBillsInput = {
+  id?: string
+  email: string
+  password?: string | null
+  name: string
+  phone?: string | null
+  mitraId?: string | null
+  address?: string | null
+  pan?: string | null
+  emailVerified?: Date | string | null
+  passwordChangedAt?: Date | string | null
+  failedPasswordAttempts?: number
+  passwordLockedUntil?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  businesses?: Prisma.BusinessUserUncheckedCreateNestedManyWithoutUserInput
+  otpCodes?: Prisma.OtpCodeUncheckedCreateNestedManyWithoutUserInput
+  resetTokens?: Prisma.ResetTokenUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutPersonalBillsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutPersonalBillsInput, Prisma.UserUncheckedCreateWithoutPersonalBillsInput>
+}
+
+export type UserUpsertWithoutPersonalBillsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutPersonalBillsInput, Prisma.UserUncheckedUpdateWithoutPersonalBillsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutPersonalBillsInput, Prisma.UserUncheckedCreateWithoutPersonalBillsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutPersonalBillsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutPersonalBillsInput, Prisma.UserUncheckedUpdateWithoutPersonalBillsInput>
+}
+
+export type UserUpdateWithoutPersonalBillsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mitraId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pan?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  passwordChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  failedPasswordAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  passwordLockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  businesses?: Prisma.BusinessUserUpdateManyWithoutUserNestedInput
+  otpCodes?: Prisma.OtpCodeUpdateManyWithoutUserNestedInput
+  resetTokens?: Prisma.ResetTokenUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutPersonalBillsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mitraId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pan?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  passwordChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  failedPasswordAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  passwordLockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  businesses?: Prisma.BusinessUserUncheckedUpdateManyWithoutUserNestedInput
+  otpCodes?: Prisma.OtpCodeUncheckedUpdateManyWithoutUserNestedInput
+  resetTokens?: Prisma.ResetTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 
@@ -900,12 +1029,14 @@ export type UserCountOutputType = {
   businesses: number
   otpCodes: number
   resetTokens: number
+  personalBills: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   businesses?: boolean | UserCountOutputTypeCountBusinessesArgs
   otpCodes?: boolean | UserCountOutputTypeCountOtpCodesArgs
   resetTokens?: boolean | UserCountOutputTypeCountResetTokensArgs
+  personalBills?: boolean | UserCountOutputTypeCountPersonalBillsArgs
 }
 
 /**
@@ -939,6 +1070,13 @@ export type UserCountOutputTypeCountResetTokensArgs<ExtArgs extends runtime.Type
   where?: Prisma.ResetTokenWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountPersonalBillsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.PersonalBillWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -958,6 +1096,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   businesses?: boolean | Prisma.User$businessesArgs<ExtArgs>
   otpCodes?: boolean | Prisma.User$otpCodesArgs<ExtArgs>
   resetTokens?: boolean | Prisma.User$resetTokensArgs<ExtArgs>
+  personalBills?: boolean | Prisma.User$personalBillsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -1017,6 +1156,7 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   businesses?: boolean | Prisma.User$businessesArgs<ExtArgs>
   otpCodes?: boolean | Prisma.User$otpCodesArgs<ExtArgs>
   resetTokens?: boolean | Prisma.User$resetTokensArgs<ExtArgs>
+  personalBills?: boolean | Prisma.User$personalBillsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -1028,6 +1168,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     businesses: Prisma.$BusinessUserPayload<ExtArgs>[]
     otpCodes: Prisma.$OtpCodePayload<ExtArgs>[]
     resetTokens: Prisma.$ResetTokenPayload<ExtArgs>[]
+    personalBills: Prisma.$PersonalBillPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1441,6 +1582,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   businesses<T extends Prisma.User$businessesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$businessesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BusinessUserPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   otpCodes<T extends Prisma.User$otpCodesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$otpCodesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OtpCodePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   resetTokens<T extends Prisma.User$resetTokensArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$resetTokensArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ResetTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  personalBills<T extends Prisma.User$personalBillsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$personalBillsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PersonalBillPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1946,6 +2088,30 @@ export type User$resetTokensArgs<ExtArgs extends runtime.Types.Extensions.Intern
   take?: number
   skip?: number
   distinct?: Prisma.ResetTokenScalarFieldEnum | Prisma.ResetTokenScalarFieldEnum[]
+}
+
+/**
+ * User.personalBills
+ */
+export type User$personalBillsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the PersonalBill
+   */
+  select?: Prisma.PersonalBillSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the PersonalBill
+   */
+  omit?: Prisma.PersonalBillOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PersonalBillInclude<ExtArgs> | null
+  where?: Prisma.PersonalBillWhereInput
+  orderBy?: Prisma.PersonalBillOrderByWithRelationInput | Prisma.PersonalBillOrderByWithRelationInput[]
+  cursor?: Prisma.PersonalBillWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.PersonalBillScalarFieldEnum | Prisma.PersonalBillScalarFieldEnum[]
 }
 
 /**

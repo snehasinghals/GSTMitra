@@ -70,7 +70,8 @@ export const ModelName = {
   ResetToken: 'ResetToken',
   Vendor: 'Vendor',
   SalesPayment: 'SalesPayment',
-  HsnCode: 'HsnCode'
+  HsnCode: 'HsnCode',
+  PersonalBill: 'PersonalBill'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -471,12 +472,41 @@ export const HsnCodeScalarFieldEnum = {
 export type HsnCodeScalarFieldEnum = (typeof HsnCodeScalarFieldEnum)[keyof typeof HsnCodeScalarFieldEnum]
 
 
+export const PersonalBillScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  shopName: 'shopName',
+  billDate: 'billDate',
+  billNumber: 'billNumber',
+  notes: 'notes',
+  totalAmount: 'totalAmount',
+  subtotal: 'subtotal',
+  totalTax: 'totalTax',
+  paidAmount: 'paidAmount',
+  paymentStatus: 'paymentStatus',
+  paymentMode: 'paymentMode',
+  receiptUrl: 'receiptUrl',
+  items: 'items',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PersonalBillScalarFieldEnum = (typeof PersonalBillScalarFieldEnum)[keyof typeof PersonalBillScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
 } as const
 
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
 export const QueryMode = {
@@ -493,4 +523,13 @@ export const NullsOrder = {
 } as const
 
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+export const JsonNullValueFilter = {
+  DbNull: DbNull,
+  JsonNull: JsonNull,
+  AnyNull: AnyNull
+} as const
+
+export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 

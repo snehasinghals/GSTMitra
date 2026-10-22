@@ -270,40 +270,39 @@ function ItemRow({
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
         {line.hsn ? (
           <>
-            <span className="text-slate-500">
-              HSN <span className="font-mono text-slate-700">{line.hsn}</span>
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-sm text-emerald-800">
+              <span className="font-medium">HSN</span>
+              <span className="font-mono text-base font-bold tracking-wide">{line.hsn}</span>
             </span>
             <button
               type="button"
               onClick={() => onChange({ hsn: "" })}
-              className="text-slate-400 underline hover:text-slate-600"
+              className="text-sm text-slate-500 underline hover:text-slate-800"
             >
               change
             </button>
           </>
         ) : hsnHits.length > 0 ? (
           <>
-            <span className="text-slate-500">HSN:</span>
+            <span className="text-sm font-medium text-slate-600">HSN:</span>
             {hsnHits.map((h) => {
               const shortDesc =
-                h.description.length > 30
-                  ? h.description.slice(0, 28) + "…"
-                  : h.description;
+                h.description.length > 30 ? h.description.slice(0, 28) + "…" : h.description;
               return (
                 <button
                   key={h.code}
                   type="button"
                   onClick={() => pickHsn(h)}
                   title={h.description}
-                  className="rounded-full border border-slate-300 px-2.5 py-1 font-mono text-slate-700 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700"
+                  className="rounded-full border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700"
                 >
-                  {h.code} · {shortDesc}
+                  <span className="font-mono font-bold">{h.code}</span> · {shortDesc}
                 </button>
               );
             })}
           </>
         ) : (
-          <span className="text-slate-400">
+          <span className="text-sm font-medium text-amber-700">
             HSN not set{line.name.trim().length < 3 ? " (type the item name to get suggestions)" : ""}
           </span>
         )}
@@ -1706,8 +1705,10 @@ export default function NewBillPage() {
                   }
                 }}
                 maxLength={15}
-                placeholder="27AAAAA0000A1Z5 (leave blank for B2C)"
-                className={`${field} font-mono uppercase pr-8 ${
+                // AFTER
+                placeholder="27AAAAA0000A1Z5"
+                className={`${field} font-mono uppercase placeholder:normal-case pr-8 ${
+                  
                   custGstin.length === 15
                     ? isValidGstin(custGstin)
                       ? "border-emerald-500 focus:ring-emerald-500"
@@ -1725,6 +1726,9 @@ export default function NewBillPage() {
                 </span>
               )}
             </div>
+            {custGstin.length === 0 && (
+              <p className="mt-1 text-xs text-slate-400">Leave blank for normal (B2C) customer</p>
+            )}
             {custGstin.length > 0 && custGstin.length < 15 && (
               <p className="mt-1 text-xs text-slate-400">{15 - custGstin.length} more characters needed</p>
             )}
@@ -2078,17 +2082,17 @@ export default function NewBillPage() {
         
 
         {/* Action bar: sticks to the bottom of the form column only */}
-        <div className="sticky bottom-3 z-30 flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-lg">
-          <div>
+        <div className="sticky bottom-3 z-30 flex items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-lg sm:gap-4 sm:px-4">
+          <div className="shrink-0">
             <p className="text-xs text-slate-500">Total</p>
-            <p className="text-lg font-bold text-slate-900">₹{grandTotal.toFixed(2)}</p>
+            <p className="text-base font-bold text-slate-900 sm:text-lg">₹{grandTotal.toFixed(2)}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
             <button
               type="button"
               onClick={handleCheckRules}
               disabled={checkingRules || submitting || grandTotal <= 0}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-3 text-xs font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-50 transition"
+              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-slate-300 bg-slate-50 px-3 py-3 text-xs font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-50 transition"
               title="Check bill details against statutory GST rules before saving"
             >
               {checkingRules ? (
@@ -2096,17 +2100,17 @@ export default function NewBillPage() {
               ) : (
                 <Check className="h-4 w-4 text-emerald-600" />
               )}
-              {checkingRules ? "Checking Rules..." : "Pre-check Rules"}
+              {checkingRules ? "Checking..." : "Pre-check"}
             </button>
             <button
               type="submit"
               disabled={submitting || grandTotal <= 0}
-              className="flex min-w-[170px] items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-blue-600 px-3 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none sm:px-5"
             >
               {submitting && (
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
               )}
-              {submitting ? "Checking & Creating…" : "Save & Make Bill"}
+              {submitting ? "Saving…" : "Save & Make Bill"}
             </button>
           </div>
         </div>

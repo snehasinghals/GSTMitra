@@ -843,10 +843,11 @@ export default function OnboardingPage() {
             <div className="text-center">
               <Link
                 href="/home"
-                className="text-xs text-slate-500 hover:text-slate-800 font-medium px-2 py-1 transition-colors"
+                className="w-full flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm px-6 py-3.5 rounded-xl border border-slate-300 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
               >
-                Not now
+                Skip for now
               </Link>
+              
             </div>
           </div>
 
