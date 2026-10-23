@@ -1251,6 +1251,20 @@ router.post("/onboarding", authMiddleware, async (req: AuthenticatedRequest, res
         validStateCode = gstinVal.stateCode;
         validStateName = INDIAN_STATES.find((s) => s.code === validStateCode)?.name || validStateName;
       }
+
+      const cleanGstin = gstin.trim().toUpperCase();
+      const existing = await prisma.business.findFirst({
+        where: {
+          gstin: { equals: cleanGstin, mode: "insensitive" },
+          id: { not: businessId },
+        },
+        select: { id: true, name: true },
+      });
+      if (existing) {
+        return res.status(400).json({
+          error: `This GSTIN (${cleanGstin}) is already registered with shop "${existing.name}". Please enter your own shop's GSTIN or leave it blank.`,
+        });
+      }
     }
 
     if (upiId !== undefined && upiId !== null && typeof upiId !== "string") {
@@ -1287,7 +1301,12 @@ router.post("/onboarding", authMiddleware, async (req: AuthenticatedRequest, res
     });
   } catch (error: any) {
     console.error("Onboarding error:", error);
-    res.status(500).json({ error: "Failed to save onboarding response." });
+    if (error?.code === "P2002") {
+      return res.status(400).json({
+        error: "This GSTIN is already registered to another shop in GSTMitra. Please use a unique GSTIN or leave it blank.",
+      });
+    }
+    res.status(500).json({ error: error.message || "Failed to save onboarding response." });
   }
 });
 
